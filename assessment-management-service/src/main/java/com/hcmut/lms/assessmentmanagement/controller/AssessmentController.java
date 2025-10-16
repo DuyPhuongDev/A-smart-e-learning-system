@@ -1,6 +1,5 @@
 package com.hcmut.lms.assessmentmanagement.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,43 +7,33 @@ import org.springframework.web.bind.annotation.*;
 public class AssessmentController {
 
     @PostMapping
-    public ResponseDto<String> createAssessment() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Create assessment - To be implemented")
-                .build();
+    public String createAssessment() {
+        // TODO: Implement create assessment logic
+        return "Create assessment - To be implemented";
     }
 
     @PutMapping("/{id}")
-    public ResponseDto<String> updateAssessment(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Update assessment - To be implemented")
-                .build();
+    public String updateAssessment(@PathVariable String id) {
+        // TODO: Implement update assessment logic
+        return "Update assessment - To be implemented";
     }
 
     @PostMapping("/{id}/grade")
-    public ResponseDto<String> gradeAssessment(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Grade assessment - To be implemented")
-                .build();
+    public String gradeAssessment(@PathVariable String id) {
+        // TODO: Implement grade assessment logic
+        return "Grade assessment - To be implemented";
     }
 
     @PostMapping("/{id}/feedback")
-    public ResponseDto<String> provideFeedback(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Provide feedback - To be implemented")
-                .build();
+    public String provideFeedback(@PathVariable String id) {
+        // TODO: Implement provide feedback logic
+        return "Provide feedback - To be implemented";
     }
 
     @GetMapping("/{id}/submissions")
-    public ResponseDto<String> getSubmissions(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get submissions - To be implemented")
-                .build();
+    public String getSubmissions(@PathVariable String id) {
+        // TODO: Implement get submissions logic
+        return "Get submissions - To be implemented";
     }
 }
 

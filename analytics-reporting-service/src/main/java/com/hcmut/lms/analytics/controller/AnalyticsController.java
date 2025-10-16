@@ -1,6 +1,5 @@
 package com.hcmut.lms.analytics.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,69 +7,52 @@ import org.springframework.web.bind.annotation.*;
 public class AnalyticsController {
 
     @GetMapping("/reports/system")
-    public ResponseDto<String> getSystemReports() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get system reports - To be implemented")
-                .build();
+    public String getSystemReports() {
+        // TODO: Implement get system reports logic
+        return "Get system reports - To be implemented";
     }
 
     @GetMapping("/reports/course/{courseId}")
-    public ResponseDto<String> getCourseReports(@PathVariable String courseId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get course reports - To be implemented")
-                .build();
+    public String getCourseReports(@PathVariable String courseId) {
+        // TODO: Implement get course reports logic
+        return "Get course reports - To be implemented";
     }
 
     @GetMapping("/statistics/grading")
-    public ResponseDto<String> getGradingStatistics() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get grading statistics - To be implemented")
-                .build();
+    public String getGradingStatistics() {
+        // TODO: Implement get grading statistics logic
+        return "Get grading statistics - To be implemented";
     }
 
     @GetMapping("/statistics/user-activity")
-    public ResponseDto<String> getUserActivityReport() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get user activity report - To be implemented")
-                .build();
+    public String getUserActivityReport() {
+        // TODO: Implement get user activity report logic
+        return "Get user activity report - To be implemented";
     }
 
     @GetMapping("/logs/system")
-    public ResponseDto<String> getSystemLogs(@RequestParam(required = false) String startDate,
-                                             @RequestParam(required = false) String endDate) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get system logs - To be implemented")
-                .build();
+    public String getSystemLogs(@RequestParam(required = false) String startDate,
+                                @RequestParam(required = false) String endDate) {
+        // TODO: Implement get system logs logic
+        return "Get system logs - To be implemented";
     }
 
     @PostMapping("/export/report/{reportId}")
-    public ResponseDto<String> exportReport(@PathVariable String reportId,
-                                           @RequestParam String format) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Export report to " + format + " - To be implemented")
-                .build();
+    public String exportReport(@PathVariable String reportId,
+                              @RequestParam String format) {
+        // TODO: Implement export report logic
+        return "Export report to " + format + " - To be implemented";
     }
 
     @GetMapping("/dashboard/admin")
-    public ResponseDto<String> getAdminDashboard() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get admin dashboard - To be implemented")
-                .build();
+    public String getAdminDashboard() {
+        // TODO: Implement get admin dashboard logic
+        return "Get admin dashboard - To be implemented";
     }
 
     @GetMapping("/dashboard/teacher/{teacherId}")
-    public ResponseDto<String> getTeacherDashboard(@PathVariable String teacherId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get teacher dashboard - To be implemented")
-                .build();
+    public String getTeacherDashboard(@PathVariable String teacherId) {
+        // TODO: Implement get teacher dashboard logic
+        return "Get teacher dashboard - To be implemented";
     }
 }
-

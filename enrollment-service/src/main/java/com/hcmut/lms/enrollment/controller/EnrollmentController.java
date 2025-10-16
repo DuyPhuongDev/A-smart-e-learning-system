@@ -1,6 +1,5 @@
 package com.hcmut.lms.enrollment.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,51 +7,38 @@ import org.springframework.web.bind.annotation.*;
 public class EnrollmentController {
 
     @PostMapping("/enroll")
-    public ResponseDto<String> enrollInCourse() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Enroll in course - To be implemented")
-                .build();
+    public String enrollInCourse() {
+        // TODO: Implement enroll in course logic
+        return "Enroll in course - To be implemented";
     }
 
     @GetMapping("/discover")
-    public ResponseDto<String> discoverCourses() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Discover courses - To be implemented")
-                .build();
+    public String discoverCourses() {
+        // TODO: Implement discover courses logic
+        return "Discover courses - To be implemented";
     }
 
     @GetMapping("/search")
-    public ResponseDto<String> searchCourses(@RequestParam(required = false) String keyword) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Search courses - To be implemented")
-                .build();
+    public String searchCourses(@RequestParam(required = false) String keyword) {
+        // TODO: Implement search courses logic
+        return "Search courses - To be implemented";
     }
 
     @GetMapping("/course/{id}")
-    public ResponseDto<String> getCourseInfo(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get course info - To be implemented")
-                .build();
+    public String getCourseInfo(@PathVariable String id) {
+        // TODO: Implement get course info logic
+        return "Get course info - To be implemented";
     }
 
     @PostMapping("/course/{id}/rate")
-    public ResponseDto<String> rateCourse(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Rate course - To be implemented")
-                .build();
+    public String rateCourse(@PathVariable String id) {
+        // TODO: Implement rate course logic
+        return "Rate course - To be implemented";
     }
 
     @GetMapping("/my-courses/{studentId}")
-    public ResponseDto<String> getEnrolledCourses(@PathVariable String studentId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get enrolled courses - To be implemented")
-                .build();
+    public String getEnrolledCourses(@PathVariable String studentId) {
+        // TODO: Implement get enrolled courses logic
+        return "Get enrolled courses - To be implemented";
     }
 }
-

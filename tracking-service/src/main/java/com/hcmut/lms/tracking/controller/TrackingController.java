@@ -1,6 +1,5 @@
 package com.hcmut.lms.tracking.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,43 +7,32 @@ import org.springframework.web.bind.annotation.*;
 public class TrackingController {
 
     @GetMapping("/progress/{studentId}")
-    public ResponseDto<String> getStudentProgress(@PathVariable String studentId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get student progress - To be implemented")
-                .build();
+    public String getStudentProgress(@PathVariable String studentId) {
+        // TODO: Implement get student progress logic
+        return "Get student progress - To be implemented";
     }
 
     @GetMapping("/grades/{studentId}")
-    public ResponseDto<String> getStudentGrades(@PathVariable String studentId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get student grades - To be implemented")
-                .build();
+    public String getStudentGrades(@PathVariable String studentId) {
+        // TODO: Implement get student grades logic
+        return "Get student grades - To be implemented";
     }
 
     @PostMapping("/activity-log")
-    public ResponseDto<String> logActivity() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Log activity - To be implemented")
-                .build();
+    public String logActivity() {
+        // TODO: Implement log activity logic
+        return "Log activity - To be implemented";
     }
 
     @GetMapping("/activity-log/{studentId}")
-    public ResponseDto<String> getActivityLogs(@PathVariable String studentId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get activity logs - To be implemented")
-                .build();
+    public String getActivityLogs(@PathVariable String studentId) {
+        // TODO: Implement get activity logs logic
+        return "Get activity logs - To be implemented";
     }
 
     @GetMapping("/dashboard/{studentId}")
-    public ResponseDto<String> getPersonalDashboard(@PathVariable String studentId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get personal dashboard - To be implemented")
-                .build();
+    public String getPersonalDashboard(@PathVariable String studentId) {
+        // TODO: Implement get personal dashboard logic
+        return "Get personal dashboard - To be implemented";
     }
 }
-

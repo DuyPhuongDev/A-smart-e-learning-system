@@ -1,6 +1,5 @@
 package com.hcmut.lms.coursemanagement.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,59 +7,44 @@ import org.springframework.web.bind.annotation.*;
 public class CourseController {
 
     @GetMapping
-    public ResponseDto<String> getAllCourses() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get all courses - To be implemented")
-                .build();
+    public String getAllCourses() {
+        // TODO: Implement get all courses logic
+        return "Get all courses - To be implemented";
     }
 
     @GetMapping("/{id}")
-    public ResponseDto<String> getCourseById(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get course by ID - To be implemented")
-                .build();
+    public String getCourseById(@PathVariable String id) {
+        // TODO: Implement get course by ID logic
+        return "Get course by ID - To be implemented";
     }
 
     @PostMapping
-    public ResponseDto<String> createCourse() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Create course - To be implemented")
-                .build();
+    public String createCourse() {
+        // TODO: Implement create course logic
+        return "Create course - To be implemented";
     }
 
     @PutMapping("/{id}")
-    public ResponseDto<String> updateCourse(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Update course - To be implemented")
-                .build();
+    public String updateCourse(@PathVariable String id) {
+        // TODO: Implement update course logic
+        return "Update course - To be implemented";
     }
 
     @DeleteMapping("/{id}")
-    public ResponseDto<String> deleteCourse(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Delete course - To be implemented")
-                .build();
+    public void deleteCourse(@PathVariable String id) {
+        // TODO: Implement delete course logic
     }
 
     @PostMapping("/{id}/structure")
-    public ResponseDto<String> buildCourseStructure(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Build course structure - To be implemented")
-                .build();
+    public String buildCourseStructure(@PathVariable String id) {
+        // TODO: Implement build course structure logic
+        return "Build course structure - To be implemented";
     }
 
     @PostMapping("/{id}/materials")
-    public ResponseDto<String> uploadMaterials(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Upload materials - To be implemented")
-                .build();
+    public String uploadMaterials(@PathVariable String id) {
+        // TODO: Implement upload materials logic
+        return "Upload materials - To be implemented";
     }
 }
 

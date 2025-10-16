@@ -1,6 +1,5 @@
 package com.hcmut.lms.authentication.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,39 +7,27 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     @PostMapping("/login")
-    public ResponseDto<String> login() {
+    public String login() {
         // TODO: Implement login logic
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Login endpoint - To be implemented")
-                .build();
+        return "Login endpoint - To be implemented";
     }
 
     @PostMapping("/register")
-    public ResponseDto<String> register() {
+    public String register() {
         // TODO: Implement registration logic
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Register endpoint - To be implemented")
-                .build();
+        return "Register endpoint - To be implemented";
     }
 
     @PostMapping("/refresh-token")
-    public ResponseDto<String> refreshToken() {
+    public String refreshToken() {
         // TODO: Implement token refresh logic
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Refresh token endpoint - To be implemented")
-                .build();
+        return "Refresh token endpoint - To be implemented";
     }
 
     @PostMapping("/validate-token")
-    public ResponseDto<Boolean> validateToken() {
+    public Boolean validateToken() {
         // TODO: Implement token validation logic
-        return ResponseDto.<Boolean>builder()
-                .success(true)
-                .message("Validate token endpoint - To be implemented")
-                .build();
+        return true;
     }
 }
 

@@ -1,6 +1,5 @@
 package com.hcmut.lms.coursedelivery.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,43 +7,32 @@ import org.springframework.web.bind.annotation.*;
 public class DeliveryController {
 
     @GetMapping("/course/{courseId}/materials")
-    public ResponseDto<String> getCourseMaterials(@PathVariable String courseId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get course materials - To be implemented")
-                .build();
+    public String getCourseMaterials(@PathVariable String courseId) {
+        // TODO: Implement get course materials logic
+        return "Get course materials - To be implemented";
     }
 
     @PostMapping("/notes")
-    public ResponseDto<String> createNote() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Create note - To be implemented")
-                .build();
+    public String createNote() {
+        // TODO: Implement create note logic
+        return "Create note - To be implemented";
     }
 
     @PostMapping("/ai/quiz-generation")
-    public ResponseDto<String> generateQuizByAI() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Generate quiz by AI - To be implemented")
-                .build();
+    public String generateQuizByAI() {
+        // TODO: Implement generate quiz by AI logic
+        return "Generate quiz by AI - To be implemented";
     }
 
     @PostMapping("/ai/qa")
-    public ResponseDto<String> askQuestionToAI() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Ask question to AI - To be implemented")
-                .build();
+    public String askQuestionToAI() {
+        // TODO: Implement ask question to AI logic
+        return "Ask question to AI - To be implemented";
     }
 
     @GetMapping("/course/{courseId}/progress")
-    public ResponseDto<String> getCourseProgress(@PathVariable String courseId) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get course progress - To be implemented")
-                .build();
+    public String getCourseProgress(@PathVariable String courseId) {
+        // TODO: Implement get course progress logic
+        return "Get course progress - To be implemented";
     }
 }
-
