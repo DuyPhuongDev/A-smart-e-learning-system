@@ -1,0 +1,69 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: authentication-service
+          uri: lb://authentication-service
+          predicates:
+            - Path=/api/auth/**
+        - id: user-management-service
+          uri: lb://user-management-service
+          predicates:
+            - Path=/api/users/**
+        - id: course-management-service
+          uri: lb://course-management-service
+          predicates:
+            - Path=/api/courses/**
+        - id: assessment-management-service
+          uri: lb://assessment-management-service
+          predicates:
+            - Path=/api/assessments/**
+        - id: course-delivery-service
+          uri: lb://course-delivery-service
+          predicates:
+            - Path=/api/delivery/**
+        - id: assessment-execution-service
+          uri: lb://assessment-execution-service
+          predicates:
+            - Path=/api/execution/**
+        - id: student-personalization-service
+          uri: lb://student-personalization-service
+          predicates:
+            - Path=/api/personalization/**
+        - id: tracking-service
+          uri: lb://tracking-service
+          predicates:
+            - Path=/api/tracking/**
+        - id: enrollment-service
+          uri: lb://enrollment-service
+          predicates:
+            - Path=/api/enrollment/**
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+        - id: communication-service
+          uri: lb://communication-service
+          predicates:
+            - Path=/api/communication/**
+        - id: analytics-reporting-service
+          uri: lb://analytics-reporting-service
+          predicates:
+            - Path=/api/analytics/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+

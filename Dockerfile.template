@@ -1,0 +1,29 @@
+# Template Dockerfile for all services
+# Copy this file to each service directory and rename to Dockerfile
+
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+
+# Copy parent pom and common module if needed
+COPY pom.xml /app/
+COPY ../common /app/common
+
+# Copy service source code
+COPY src /app/src
+COPY pom.xml /app/
+
+# Build the application
+RUN mvn clean package -DskipTests
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Copy the built artifact from build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Expose the service port
+EXPOSE 8080
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
+

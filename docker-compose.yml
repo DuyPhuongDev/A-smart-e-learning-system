@@ -1,0 +1,203 @@
+version: '3.8'
+
+services:
+  # Service Discovery - Eureka Server
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Config Server
+  config-server:
+    build: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Authentication Service
+  authentication-service:
+    build: ./authentication-service
+    container_name: authentication-service
+    ports:
+      - "8081:8081"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # User Management Service
+  user-management-service:
+    build: ./user-management-service
+    container_name: user-management-service
+    ports:
+      - "8082:8082"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Course Management Service
+  course-management-service:
+    build: ./course-management-service
+    container_name: course-management-service
+    ports:
+      - "8083:8083"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Assessment Management Service
+  assessment-management-service:
+    build: ./assessment-management-service
+    container_name: assessment-management-service
+    ports:
+      - "8084:8084"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Assessment Execution Service
+  assessment-execution-service:
+    build: ./assessment-execution-service
+    container_name: assessment-execution-service
+    ports:
+      - "8085:8085"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Course Delivery Service
+  course-delivery-service:
+    build: ./course-delivery-service
+    container_name: course-delivery-service
+    ports:
+      - "8086:8086"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Student Personalization Service
+  student-personalization-service:
+    build: ./student-personalization-service
+    container_name: student-personalization-service
+    ports:
+      - "8087:8087"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Tracking Service
+  tracking-service:
+    build: ./tracking-service
+    container_name: tracking-service
+    ports:
+      - "8088:8088"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Enrollment Service
+  enrollment-service:
+    build: ./enrollment-service
+    container_name: enrollment-service
+    ports:
+      - "8089:8089"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Notification Service
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8090:8090"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Communication Service
+  communication-service:
+    build: ./communication-service
+    container_name: communication-service
+    ports:
+      - "8091:8091"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+  # Analytics & Reporting Service
+  analytics-reporting-service:
+    build: ./analytics-reporting-service
+    container_name: analytics-reporting-service
+    ports:
+      - "8092:8092"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+    networks:
+      - lms-network
+
+networks:
+  lms-network:
+    driver: bridge
+
