@@ -229,8 +229,8 @@ Tất cả requests đều đi qua API Gateway tại `http://localhost:8080`
 
 ## 📧 Liên Hệ
 
-Project được phát triển bởi team Capstone - HCMUT
+Project được phát triển bởi team Wecancode
 
 ## 📄 License
 
-Copyright © 2024 HCMUT
+Copyright © 2025 HCMUT
