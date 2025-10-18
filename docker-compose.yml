@@ -1,9 +1,245 @@
-version: '3.8'
-
 services:
+  # ========================================
+  # PostgreSQL Databases
+  # ========================================
+  
+  postgres-authentication:
+    image: postgres:16-alpine
+    container_name: postgres-authentication
+    environment:
+      POSTGRES_DB: authentication_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d authentication_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-user-management:
+    image: postgres:16-alpine
+    container_name: postgres-user-management
+    environment:
+      POSTGRES_DB: user_management_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-user-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d user_management_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-course-management:
+    image: postgres:16-alpine
+    container_name: postgres-course-management
+    environment:
+      POSTGRES_DB: course_management_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-course-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d course_management_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-assessment-management:
+    image: postgres:16-alpine
+    container_name: postgres-assessment-management
+    environment:
+      POSTGRES_DB: assessment_management_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-assessment-mgmt-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d assessment_management_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-assessment-execution:
+    image: postgres:16-alpine
+    container_name: postgres-assessment-execution
+    environment:
+      POSTGRES_DB: assessment_execution_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres-assessment-exec-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d assessment_execution_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-course-delivery:
+    image: postgres:16-alpine
+    container_name: postgres-course-delivery
+    environment:
+      POSTGRES_DB: course_delivery_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres-delivery-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d course_delivery_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-student-personalization:
+    image: postgres:16-alpine
+    container_name: postgres-student-personalization
+    environment:
+      POSTGRES_DB: student_personalization_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres-personalization-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d student_personalization_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-tracking:
+    image: postgres:16-alpine
+    container_name: postgres-tracking
+    environment:
+      POSTGRES_DB: tracking_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5439:5432"
+    volumes:
+      - postgres-tracking-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d tracking_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-enrollment:
+    image: postgres:16-alpine
+    container_name: postgres-enrollment
+    environment:
+      POSTGRES_DB: enrollment_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5440:5432"
+    volumes:
+      - postgres-enrollment-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d enrollment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-notification:
+    image: postgres:16-alpine
+    container_name: postgres-notification
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5441:5432"
+    volumes:
+      - postgres-notification-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d notification_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-communication:
+    image: postgres:16-alpine
+    container_name: postgres-communication
+    environment:
+      POSTGRES_DB: communication_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5442:5432"
+    volumes:
+      - postgres-communication-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d communication_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-analytics:
+    image: postgres:16-alpine
+    container_name: postgres-analytics
+    environment:
+      POSTGRES_DB: analytics_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    ports:
+      - "5443:5432"
+    volumes:
+      - postgres-analytics-data:/var/lib/postgresql/data
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d analytics_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # Infrastructure Services
+  # ========================================
+  
   # Service Discovery - Eureka Server
   eureka-server:
-    build: ./eureka-server
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
     container_name: eureka-server
     ports:
       - "8761:8761"
@@ -17,7 +253,9 @@ services:
 
   # Config Server
   config-server:
-    build: ./config-server
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
     container_name: config-server
     ports:
       - "8888:8888"
@@ -30,7 +268,9 @@ services:
 
   # API Gateway
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -43,161 +283,295 @@ services:
 
   # Authentication Service
   authentication-service:
-    build: ./authentication-service
+    build:
+      context: .
+      dockerfile: authentication-service/Dockerfile
     container_name: authentication-service
     ports:
       - "8081:8081"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-authentication
+      - DB_PORT=5432
+      - DB_NAME=authentication_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-authentication:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # User Management Service
   user-management-service:
-    build: ./user-management-service
+    build:
+      context: .
+      dockerfile: user-management-service/Dockerfile
     container_name: user-management-service
     ports:
       - "8082:8082"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-user-management
+      - DB_PORT=5432
+      - DB_NAME=user_management_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-user-management:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Course Management Service
   course-management-service:
-    build: ./course-management-service
+    build:
+      context: .
+      dockerfile: course-management-service/Dockerfile
     container_name: course-management-service
     ports:
       - "8083:8083"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-course-management
+      - DB_PORT=5432
+      - DB_NAME=course_management_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-course-management:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Assessment Management Service
   assessment-management-service:
-    build: ./assessment-management-service
+    build:
+      context: .
+      dockerfile: assessment-management-service/Dockerfile
     container_name: assessment-management-service
     ports:
       - "8084:8084"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-assessment-management
+      - DB_PORT=5432
+      - DB_NAME=assessment_management_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-assessment-management:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Assessment Execution Service
   assessment-execution-service:
-    build: ./assessment-execution-service
+    build:
+      context: .
+      dockerfile: assessment-execution-service/Dockerfile
     container_name: assessment-execution-service
     ports:
       - "8085:8085"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-assessment-execution
+      - DB_PORT=5432
+      - DB_NAME=assessment_execution_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-assessment-execution:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Course Delivery Service
   course-delivery-service:
-    build: ./course-delivery-service
+    build:
+      context: .
+      dockerfile: course-delivery-service/Dockerfile
     container_name: course-delivery-service
     ports:
       - "8086:8086"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-course-delivery
+      - DB_PORT=5432
+      - DB_NAME=course_delivery_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-course-delivery:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Student Personalization Service
   student-personalization-service:
-    build: ./student-personalization-service
+    build:
+      context: .
+      dockerfile: student-personalization-service/Dockerfile
     container_name: student-personalization-service
     ports:
       - "8087:8087"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-student-personalization
+      - DB_PORT=5432
+      - DB_NAME=student_personalization_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-student-personalization:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Tracking Service
   tracking-service:
-    build: ./tracking-service
+    build:
+      context: .
+      dockerfile: tracking-service/Dockerfile
     container_name: tracking-service
     ports:
       - "8088:8088"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-tracking
+      - DB_PORT=5432
+      - DB_NAME=tracking_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-tracking:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Enrollment Service
   enrollment-service:
-    build: ./enrollment-service
+    build:
+      context: .
+      dockerfile: enrollment-service/Dockerfile
     container_name: enrollment-service
     ports:
       - "8089:8089"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-enrollment
+      - DB_PORT=5432
+      - DB_NAME=enrollment_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-enrollment:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Notification Service
   notification-service:
-    build: ./notification-service
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
     container_name: notification-service
     ports:
       - "8090:8090"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-notification
+      - DB_PORT=5432
+      - DB_NAME=notification_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-notification:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Communication Service
   communication-service:
-    build: ./communication-service
+    build:
+      context: .
+      dockerfile: communication-service/Dockerfile
     container_name: communication-service
     ports:
       - "8091:8091"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-communication
+      - DB_PORT=5432
+      - DB_NAME=communication_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-communication:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
   # Analytics & Reporting Service
   analytics-reporting-service:
-    build: ./analytics-reporting-service
+    build:
+      context: .
+      dockerfile: analytics-reporting-service/Dockerfile
     container_name: analytics-reporting-service
     ports:
       - "8092:8092"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres-analytics
+      - DB_PORT=5432
+      - DB_NAME=analytics_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
     depends_on:
-      - eureka-server
+      postgres-analytics:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
     networks:
       - lms-network
 
 networks:
   lms-network:
     driver: bridge
+
+volumes:
+  postgres-auth-data:
+  postgres-user-data:
+  postgres-course-data:
+  postgres-assessment-mgmt-data:
+  postgres-assessment-exec-data:
+  postgres-delivery-data:
+  postgres-personalization-data:
+  postgres-tracking-data:
+  postgres-enrollment-data:
+  postgres-notification-data:
+  postgres-communication-data:
+  postgres-analytics-data:
 
