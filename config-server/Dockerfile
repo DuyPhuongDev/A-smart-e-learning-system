@@ -20,15 +20,17 @@ COPY notification-service/pom.xml notification-service/
 COPY communication-service/pom.xml communication-service/
 COPY analytics-reporting-service/pom.xml analytics-reporting-service/
 
-# Download dependencies (cached layer)
-RUN mvn dependency:go-offline -B -pl :config-server -am || true
+# Download dependencies (cached layer with BuildKit cache mount)
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn dependency:go-offline -B -pl :config-server -am || true
 
 # Copy source code
 COPY common/src common/src
 COPY config-server/src config-server/src
 
 # Build
-RUN mvn clean package -DskipTests -pl :config-server -am
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn clean package -DskipTests -pl :config-server -am
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

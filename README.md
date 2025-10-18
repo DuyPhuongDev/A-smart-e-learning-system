@@ -58,6 +58,54 @@ Module chứa các utilities, DTOs, và configurations dùng chung cho tất c�
 
 ## 🚀 Hướng Dẫn Chạy Dự Án
 
+### Chọn 1 trong 2 cách: Docker (Khuyến nghị) hoặc Maven local
+
+---
+
+## 🐳 Cách 1: Sử Dụng Docker (Khuyến nghị)
+
+### Build Docker Images với BuildKit Cache Mount
+
+**Windows:**
+```bash
+# Build tất cả services
+docker-build-with-buildkit.bat
+
+# Build service cụ thể
+docker-build-with-buildkit.bat user-management-service
+```
+
+**Linux/Mac:**
+```bash
+# Build tất cả services
+./docker-build-with-buildkit.sh
+
+# Build service cụ thể
+./docker-build-with-buildkit.sh user-management-service
+```
+
+### Khởi động services
+
+```bash
+# Khởi động tất cả services
+docker-compose up -d
+
+# Khởi động service cụ thể
+docker-compose up -d user-management-service
+
+# Xem logs
+docker-compose logs -f user-management-service
+
+# Dừng services
+docker-compose down
+```
+
+**📚 Chi tiết về BuildKit:** Xem [BUILDKIT_GUIDE.md](BUILDKIT_GUIDE.md)
+
+---
+
+## 💻 Cách 2: Build và Chạy Local với Maven
+
 ### 1. Build toàn bộ project
 ```bash
 # Make wrapper executable (Linux/Mac only, chỉ cần chạy 1 lần)
