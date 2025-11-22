@@ -1,117 +1,51 @@
 # LMS Backend - HCMUT
-## Learning Management System - Microservices Architecture
 
-Dự án backend cho hệ thống quản lý học tập (LMS) của trường ĐHBK TPHCM, được xây dựng theo kiến trúc microservices với mono-repo.
+> Learning Management System Backend - Ho Chi Minh University of Technology  
+> Microservices Architecture với Spring Boot 3.5.0 + Spring Cloud 2025.0.0
+
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
+
+---
 
 ## 🏗️ Kiến Trúc Hệ Thống
 
-### Infrastructure Services
-- **Eureka Server** (Port: 8761) - Service Discovery
-- **API Gateway** (Port: 8080) - API Gateway & Routing
-- **Config Server** (Port: 8888) - Centralized Configuration
+**11 Services:**
+- **Infrastructure (3):** Eureka Server, API Gateway, Config Server
+- **Business (8):** Authentication, User Management, Course Management, Assessment, Learning, Personalization, Notification, Communication
 
-### Business Services
-
-#### Core Services
-- **Authentication Service** (Port: 8081) - Xác thực và phân quyền
-- **User Management Service** (Port: 8082) - Quản lý tài khoản người dùng
-
-#### Course Services
-- **Course Management Service** (Port: 8083) - Quản lý khóa học
-- **Course Delivery Service** (Port: 8086) - Phân phối nội dung học tập
-- **Enrollment Service** (Port: 8089) - Quản lý đăng ký khóa học
-
-#### Assessment Services
-- **Assessment Management Service** (Port: 8084) - Quản lý bài tập/kiểm tra
-- **Assessment Execution Service** (Port: 8085) - Thực thi bài tập/kiểm tra
-
-#### Student Services
-- **Student Personalization Service** (Port: 8087) - Cá nhân hóa lộ trình học tập
-- **Tracking Service** (Port: 8088) - Theo dõi tiến độ học tập
-
-#### Communication Services
-- **Notification Service** (Port: 8090) - Gửi thông báo
-- **Communication Service** (Port: 8091) - Nhắn tin & thảo luận
-
-#### Analytics Service
-- **Analytics & Reporting Service** (Port: 8092) - Báo cáo & phân tích
-
-### Common Module
-Module chứa các utilities, DTOs, và configurations dùng chung cho tất cả microservices.
-
-## 🛠️ Công Nghệ Sử Dụng
-
-- **Java**: 21
-- **Spring Boot**: 3.5.0
-- **Spring Cloud**: 2025.0.0
-- **Maven**: 3.9.9
-- **Database**: H2 (development), PostgreSQL/MySQL (production)
-- **Service Discovery**: Netflix Eureka
-- **API Gateway**: Spring Cloud Gateway
-- **Security**: Spring Security + JWT
-
-## 📋 Yêu Cầu Hệ Thống
-
-- Java JDK 21 hoặc cao hơn
-- Maven 3.9.9
-- RAM tối thiểu: 8GB (khuyến nghị 16GB để chạy tất cả services)
-
-## 🚀 Hướng Dẫn Chạy Dự Án
-
-### Chọn 1 trong 2 cách: Docker (Khuyến nghị) hoặc Maven local
+**Database:** Shared PostgreSQL (lms_db)
 
 ---
 
-## 🐳 Cách 1: Sử Dụng Docker (Khuyến nghị)
+## ⚡ Quick Start
 
-### Build Docker Images với BuildKit Cache Mount
+### 1️⃣ Yêu Cầu
 
-**Windows:**
 ```bash
-# Build tất cả services
-docker-build-with-buildkit.bat
-
-# Build service cụ thể
-docker-build-with-buildkit.bat user-management-service
+- Java 21+
+- Maven 3.9+
+- PostgreSQL 16+
 ```
 
-**Linux/Mac:**
-```bash
-# Build tất cả services
-./docker-build-with-buildkit.sh
+### 2️⃣ Setup Database
 
-# Build service cụ thể
-./docker-build-with-buildkit.sh user-management-service
+**Option A: Local PostgreSQL**
+```sql
+CREATE USER lms_user WITH PASSWORD 'lms_password';
+CREATE DATABASE lms_db OWNER lms_user;
+GRANT ALL PRIVILEGES ON DATABASE lms_db TO lms_user;
 ```
 
-### Khởi động services
-
+**Option B: Docker**
 ```bash
-# Khởi động tất cả services
-docker-compose up -d
-
-# Khởi động service cụ thể
-docker-compose up -d user-management-service
-
-# Xem logs
-docker-compose logs -f user-management-service
-
-# Dừng services
-docker-compose down
+docker-compose up -d postgres
 ```
 
-**📚 Chi tiết về BuildKit:** Xem [BUILDKIT_GUIDE.md](BUILDKIT_GUIDE.md)
+### 3️⃣ Build Project
 
----
-
-## 💻 Cách 2: Build và Chạy Local với Maven
-
-### 1. Build toàn bộ project
 ```bash
-# Make wrapper executable (Linux/Mac only, chỉ cần chạy 1 lần)
-chmod +x mvnw
-
-# Build project
 # Linux/Mac
 ./mvnw clean install
 
@@ -119,166 +53,283 @@ chmod +x mvnw
 mvnw.cmd clean install
 ```
 
-### 2. Chạy từng service theo thứ tự
+### 4️⃣ Chạy Services
 
-#### Bước 1: Khởi động Eureka Server (Service Discovery)
+**Linux/Mac:**
 ```bash
-cd eureka-server
+chmod +x start-all-services.sh
+./start-all-services.sh
+# Services chạy ở foreground, nhấn Ctrl+C để stop tất cả
+```
 
+**Windows:**
+```cmd
+start-all-services.bat
+```
+
+**Docker:**
+```bash
+docker-compose up -d
+```
+
+### 5️⃣ Kiểm Tra
+
+- **Eureka Dashboard:** http://localhost:8761
+- **API Gateway:** http://localhost:8080
+
+### 6️⃣ Check Status (Xem services nào đang chạy)
+
+**Linux/Mac:**
+```bash
+./check-services.sh
+```
+
+**Windows:**
+```cmd
+check-services.bat
+```
+
+**Output ví dụ:**
+```
+Infrastructure Services:
+● Eureka Server (port 8761) - RUNNING [PID: 12345, MEM: 450 MB]
+● API Gateway (port 8080) - RUNNING [PID: 12346, MEM: 380 MB]
+○ Config Server (port 8888) - STOPPED
+
+Business Services:
+● Authentication Service (port 8081) - RUNNING [PID: 12347, MEM: 420 MB]
+...
+
+Summary:
+● Running: 8 / 11
+○ Stopped: 3 / 11
+```
+
+---
+
+## 🔧 Dừng Services
+
+### Dừng tất cả:
+
+**Nếu đang chạy start-all-services.sh:**
+```bash
+# Chỉ cần nhấn Ctrl+C trong terminal
+```
+
+**Hoặc dùng script:**
+
+**Linux/Mac:**
+```bash
+./stop-all-services.sh         # Dừng tất cả
+./stop-all-services.sh business # Chỉ dừng business services
+./stop-all-services.sh infra    # Chỉ dừng infrastructure
+```
+
+**Windows:**
+```cmd
+stop-all-services.bat          # Dừng tất cả
+stop-all-services.bat business
+stop-all-services.bat infra
+```
+
+### Dừng 1 service cụ thể:
+
+**Linux/Mac:**
+```bash
+./stop-service.sh user-management-service
+./stop-service.sh eureka-server
+./stop-service.sh auth    # Shortcut
+./stop-service.sh user    # Shortcut
+```
+
+**Windows:**
+```cmd
+stop-service.bat user-management-service
+stop-service.bat eureka-server
+stop-service.bat auth
+```
+
+**Docker:**
+```bash
+docker-compose down
+```
+
+---
+
+## 📊 Service Ports
+
+| Service | Port | URL |
+|---------|------|-----|
+| **Infrastructure** |
+| Eureka Server | 8761 | http://localhost:8761 |
+| API Gateway | 8080 | http://localhost:8080 |
+| Config Server | 8888 | http://localhost:8888 |
+| **Business Services** |
+| Authentication | 8081 | http://localhost:8081 |
+| User Management | 8082 | http://localhost:8082 |
+| Course Management | 8083 | http://localhost:8083 |
+| Assessment | 8084 | http://localhost:8084 |
+| Learning | 8086 | http://localhost:8086 |
+| Personalization | 8087 | http://localhost:8087 |
+| Notification | 8090 | http://localhost:8090 |
+| Communication | 8091 | http://localhost:8091 |
+
+---
+
+## 🎯 Key Features
+
+### 👤 User Management
+- User CRUD, RBAC, Excel import/export
+- Endpoint scanning & granular permissions
+- Password management via Authentication Service
+
+### 📚 Course Management
+- Course creation, materials, grading system
+- Material library, course approval workflow
+
+### 📝 Assessment
+- Quiz/assignment creation, AI-assisted grading
+- Multiple submission types, online code execution
+
+### 🎓 Learning
+- Course enrollment, content delivery with AI
+- Progress tracking, note-taking
+
+### 🎯 Personalization
+- AI-powered learning paths
+- Academic schedule, analytics & reporting
+
+### 💬 Communication
+- Real-time messaging, forums
+- Notifications (email, push, in-app)
+
+---
+
+## 🛠️ Development
+
+### Build một service
+```bash
+cd user-management-service
+mvn spring-boot:run
+```
+
+### Chạy tests
+```bash
+mvn test
+```
+
+### Xem logs
+```bash
+tail -f logs/user-management-service.log
+```
+
+### Health check
+```bash
+curl http://localhost:8082/actuator/health
+```
+
+---
+
+## 🐛 Troubleshooting
+
+**Kiểm tra services nào đang chạy:**
+```bash
 # Linux/Mac
-../mvnw spring-boot:run
+./check-services.sh
 
 # Windows
-..\mvnw.cmd spring-boot:run
-```
-Truy cập: http://localhost:8761
+check-services.bat
 
-#### Bước 2: Khởi động Config Server (tùy chọn)
-```bash
-cd config-server
-
-# Linux/Mac
-../mvnw spring-boot:run
-
-# Windows
-..\mvnw.cmd spring-boot:run
+# Hoặc check thủ công
+lsof -i :8080  # Linux/Mac
+netstat -ano | findstr :8080  # Windows
 ```
 
-#### Bước 3: Khởi động API Gateway
-```bash
-cd api-gateway
-
-# Linux/Mac
-../mvnw spring-boot:run
-
-# Windows
-..\mvnw.cmd spring-boot:run
-```
-API Gateway: http://localhost:8080
-
-#### Bước 4: Khởi động các Business Services
-Mở terminal riêng cho mỗi service:
-
+**Port đã được sử dụng:**
 ```bash
 # Linux/Mac
-cd authentication-service && ../mvnw spring-boot:run
-cd user-management-service && ../mvnw spring-boot:run
-cd course-management-service && ../mvnw spring-boot:run
-cd assessment-management-service && ../mvnw spring-boot:run
-cd assessment-execution-service && ../mvnw spring-boot:run
-cd course-delivery-service && ../mvnw spring-boot:run
-cd student-personalization-service && ../mvnw spring-boot:run
-cd tracking-service && ../mvnw spring-boot:run
-cd enrollment-service && ../mvnw spring-boot:run
-cd notification-service && ../mvnw spring-boot:run
-cd communication-service && ../mvnw spring-boot:run
-cd analytics-reporting-service && ../mvnw spring-boot:run
+lsof -ti:8080 | xargs kill -9
 
 # Windows
-cd authentication-service && ..\mvnw.cmd spring-boot:run
-# (tương tự cho các services khác)
+netstat -ano | findstr :8080
+taskkill /F /PID <PID>
 ```
 
-## 📁 Cấu Trúc Thư Mục
+**Không kết nối được Eureka:**
+- Kiểm tra Eureka đang chạy: http://localhost:8761
+- Đợi 30-60s để services đăng ký
+- Restart service bị lỗi
 
-```
-Capstone_Project_LMS-HCMUT_BE/
-├── pom.xml (Root POM - Parent)
-├── README.md
-├── .gitignore
-│
-├── eureka-server/                          # Service Discovery
-├── api-gateway/                            # API Gateway
-├── config-server/                          # Config Server
-├── common/                                 # Shared Module
-│
-├── authentication-service/                 # Core Services
-├── user-management-service/
-│
-├── course-management-service/              # Course Services
-├── course-delivery-service/
-├── enrollment-service/
-│
-├── assessment-management-service/          # Assessment Services
-├── assessment-execution-service/
-│
-├── student-personalization-service/        # Student Services
-├── tracking-service/
-│
-├── notification-service/                   # Communication Services
-├── communication-service/
-│
-└── analytics-reporting-service/            # Analytics Service
+**Build thất bại:**
+```bash
+./mvnw clean install -U -DskipTests
 ```
 
-## 🔗 API Endpoints
+---
 
-Tất cả requests đều đi qua API Gateway tại `http://localhost:8080`
+## 📁 Project Structure
 
-### Authentication Service
-- `POST /api/auth/login` - Đăng nhập
-- `POST /api/auth/register` - Đăng ký
-- `POST /api/auth/refresh-token` - Làm mới token
-- `POST /api/auth/validate-token` - Xác thực token
+```
+lms-backend/
+├── common/                      # Shared utilities, DTOs
+├── eureka-server/               # Service discovery
+├── api-gateway/                 # API gateway
+├── config-server/               # Config management
+├── authentication-service/      # Auth & JWT
+├── user-management-service/     # Users, roles, RBAC
+├── course-management-service/   # Courses, materials
+├── assessment-service/          # Assessments
+├── learning-service/            # Learning & tracking
+├── personalization-service/     # AI learning paths
+├── notification-service/        # Notifications
+├── communication-service/       # Messaging, forums
+├── docker-compose.yml           # Docker orchestration
+├── start-all-services.sh        # Start script (Linux/Mac)
+├── start-all-services.bat       # Start script (Windows)
+├── stop-all-services.sh         # Stop all services (Linux/Mac)
+├── stop-all-services.bat        # Stop all services (Windows)
+├── stop-service.sh              # Stop one service (Linux/Mac)
+├── stop-service.bat             # Stop one service (Windows)
+├── check-services.sh            # Status check (Linux/Mac)
+└── check-services.bat           # Status check (Windows)
+```
 
-### User Management Service
-- `GET /api/users` - Lấy danh sách users
-- `POST /api/users` - Tạo user mới
-- `GET /api/users/{id}` - Lấy thông tin user
-- `PUT /api/users/{id}` - Cập nhật user
-- `DELETE /api/users/{id}` - Xóa user
+---
 
-### Course Management Service
-- `GET /api/courses` - Lấy danh sách khóa học
-- `POST /api/courses` - Tạo khóa học mới
-- `GET /api/courses/{id}` - Xem chi tiết khóa học
-- `PUT /api/courses/{id}` - Cập nhật khóa học
+## 🔒 Security
 
-### Assessment Services
-- `POST /api/assessments` - Tạo bài tập/kiểm tra
-- `POST /api/execution/quiz/{id}/submit` - Nộp bài quiz
-- `POST /api/execution/assignment/{id}/submit` - Nộp bài tập
+- **Authentication:** JWT-based
+- **Authorization:** RBAC với endpoint-level permissions
+- **Inter-Service:** Service discovery via Eureka
 
-### Student Services
-- `POST /api/personalization/goals` - Thiết lập mục tiêu học tập
-- `GET /api/personalization/learning-path` - Xem lộ trình học tập
-- `GET /api/tracking/progress/{studentId}` - Xem tiến độ học tập
+---
 
-### Enrollment Service
-- `POST /api/enrollment/enroll` - Đăng ký khóa học
-- `GET /api/enrollment/search` - Tìm kiếm khóa học
-- `POST /api/enrollment/course/{id}/rate` - Đánh giá khóa học
+## 🚀 Tech Stack
 
-### Communication Services
-- `POST /api/notifications/send` - Gửi thông báo
-- `POST /api/communication/message` - Gửi tin nhắn
-- `POST /api/communication/forum` - Tạo diễn đàn thảo luận
+- **Java 21** + **Spring Boot 3.5.0** + **Spring Cloud 2025.0.0**
+- **PostgreSQL 16** (Shared Database)
+- **Netflix Eureka** (Service Discovery)
+- **Spring Cloud Gateway** (API Gateway)
+- **Spring Security + JWT** (Authentication)
+- **Docker & Docker Compose** (Containerization)
+- **Apache POI** (Excel), **iTextPDF** (Reports)
+- **WebSocket + STOMP** (Real-time communication)
 
-### Analytics Service
-- `GET /api/analytics/reports/system` - Xem báo cáo hệ thống
-- `GET /api/analytics/logs/system` - Xem logs hệ thống
-- `POST /api/analytics/export/report/{id}` - Xuất báo cáo
+---
 
-## 📝 Ghi Chú
+## 👥 Team
 
-- Đây là phiên bản khởi tạo cơ bản, chưa implement chi tiết
-- Tất cả services đang sử dụng H2 in-memory database cho development
-- Cần cấu hình database thật (PostgreSQL/MySQL) cho production
-- Cần implement các business logic cho từng service
-- Cần implement security với JWT
-- Cần thêm API documentation với Swagger/OpenAPI
-- Cần implement integration tests
+**HCMUT - Computer Science Department**  
+Capstone Project - Learning Management System
 
-## 🔐 Security
+---
 
-- Hiện tại project chưa implement authentication/authorization đầy đủ
-- Cần implement JWT token validation tại API Gateway
-- Cần secure inter-service communication
+## 📞 Support
 
-## 📧 Liên Hệ
+- Kiểm tra logs: `./logs/` directory
+- Xem Eureka Dashboard: http://localhost:8761
+- Health check: `http://localhost:808X/actuator/health`
 
-Project được phát triển bởi team Capstone - HCMUT
+---
 
-## 📄 License
-
-Copyright © 2024 HCMUT
+**Built with ❤️ by HCMUT Students**

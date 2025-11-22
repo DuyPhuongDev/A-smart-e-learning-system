@@ -35,23 +35,19 @@
         
         <!-- Course Related Services -->
         <module>course-management-service</module>
-        <module>course-delivery-service</module>
-        <module>enrollment-service</module>
         
-        <!-- Assessment Services -->
-        <module>assessment-management-service</module>
-        <module>assessment-execution-service</module>
+        <!-- Learning Service (Consolidated: course-delivery + tracking + enrollment) -->
+        <module>learning-service</module>
         
-        <!-- Student Services -->
-        <module>student-personalization-service</module>
-        <module>tracking-service</module>
+        <!-- Assessment Service (Consolidated) -->
+        <module>assessment-service</module>
+        
+        <!-- Student Personalization & Analytics Service (Consolidated) -->
+        <module>personalization-service</module>
         
         <!-- Communication Services -->
         <module>notification-service</module>
         <module>communication-service</module>
-        
-        <!-- Analytics Service -->
-        <module>analytics-reporting-service</module>
     </modules>
 
     <properties>

@@ -93,17 +93,20 @@ public class UserServiceImpl implements UserService {
         
         // Create credentials in Authentication Service
         String temporaryPassword = PasswordGenerator.generateTemporaryPassword();
-        ApiResponse<Void> authResponse = authServiceClient.createUserCredentials(
+        AuthServiceClient.CreateCredentialsRequest request = 
+            new AuthServiceClient.CreateCredentialsRequest(
                 savedUser.getId(), 
                 savedUser.getEmail(), 
                 temporaryPassword
-        );
+            );
+        ApiResponse<Void> authResponse = authServiceClient.createUserCredentials(request);
         
         if (authResponse.getStatus() != 200 && authResponse.getStatus() != 201) {
             log.error("Failed to create credentials for user: {}", savedUser.getEmail());
             // Continue anyway - user is created but credentials creation failed
         } else {
-            log.info("Created user with temporary password. Email: {}, Password: {}", savedUser.getEmail(), temporaryPassword);
+            log.info("Created user with temporary password. Email: {}, Password: {}", 
+                    savedUser.getEmail(), temporaryPassword);
         }
         
         return userMapper.toResponseDto(savedUser);
@@ -144,7 +147,8 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
         
         // Lock account in Authentication Service
-        authServiceClient.lockUserAccount(user.getId());
+        AuthServiceClient.UserIdRequest request = new AuthServiceClient.UserIdRequest(user.getId());
+        authServiceClient.lockUserAccount(request);
         
         log.info("User locked: {}", user.getEmail());
     }
@@ -159,7 +163,8 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
         
         // Unlock account in Authentication Service
-        authServiceClient.unlockUserAccount(user.getId());
+        AuthServiceClient.UserIdRequest request = new AuthServiceClient.UserIdRequest(user.getId());
+        authServiceClient.unlockUserAccount(request);
         
         log.info("User unlocked: {}", user.getEmail());
     }
@@ -171,7 +176,9 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
         
         // Trigger password reset in Authentication Service
-        ApiResponse<Void> response = authServiceClient.resetUserPassword(user.getId(), user.getEmail());
+        AuthServiceClient.ResetPasswordRequest request = 
+            new AuthServiceClient.ResetPasswordRequest(user.getId(), user.getEmail());
+        ApiResponse<Void> response = authServiceClient.resetUserPassword(request);
         
         if (response.getStatus() != 200) {
             log.error("Failed to reset password for user: {}", user.getEmail());

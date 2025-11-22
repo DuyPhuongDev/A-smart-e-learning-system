@@ -113,7 +113,13 @@ public class ImportExportServiceImpl implements ImportExportService {
                 
                 // Create credentials
                 String temporaryPassword = PasswordGenerator.generateTemporaryPassword();
-                authServiceClient.createUserCredentials(savedUser.getId(), savedUser.getEmail(), temporaryPassword);
+                AuthServiceClient.CreateCredentialsRequest request = 
+                    new AuthServiceClient.CreateCredentialsRequest(
+                        savedUser.getId(), 
+                        savedUser.getEmail(), 
+                        temporaryPassword
+                    );
+                authServiceClient.createUserCredentials(request);
                 
                 log.info("Imported user: {} with temporary password: {}", savedUser.getEmail(), temporaryPassword);
                 successCount++;

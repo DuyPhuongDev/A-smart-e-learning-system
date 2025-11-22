@@ -2,54 +2,55 @@ package com.hcmut.lms.usermanagement.client;
 
 import com.hcmut.lms.common.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
-
+/**
+ * Fallback implementation for AuthServiceClient
+ * Provides circuit breaker pattern when authentication-service is unavailable
+ */
 @Slf4j
 @Component
 public class AuthServiceClientFallback implements AuthServiceClient {
     
     @Override
-    public ApiResponse<Void> createUserCredentials(UUID userId, String email, String temporaryPassword) {
-        log.error("Authentication Service is unavailable. Failed to create credentials for user: {}", email);
+    public ApiResponse<Void> createUserCredentials(CreateCredentialsRequest request) {
+        log.error("Authentication service is unavailable. Failed to create credentials for user: {}", 
+                request.getEmail());
         return ApiResponse.<Void>builder()
-                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .status(503)
                 .message("Authentication service is temporarily unavailable")
-                .timestamp(LocalDateTime.now())
                 .build();
     }
     
     @Override
-    public ApiResponse<Void> resetUserPassword(UUID userId, String email) {
-        log.error("Authentication Service is unavailable. Failed to reset password for user: {}", email);
+    public ApiResponse<Void> resetUserPassword(ResetPasswordRequest request) {
+        log.error("Authentication service is unavailable. Failed to reset password for user: {}", 
+                request.getEmail());
         return ApiResponse.<Void>builder()
-                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .status(503)
                 .message("Authentication service is temporarily unavailable")
-                .timestamp(LocalDateTime.now())
                 .build();
     }
     
     @Override
-    public ApiResponse<Void> lockUserAccount(UUID userId) {
-        log.error("Authentication Service is unavailable. Failed to lock account for user: {}", userId);
+    public ApiResponse<Void> lockUserAccount(UserIdRequest request) {
+        log.error("Authentication service is unavailable. Failed to lock account for user: {}", 
+                request.getUserId());
         return ApiResponse.<Void>builder()
-                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .status(503)
                 .message("Authentication service is temporarily unavailable")
-                .timestamp(LocalDateTime.now())
                 .build();
     }
     
     @Override
-    public ApiResponse<Void> unlockUserAccount(UUID userId) {
-        log.error("Authentication Service is unavailable. Failed to unlock account for user: {}", userId);
+    public ApiResponse<Void> unlockUserAccount(UserIdRequest request) {
+        log.error("Authentication service is unavailable. Failed to unlock account for user: {}", 
+                request.getUserId());
         return ApiResponse.<Void>builder()
-                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .status(503)
                 .message("Authentication service is temporarily unavailable")
-                .timestamp(LocalDateTime.now())
                 .build();
     }
 }
+
 
