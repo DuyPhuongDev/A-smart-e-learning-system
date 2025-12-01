@@ -8,9 +8,6 @@ COPY mvnw pom.xml ./
 COPY common/ ./common/
 COPY authentication-service/pom.xml ./authentication-service/
 
-# Download dependencies
-RUN ./mvnw dependency:go-offline -B -f authentication-service/pom.xml
-
 # Copy source code
 COPY authentication-service/src ./authentication-service/src
 

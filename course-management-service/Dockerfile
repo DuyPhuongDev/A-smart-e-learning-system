@@ -1,7 +1,8 @@
 FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 WORKDIR /workspace/app
 
-# Copy ALL POM files to satisfy parent POM validation
+# Copy POM files to satisfy parent POM validation
+# Only copy pom.xml files that actually exist in the parent pom.xml modules
 COPY pom.xml .
 COPY common/pom.xml common/
 COPY eureka-server/pom.xml eureka-server/
@@ -10,19 +11,11 @@ COPY api-gateway/pom.xml api-gateway/
 COPY authentication-service/pom.xml authentication-service/
 COPY user-management-service/pom.xml user-management-service/
 COPY course-management-service/pom.xml course-management-service/
-COPY assessment-management-service/pom.xml assessment-management-service/
-COPY assessment-execution-service/pom.xml assessment-execution-service/
-COPY course-delivery-service/pom.xml course-delivery-service/
-COPY student-personalization-service/pom.xml student-personalization-service/
-COPY tracking-service/pom.xml tracking-service/
-COPY enrollment-service/pom.xml enrollment-service/
+COPY learning-service/pom.xml learning-service/
+COPY assessment-service/pom.xml assessment-service/
+COPY personalization-service/pom.xml personalization-service/
 COPY notification-service/pom.xml notification-service/
 COPY communication-service/pom.xml communication-service/
-COPY analytics-reporting-service/pom.xml analytics-reporting-service/
-
-# Download dependencies (cached layer with BuildKit cache mount)
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn dependency:go-offline -B -pl :course-management-service -am || true
 
 # Copy source code
 COPY common/src common/src
