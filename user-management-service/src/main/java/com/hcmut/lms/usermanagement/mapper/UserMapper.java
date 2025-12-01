@@ -1,45 +1,39 @@
 package com.hcmut.lms.usermanagement.mapper;
 
-import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequestDto;
-import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequestDto;
-import com.hcmut.lms.usermanagement.model.dto.response.UserDetailResponseDto;
-import com.hcmut.lms.usermanagement.model.dto.response.UserResponseDto;
+import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
 import com.hcmut.lms.usermanagement.model.entity.User;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
-import java.util.List;
-
-@Mapper(componentModel = "spring", uses = {RoleMapper.class})
+@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface UserMapper {
-    
-    @Mapping(target = "roles", source = "userRoles")
-    UserResponseDto toResponseDto(User user);
-    
-    @Mapping(target = "roles", source = "userRoles")
-    UserDetailResponseDto toDetailResponseDto(User user);
-    
-    List<UserResponseDto> toResponseDtoList(List<User> users);
-    
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "role", ignore = true)
+    @Mapping(target = "student", ignore = true)
+    @Mapping(target = "teacher", ignore = true)
+    @Mapping(target = "admin", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "updatedBy", ignore = true)
-    @Mapping(target = "userRoles", ignore = true)
-    @Mapping(target = "avatar", ignore = true)
-    User toEntity(CreateUserRequestDto dto);
+    User toEntity(CreateUserRequest request);
     
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "roleId", source = "role.id")
+    @Mapping(target = "roleName", source = "role.name")
+    @Mapping(target = "studentCode", source = "student.studentCode")
+    @Mapping(target = "teacherCode", source = "teacher.teacherCode")
+    @Mapping(target = "bio", source = "teacher.bio")
+    @Mapping(target = "adminCode", source = "admin.adminCode")
+    UserResponse toResponse(User user);
+    
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "email", ignore = true)
-    @Mapping(target = "studentId", ignore = true)
-    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "role", ignore = true)
+    @Mapping(target = "student", ignore = true)
+    @Mapping(target = "teacher", ignore = true)
+    @Mapping(target = "admin", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "updatedBy", ignore = true)
-    @Mapping(target = "userRoles", ignore = true)
-    void updateEntityFromDto(UpdateUserRequestDto dto, @MappingTarget User user);
+    void updateEntity(UpdateUserRequest request, @MappingTarget User user);
 }
-

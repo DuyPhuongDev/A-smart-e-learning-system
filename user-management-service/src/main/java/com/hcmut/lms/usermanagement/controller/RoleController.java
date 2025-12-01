@@ -1,9 +1,8 @@
 package com.hcmut.lms.usermanagement.controller;
 
-import com.hcmut.lms.usermanagement.model.dto.request.CreateRoleRequestDto;
-import com.hcmut.lms.usermanagement.model.dto.request.UpdateRoleRequestDto;
-import com.hcmut.lms.usermanagement.model.dto.response.RoleDetailResponseDto;
-import com.hcmut.lms.usermanagement.model.dto.response.RoleResponseDto;
+import com.hcmut.lms.usermanagement.model.dto.request.CreateRoleRequest;
+import com.hcmut.lms.usermanagement.model.dto.request.UpdateRoleRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.RoleResponse;
 import com.hcmut.lms.usermanagement.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,33 +20,33 @@ public class RoleController {
     
     private final RoleService roleService;
     
-    @GetMapping
-    public List<RoleResponseDto> getAllRoles(
-            @RequestParam(defaultValue = "true") boolean includeCustom) {
-        return roleService.getAllRoles(includeCustom);
+    @PostMapping
+    public ResponseEntity<RoleResponse> create(@Valid @RequestBody CreateRoleRequest request) {
+        RoleResponse response = roleService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
     @GetMapping("/{id}")
-    public RoleDetailResponseDto getRoleById(@PathVariable UUID id) {
-        return roleService.getRoleById(id);
+    public ResponseEntity<RoleResponse> getById(@PathVariable UUID id) {
+        RoleResponse response = roleService.getById(id);
+        return ResponseEntity.ok(response);
     }
     
-    @PostMapping
-    public ResponseEntity<RoleResponseDto> createRole(@Valid @RequestBody CreateRoleRequestDto dto) {
-        RoleResponseDto role = roleService.createRole(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(role);
+    @GetMapping
+    public ResponseEntity<List<RoleResponse>> getAll() {
+        List<RoleResponse> responses = roleService.getAll();
+        return ResponseEntity.ok(responses);
     }
     
     @PutMapping("/{id}")
-    public RoleResponseDto updateRole(
-            @PathVariable UUID id,
-            @Valid @RequestBody UpdateRoleRequestDto dto) {
-        return roleService.updateRole(id, dto);
+    public ResponseEntity<RoleResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateRoleRequest request) {
+        RoleResponse response = roleService.update(id, request);
+        return ResponseEntity.ok(response);
     }
     
     @DeleteMapping("/{id}")
-    public void deleteRole(@PathVariable UUID id) {
-        roleService.deleteRole(id);
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        roleService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
-

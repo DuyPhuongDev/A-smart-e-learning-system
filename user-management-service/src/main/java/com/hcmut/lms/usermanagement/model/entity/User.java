@@ -1,6 +1,5 @@
 package com.hcmut.lms.usermanagement.model.entity;
 
-import com.hcmut.lms.usermanagement.model.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,16 +9,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users", indexes = {
-    @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_status", columnList = "status"),
-    @Index(name = "idx_student_id", columnList = "student_id")
-})
+@Table(name = "users")
 @Data
 @Builder
 @NoArgsConstructor
@@ -30,48 +23,48 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
-    @Column(unique = true, nullable = false, length = 255)
+    @Column(length = 255)
+    private String password;
+    
+    @Column(unique = true, length = 255)
     private String email;
     
-    @Column(name = "full_name", nullable = false, length = 255)
-    private String fullName;
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
     
-    @Column(length = 500)
-    private String avatar;
+    @Column(name = "first_name", length = 255)
+    private String firstName;
+    
+    @Column(name = "last_name", length = 255)
+    private String lastName;
     
     @Column(length = 20)
     private String phone;
     
-    @Column(length = 500)
-    private String address;
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
     
-    @Column(length = 100)
-    private String department;
+    @Column(name = "specialization_id")
+    private Integer specializationId;
     
-    @Column(name = "student_id", length = 50)
-    private String studentId;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    @Builder.Default
-    private UserStatus status = UserStatus.ACTIVE;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
     
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
     @UpdateTimestamp
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
     
-    @Column(name = "created_by")
-    private UUID createdBy;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Student student;
     
-    @Column(name = "updated_by")
-    private UUID updatedBy;
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Teacher teacher;
     
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private Set<UserRole> userRoles = new HashSet<>();
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Admin admin;
 }
-

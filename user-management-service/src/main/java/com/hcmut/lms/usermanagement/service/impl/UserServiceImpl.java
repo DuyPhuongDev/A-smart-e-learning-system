@@ -1,191 +1,185 @@
 package com.hcmut.lms.usermanagement.service.impl;
 
-import com.hcmut.lms.common.dto.ApiResponse;
-import com.hcmut.lms.usermanagement.client.AuthServiceClient;
-import com.hcmut.lms.usermanagement.exception.DuplicateEmailException;
-import com.hcmut.lms.usermanagement.exception.UserNotFoundException;
+import com.hcmut.lms.usermanagement.exception.DuplicateResourceException;
+import com.hcmut.lms.usermanagement.exception.ResourceNotFoundException;
 import com.hcmut.lms.usermanagement.mapper.UserMapper;
-import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequestDto;
-import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequestDto;
-import com.hcmut.lms.usermanagement.model.dto.response.UserDetailResponseDto;
-import com.hcmut.lms.usermanagement.model.dto.response.UserResponseDto;
-import com.hcmut.lms.usermanagement.model.entity.Role;
-import com.hcmut.lms.usermanagement.model.entity.User;
-import com.hcmut.lms.usermanagement.model.entity.UserRole;
-import com.hcmut.lms.usermanagement.model.enums.UserStatus;
-import com.hcmut.lms.usermanagement.repository.RoleRepository;
-import com.hcmut.lms.usermanagement.repository.UserRepository;
+import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
+import com.hcmut.lms.usermanagement.model.entity.*;
+import com.hcmut.lms.usermanagement.repository.*;
 import com.hcmut.lms.usermanagement.service.UserService;
-import com.hcmut.lms.usermanagement.util.PasswordGenerator;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
+    private final AdminRepository adminRepository;
     private final UserMapper userMapper;
-    private final AuthServiceClient authServiceClient;
-    
-    @Override
-    @Transactional(readOnly = true)
-    public Page<UserResponseDto> getAllUsers(String search, UserStatus status, String department, UUID roleId, Pageable pageable) {
-        Page<User> usersPage;
-        
-        if (roleId != null) {
-            usersPage = userRepository.findByRoleAndFilters(roleId, search, status, pageable);
-        } else {
-            usersPage = userRepository.findByFilters(search, status, department, pageable);
-        }
-        
-        return usersPage.map(userMapper::toResponseDto);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public UserDetailResponseDto getUserById(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
-        return userMapper.toDetailResponseDto(user);
-    }
     
     @Override
     @Transactional
-    public UserResponseDto createUser(CreateUserRequestDto dto) {
-        // Check if email already exists
-        if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new DuplicateEmailException("Email already exists: " + dto.getEmail());
+    public UserResponse create(CreateUserRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateResourceException("User", "email", request.getEmail());
         }
         
-        // Create user entity
-        User user = userMapper.toEntity(dto);
-        user.setStatus(UserStatus.ACTIVE);
+        Role role = roleRepository.findById(request.getRoleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Role", "id", request.getRoleId()));
         
-        // Assign roles if provided
-        if (dto.getRoleIds() != null && !dto.getRoleIds().isEmpty()) {
-            Set<UserRole> userRoles = new HashSet<>();
-            for (UUID roleId : dto.getRoleIds()) {
-                Role role = roleRepository.findById(roleId)
-                        .orElseThrow(() -> new RuntimeException("Role not found with id: " + roleId));
-                
-                UserRole userRole = UserRole.builder()
-                        .user(user)
-                        .role(role)
-                        .build();
-                userRoles.add(userRole);
+        User user = userMapper.toEntity(request);
+        user.setRole(role);
+        user = userRepository.save(user);
+        
+        // Create user type specific records
+        if (request.getStudentCode() != null) {
+            if (studentRepository.existsByStudentCode(request.getStudentCode())) {
+                throw new DuplicateResourceException("Student", "studentCode", request.getStudentCode());
             }
-            user.setUserRoles(userRoles);
+            Student student = Student.builder()
+                    .user(user)
+                    .studentCode(request.getStudentCode())
+                    .build();
+            studentRepository.save(student);
         }
         
-        // Save user
-        User savedUser = userRepository.save(user);
-        
-        // Create credentials in Authentication Service
-        String temporaryPassword = PasswordGenerator.generateTemporaryPassword();
-        AuthServiceClient.CreateCredentialsRequest request = 
-            new AuthServiceClient.CreateCredentialsRequest(
-                savedUser.getId(), 
-                savedUser.getEmail(), 
-                temporaryPassword
-            );
-        ApiResponse<Void> authResponse = authServiceClient.createUserCredentials(request);
-        
-        if (authResponse.getStatus() != 200 && authResponse.getStatus() != 201) {
-            log.error("Failed to create credentials for user: {}", savedUser.getEmail());
-            // Continue anyway - user is created but credentials creation failed
-        } else {
-            log.info("Created user with temporary password. Email: {}, Password: {}", 
-                    savedUser.getEmail(), temporaryPassword);
+        if (request.getTeacherCode() != null) {
+            if (teacherRepository.existsByTeacherCode(request.getTeacherCode())) {
+                throw new DuplicateResourceException("Teacher", "teacherCode", request.getTeacherCode());
+            }
+            Teacher teacher = Teacher.builder()
+                    .user(user)
+                    .teacherCode(request.getTeacherCode())
+                    .bio(request.getBio())
+                    .build();
+            teacherRepository.save(teacher);
         }
         
-        return userMapper.toResponseDto(savedUser);
-    }
-    
-    @Override
-    @Transactional
-    public UserResponseDto updateUser(UUID id, UpdateUserRequestDto dto) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
-        
-        userMapper.updateEntityFromDto(dto, user);
-        User updatedUser = userRepository.save(user);
-        
-        return userMapper.toResponseDto(updatedUser);
-    }
-    
-    @Override
-    @Transactional
-    public void deleteUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
-        
-        // Soft delete
-        user.setStatus(UserStatus.DELETED);
-        userRepository.save(user);
-        
-        log.info("User deleted (soft): {}", user.getEmail());
-    }
-    
-    @Override
-    @Transactional
-    public void lockUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
-        
-        user.setStatus(UserStatus.LOCKED);
-        userRepository.save(user);
-        
-        // Lock account in Authentication Service
-        AuthServiceClient.UserIdRequest request = new AuthServiceClient.UserIdRequest(user.getId());
-        authServiceClient.lockUserAccount(request);
-        
-        log.info("User locked: {}", user.getEmail());
-    }
-    
-    @Override
-    @Transactional
-    public void unlockUser(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
-        
-        user.setStatus(UserStatus.ACTIVE);
-        userRepository.save(user);
-        
-        // Unlock account in Authentication Service
-        AuthServiceClient.UserIdRequest request = new AuthServiceClient.UserIdRequest(user.getId());
-        authServiceClient.unlockUserAccount(request);
-        
-        log.info("User unlocked: {}", user.getEmail());
-    }
-    
-    @Override
-    @Transactional
-    public void resetPassword(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
-        
-        // Trigger password reset in Authentication Service
-        AuthServiceClient.ResetPasswordRequest request = 
-            new AuthServiceClient.ResetPasswordRequest(user.getId(), user.getEmail());
-        ApiResponse<Void> response = authServiceClient.resetUserPassword(request);
-        
-        if (response.getStatus() != 200) {
-            log.error("Failed to reset password for user: {}", user.getEmail());
-            throw new RuntimeException("Failed to reset password");
+        if (request.getAdminCode() != null) {
+            if (adminRepository.existsByAdminCode(request.getAdminCode())) {
+                throw new DuplicateResourceException("Admin", "adminCode", request.getAdminCode());
+            }
+            Admin admin = Admin.builder()
+                    .user(user)
+                    .adminCode(request.getAdminCode())
+                    .build();
+            adminRepository.save(admin);
         }
         
-        log.info("Password reset triggered for user: {}", user.getEmail());
+        return userMapper.toResponse(user);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getById(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+        return userMapper.toResponse(user);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
+        return userMapper.toResponse(user);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getAll() {
+        return userRepository.findAll().stream()
+                .map(userMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional
+    public UserResponse update(UUID id, UpdateUserRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+        
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new DuplicateResourceException("User", "email", request.getEmail());
+            }
+        }
+        
+        if (request.getRoleId() != null) {
+            Role role = roleRepository.findById(request.getRoleId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Role", "id", request.getRoleId()));
+            user.setRole(role);
+        }
+        
+        userMapper.updateEntity(request, user);
+        user = userRepository.save(user);
+        
+        // Update user type specific records
+        if (request.getStudentCode() != null) {
+            Student student = user.getStudent();
+            if (student == null) {
+                student = Student.builder()
+                        .user(user)
+                        .studentCode(request.getStudentCode())
+                        .build();
+                studentRepository.save(student);
+            } else {
+                student.setStudentCode(request.getStudentCode());
+                studentRepository.save(student);
+            }
+        }
+        
+        if (request.getTeacherCode() != null) {
+            Teacher teacher = user.getTeacher();
+            if (teacher == null) {
+                teacher = Teacher.builder()
+                        .user(user)
+                        .teacherCode(request.getTeacherCode())
+                        .bio(request.getBio())
+                        .build();
+                teacherRepository.save(teacher);
+            } else {
+                teacher.setTeacherCode(request.getTeacherCode());
+                if (request.getBio() != null) {
+                    teacher.setBio(request.getBio());
+                }
+                teacherRepository.save(teacher);
+            }
+        }
+        
+        if (request.getAdminCode() != null) {
+            Admin admin = user.getAdmin();
+            if (admin == null) {
+                admin = Admin.builder()
+                        .user(user)
+                        .adminCode(request.getAdminCode())
+                        .build();
+                adminRepository.save(admin);
+            } else {
+                admin.setAdminCode(request.getAdminCode());
+                adminRepository.save(admin);
+            }
+        }
+        
+        return userMapper.toResponse(user);
+    }
+    
+    @Override
+    @Transactional
+    public void delete(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+        userRepository.delete(user);
     }
 }
-
