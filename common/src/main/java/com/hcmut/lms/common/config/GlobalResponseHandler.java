@@ -10,8 +10,11 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+import org.springframework.http.server.ServletServerHttpResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.time.LocalDateTime;
 
@@ -48,11 +51,8 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
             return false;
         }
 
-        // Bỏ qua nếu return type là ResponseEntity (sẽ được xử lý riêng)
-        if (returnType.getParameterType().equals(ResponseEntity.class)) {
-            return false;
-        }
-
+        // Cho phép xử lý cả ResponseEntity và các return type khác
+        // Khi controller trả về ResponseEntity<T>, Spring sẽ unwrap và body sẽ được truyền vào beforeBodyWrite()
         return true;
     }
 
@@ -74,13 +74,94 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
             path = ((ServletServerHttpRequest) request).getServletRequest().getRequestURI();
         }
 
+        // Xác định status code: ưu tiên lấy từ response, nếu không có thì suy luận từ HTTP method
+        int statusCode = determineStatusCode(returnType, request, response);
+        
+        // Nếu body là ErrorResponse (có method getStatus và getMessage), lấy status code và message từ đó
+        if (body != null) {
+            try {
+                java.lang.reflect.Method getStatusMethod = body.getClass().getMethod("getStatus");
+                java.lang.reflect.Method getMessageMethod = body.getClass().getMethod("getMessage");
+                
+                // Check if it's an ErrorResponse-like object
+                if (getStatusMethod != null && getMessageMethod != null) {
+                    Object statusObj = getStatusMethod.invoke(body);
+                    Object messageObj = getMessageMethod.invoke(body);
+                    
+                    if (statusObj instanceof Integer) {
+                        statusCode = (Integer) statusObj;
+                    }
+                    String message = messageObj != null ? messageObj.toString() : "Error";
+                    
+                    return ApiResponse.builder()
+                            .status(statusCode)
+                            .message(message)
+                            .data(body)
+                            .timestamp(LocalDateTime.now())
+                            .path(path)
+                            .build();
+                }
+            } catch (Exception e) {
+                // Not an ErrorResponse, fallback to default behavior
+            }
+        }
+
+        // Nếu body là null (ví dụ: @ResponseStatus(NO_CONTENT) hoặc void return type)
+        // Vẫn wrap vào ApiResponse format để đảm bảo consistency
+        if (body == null) {
+            return ApiResponse.builder()
+                    .status(statusCode)
+                    .message(statusCode == HttpStatus.NO_CONTENT.value() ? "No Content" : "Success")
+                    .data(null)
+                    .timestamp(LocalDateTime.now())
+                    .path(path)
+                    .build();
+        }
+
         return ApiResponse.builder()
-                .status(HttpStatus.OK.value())
+                .status(statusCode)
                 .message("Success")
                 .data(body)
                 .timestamp(LocalDateTime.now())
                 .path(path)
                 .build();
+    }
+
+    /**
+     * Xác định status code dựa trên @ResponseStatus annotation, response và HTTP method
+     * Best practice: Ưu tiên @ResponseStatus > HttpServletResponse > suy luận từ HTTP method
+     */
+    private int determineStatusCode(MethodParameter returnType, ServerHttpRequest request, ServerHttpResponse response) {
+        // Ưu tiên 1: Kiểm tra @ResponseStatus annotation trên method
+        ResponseStatus responseStatus = returnType.getMethodAnnotation(ResponseStatus.class);
+        if (responseStatus != null) {
+            return responseStatus.value().value();
+        }
+        
+        // Ưu tiên 2: Lấy status code từ HttpServletResponse (nếu đã được set)
+        if (response instanceof ServletServerHttpResponse) {
+            HttpServletResponse servletResponse = ((ServletServerHttpResponse) response).getServletResponse();
+            int status = servletResponse.getStatus();
+            // Nếu status code đã được set (khác 0), sử dụng nó
+            if (status > 0) {
+                return status;
+            }
+        }
+        
+        // Ưu tiên 3: Suy luận từ HTTP method nếu return type là ResponseEntity
+        Class<?> returnTypeClass = returnType.getParameterType();
+        if (ResponseEntity.class.isAssignableFrom(returnTypeClass)) {
+            String method = request.getMethod() != null ? request.getMethod().name() : "GET";
+            return switch (method) {
+                case "POST" -> HttpStatus.CREATED.value(); // 201
+                case "PUT", "PATCH" -> HttpStatus.OK.value(); // 200
+                case "DELETE" -> HttpStatus.NO_CONTENT.value(); // 204
+                default -> HttpStatus.OK.value(); // 200
+            };
+        }
+        
+        // Mặc định: 200 OK
+        return HttpStatus.OK.value();
     }
 }
 
