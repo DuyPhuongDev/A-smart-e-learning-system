@@ -77,33 +77,10 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         // Xác định status code: ưu tiên lấy từ response, nếu không có thì suy luận từ HTTP method
         int statusCode = determineStatusCode(returnType, request, response);
         
-        // Nếu body là ErrorResponse (có method getStatus và getMessage), lấy status code và message từ đó
-        if (body != null) {
-            try {
-                java.lang.reflect.Method getStatusMethod = body.getClass().getMethod("getStatus");
-                java.lang.reflect.Method getMessageMethod = body.getClass().getMethod("getMessage");
-                
-                // Check if it's an ErrorResponse-like object
-                if (getStatusMethod != null && getMessageMethod != null) {
-                    Object statusObj = getStatusMethod.invoke(body);
-                    Object messageObj = getMessageMethod.invoke(body);
-                    
-                    if (statusObj instanceof Integer) {
-                        statusCode = (Integer) statusObj;
-                    }
-                    String message = messageObj != null ? messageObj.toString() : "Error";
-                    
-                    return ApiResponse.builder()
-                            .status(statusCode)
-                            .message(message)
-                            .data(body)
-                            .timestamp(LocalDateTime.now())
-                            .path(path)
-                            .build();
-                }
-            } catch (Exception e) {
-                // Not an ErrorResponse, fallback to default behavior
-            }
+        // Nếu body là String (thường là error message từ exception handlers), dùng làm message
+        String message = "Success";
+        if (body instanceof String) {
+            message = (String) body;
         }
 
         // Nếu body là null (ví dụ: @ResponseStatus(NO_CONTENT) hoặc void return type)
@@ -111,7 +88,18 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         if (body == null) {
             return ApiResponse.builder()
                     .status(statusCode)
-                    .message(statusCode == HttpStatus.NO_CONTENT.value() ? "No Content" : "Success")
+                    .message(statusCode == HttpStatus.NO_CONTENT.value() ? "No Content" : message)
+                    .data(null)
+                    .timestamp(LocalDateTime.now())
+                    .path(path)
+                    .build();
+        }
+
+        // Nếu body là String (error message), đặt vào message và data = null
+        if (body instanceof String) {
+            return ApiResponse.builder()
+                    .status(statusCode)
+                    .message((String) body)
                     .data(null)
                     .timestamp(LocalDateTime.now())
                     .path(path)
@@ -120,7 +108,7 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
 
         return ApiResponse.builder()
                 .status(statusCode)
-                .message("Success")
+                .message(message)
                 .data(body)
                 .timestamp(LocalDateTime.now())
                 .path(path)
