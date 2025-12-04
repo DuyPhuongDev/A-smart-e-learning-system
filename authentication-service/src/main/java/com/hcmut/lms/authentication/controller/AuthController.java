@@ -1,122 +1,81 @@
 package com.hcmut.lms.authentication.controller;
 
+import com.hcmut.lms.authentication.model.dto.request.*;
+import com.hcmut.lms.authentication.model.dto.response.AuthResponse;
+import com.hcmut.lms.authentication.model.dto.response.TokenValidationResponse;
+import com.hcmut.lms.authentication.service.AuthService;
+import com.hcmut.lms.authentication.util.JwtUtil;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 /**
  * Authentication Controller
- * Handles user authentication, registration, and token management
+ * Handles user authentication and token management
  */
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @PostMapping("/login")
-    public String login(@RequestBody LoginRequest request) {
-        // TODO: Implement login logic with JWT generation
-        // 1. Validate credentials
-        // 2. Generate JWT access token
-        // 3. Generate refresh token
-        // 4. Return tokens
-        return "Login endpoint - To be implemented";
-    }
+    private final AuthService authService;
+    private final JwtUtil jwtUtil;
 
-    @PostMapping("/register")
-    public String register(@RequestBody RegisterRequest request) {
-        // TODO: Implement registration logic
-        // 1. Validate input data
-        // 2. Create user account (call User Management Service)
-        // 3. Hash password
-        // 4. Send welcome email
-        return "Register endpoint - To be implemented";
+    @PostMapping("/login")
+    @ResponseStatus(HttpStatus.OK)
+    public AuthResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 
     @PostMapping("/refresh-token")
-    public String refreshToken(@RequestBody RefreshTokenRequest request) {
-        // TODO: Implement token refresh logic
-        // 1. Validate refresh token
-        // 2. Generate new access token
-        // 3. Optionally rotate refresh token
-        return "Refresh token endpoint - To be implemented";
+    @ResponseStatus(HttpStatus.OK)
+    public AuthResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return authService.refreshToken(request);
     }
 
     @PostMapping("/validate-token")
-    public Boolean validateToken(@RequestHeader("Authorization") String token) {
-        // TODO: Implement token validation logic
-        // 1. Extract JWT from header
-        // 2. Validate signature
-        // 3. Check expiration
-        // 4. Return validation result
-        return true;
+    @ResponseStatus(HttpStatus.OK)
+    public TokenValidationResponse validateToken(@RequestHeader("Authorization") String authorization) {
+        String token = extractTokenFromHeader(authorization);
+        return authService.validateToken(token);
     }
     
     @PostMapping("/logout")
-    public String logout(@RequestHeader("Authorization") String token) {
-        // TODO: Implement logout logic
-        // 1. Invalidate refresh token
-        // 2. Add access token to blacklist (optional)
-        return "Logout endpoint - To be implemented";
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.getRefreshToken());
     }
 
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        // TODO: Implement forgot password logic
-        // 1. Validate email exists
-        // 2. Generate reset token
-        // 3. Send reset email
-        return "Forgot password endpoint - To be implemented";
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
     }
 
     @PostMapping("/reset-password")
-    public String resetPassword(@RequestBody ResetPasswordRequest request) {
-        // TODO: Implement reset password logic
-        // 1. Validate reset token
-        // 2. Update password
-        // 3. Invalidate reset token
-        return "Reset password endpoint - To be implemented";
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
     }
 
     @PostMapping("/change-password")
-    public String changePassword(@RequestBody ChangePasswordRequest request) {
-        // TODO: Implement change password logic
-        // 1. Validate current password
-        // 2. Update to new password
-        return "Change password endpoint - To be implemented";
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(
+            @RequestHeader("Authorization") String authorization,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        String token = extractTokenFromHeader(authorization);
+        UUID userId = jwtUtil.extractUserId(token);
+        authService.changePassword(userId, request);
     }
-
-    // DTO Classes (placeholder - should be in separate files)
-    public static class LoginRequest {
-        private String email;
-        private String password;
-        // getters/setters
-    }
-
-    public static class RegisterRequest {
-        private String email;
-        private String password;
-        private String fullName;
-        // getters/setters
-    }
-
-    public static class RefreshTokenRequest {
-        private String refreshToken;
-        // getters/setters
-    }
-
-    public static class ForgotPasswordRequest {
-        private String email;
-        // getters/setters
-    }
-
-    public static class ResetPasswordRequest {
-        private String token;
-        private String newPassword;
-        // getters/setters
-    }
-
-    public static class ChangePasswordRequest {
-        private String currentPassword;
-        private String newPassword;
-        // getters/setters
+    
+    private String extractTokenFromHeader(String authorization) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return authorization.substring(7);
+        }
+        throw new IllegalArgumentException("Invalid Authorization header");
     }
 }
 

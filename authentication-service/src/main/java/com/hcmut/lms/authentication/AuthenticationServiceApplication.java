@@ -7,7 +7,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication(scanBasePackages = {"com.hcmut.lms.authentication", "com.hcmut.lms.common"})
 @EnableDiscoveryClient
-@EnableFeignClients
+@EnableFeignClients(basePackages = "com.hcmut.lms.authentication.client")
 public class AuthenticationServiceApplication {
 
     public static void main(String[] args) {

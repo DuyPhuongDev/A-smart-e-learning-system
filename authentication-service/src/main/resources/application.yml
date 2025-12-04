@@ -21,12 +21,18 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        default_schema: authentication
 
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:your-secret-key-change-this-in-production-min-256-bits}
   expiration: 86400000  # 24 hours in milliseconds
   refresh-expiration: 604800000  # 7 days in milliseconds
+
+# Authentication Configuration
+auth:
+  max-failed-attempts: 5
+  lockout-duration-minutes: 30
 
 eureka:
   client:

@@ -7,7 +7,6 @@ import com.hcmut.lms.usermanagement.service.RoleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,32 +20,29 @@ public class RoleController {
     private final RoleService roleService;
     
     @PostMapping
-    public ResponseEntity<RoleResponse> create(@Valid @RequestBody CreateRoleRequest request) {
-        RoleResponse response = roleService.create(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @ResponseStatus(HttpStatus.CREATED)
+    public RoleResponse create(@Valid @RequestBody CreateRoleRequest request) {
+        return roleService.create(request);
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<RoleResponse> getById(@PathVariable UUID id) {
-        RoleResponse response = roleService.getById(id);
-        return ResponseEntity.ok(response);
+    public RoleResponse getById(@PathVariable UUID id) {
+        return roleService.getById(id);
     }
     
     @GetMapping
-    public ResponseEntity<List<RoleResponse>> getAll() {
-        List<RoleResponse> responses = roleService.getAll();
-        return ResponseEntity.ok(responses);
+    public List<RoleResponse> getAll() {
+        return roleService.getAll();
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<RoleResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateRoleRequest request) {
-        RoleResponse response = roleService.update(id, request);
-        return ResponseEntity.ok(response);
+    public RoleResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateRoleRequest request) {
+        return roleService.update(id, request);
     }
     
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) {
         roleService.delete(id);
-        return ResponseEntity.noContent().build();
     }
 }
