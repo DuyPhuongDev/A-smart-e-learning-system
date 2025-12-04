@@ -32,19 +32,25 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
     
-    public String generateAccessToken(UUID userId, String email) {
+    public String generateAccessToken(UUID userId, String email, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId.toString());
         claims.put("email", email);
+        claims.put("role", role);
         return createToken(claims, userId.toString(), expiration);
     }
     
-    public String generateRefreshToken(UUID userId, String email) {
+    public String generateRefreshToken(UUID userId, String email, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId.toString());
         claims.put("email", email);
+        claims.put("role", role);
         claims.put("type", "refresh");
         return createToken(claims, userId.toString(), refreshExpiration);
+    }
+    
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
     
     private String createToken(Map<String, Object> claims, String subject, Long expiration) {

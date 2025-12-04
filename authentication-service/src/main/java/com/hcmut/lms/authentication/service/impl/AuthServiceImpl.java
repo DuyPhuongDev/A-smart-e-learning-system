@@ -1,5 +1,6 @@
 package com.hcmut.lms.authentication.service.impl;
 
+import com.hcmut.lms.authentication.client.UserManagementClient;
 import com.hcmut.lms.authentication.exception.*;
 import com.hcmut.lms.authentication.model.dto.request.*;
 import com.hcmut.lms.authentication.model.dto.response.AuthResponse;
@@ -32,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordUtil passwordUtil;
     private final JwtUtil jwtUtil;
+    private final UserManagementClient userManagementClient;
     
     @Value("${auth.max-failed-attempts:5}")
     private int maxFailedAttempts;
@@ -73,9 +75,12 @@ public class AuthServiceImpl implements AuthService {
         credentials.setLockedUntil(null);
         userCredentialsRepository.save(credentials);
         
-        // Generate tokens
-        String accessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail());
-        String refreshTokenValue = jwtUtil.generateRefreshToken(credentials.getUserId(), credentials.getEmail());
+        // Get user role from user-management-service
+        String role = getUserRole(credentials.getUserId());
+        
+        // Generate tokens with role
+        String accessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail(), role);
+        String refreshTokenValue = jwtUtil.generateRefreshToken(credentials.getUserId(), credentials.getEmail(), role);
         
         // Save refresh token
         String refreshTokenHash = passwordUtil.hashToken(refreshTokenValue);
@@ -150,8 +155,11 @@ public class AuthServiceImpl implements AuthService {
         UserCredentials credentials = userCredentialsRepository.findByUserId(refreshToken.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", refreshToken.getUserId()));
         
-        // Generate new access token
-        String newAccessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail());
+        // Get user role from user-management-service
+        String role = getUserRole(credentials.getUserId());
+        
+        // Generate new access token with role
+        String newAccessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail(), role);
         
         log.info("Token refreshed for user {}", credentials.getEmail());
         
@@ -175,17 +183,32 @@ public class AuthServiceImpl implements AuthService {
             
             UUID userId = jwtUtil.extractUserId(token);
             String email = jwtUtil.extractEmail(token);
+            String role = jwtUtil.extractRole(token);
             
             return TokenValidationResponse.builder()
                     .valid(true)
                     .userId(userId)
                     .email(email)
+                    .role(role)
                     .build();
         } catch (Exception e) {
             log.warn("Token validation failed: {}", e.getMessage());
             return TokenValidationResponse.builder()
                     .valid(false)
                     .build();
+        }
+    }
+    
+    /**
+     * Get user role from user-management-service
+     */
+    private String getUserRole(UUID userId) {
+        try {
+            UserManagementClient.UserRoleResponse roleResponse = userManagementClient.getUserRole(userId);
+            return roleResponse.getRoleName();
+        } catch (Exception e) {
+            log.warn("Failed to get user role for {}: {}", userId, e.getMessage());
+            return "UNKNOWN"; // Default role if service unavailable
         }
     }
     
