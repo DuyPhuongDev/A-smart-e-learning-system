@@ -1,6 +1,7 @@
 package com.hcmut.lms.authentication.controller;
 
 import com.hcmut.lms.authentication.model.dto.request.CreateCredentialsRequest;
+import com.hcmut.lms.authentication.model.dto.request.UpdateEmailRequest;
 import com.hcmut.lms.authentication.model.dto.request.UserIdRequest;
 import com.hcmut.lms.authentication.service.InternalAuthService;
 import jakarta.validation.Valid;
@@ -36,6 +37,12 @@ public class InternalAuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unlockAccount(@Valid @RequestBody UserIdRequest request) {
         internalAuthService.unlockAccount(request.getUserId());
+    }
+    
+    @PostMapping("/update-email")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateEmail(@Valid @RequestBody UpdateEmailRequest request) {
+        internalAuthService.updateEmail(request);
     }
 }
 

@@ -1,6 +1,5 @@
 package com.hcmut.lms.usermanagement.client;
 
-import com.hcmut.lms.common.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -13,43 +12,38 @@ import org.springframework.stereotype.Component;
 public class AuthServiceClientFallback implements AuthServiceClient {
     
     @Override
-    public ApiResponse<Void> createUserCredentials(CreateCredentialsRequest request) {
+    public void createUserCredentials(CreateCredentialsRequest request) {
         log.error("Authentication service is unavailable. Failed to create credentials for user: {}", 
                 request.getEmail());
-        return ApiResponse.<Void>builder()
-                .status(503)
-                .message("Authentication service is temporarily unavailable")
-                .build();
+        throw new RuntimeException("Authentication service is temporarily unavailable");
     }
     
     @Override
-    public ApiResponse<Void> resetUserPassword(ResetPasswordRequest request) {
+    public void resetUserPassword(ResetPasswordRequest request) {
         log.error("Authentication service is unavailable. Failed to reset password for user: {}", 
                 request.getEmail());
-        return ApiResponse.<Void>builder()
-                .status(503)
-                .message("Authentication service is temporarily unavailable")
-                .build();
+        throw new RuntimeException("Authentication service is temporarily unavailable");
     }
     
     @Override
-    public ApiResponse<Void> lockUserAccount(UserIdRequest request) {
+    public void lockUserAccount(UserIdRequest request) {
         log.error("Authentication service is unavailable. Failed to lock account for user: {}", 
                 request.getUserId());
-        return ApiResponse.<Void>builder()
-                .status(503)
-                .message("Authentication service is temporarily unavailable")
-                .build();
+        throw new RuntimeException("Authentication service is temporarily unavailable");
     }
     
     @Override
-    public ApiResponse<Void> unlockUserAccount(UserIdRequest request) {
+    public void unlockUserAccount(UserIdRequest request) {
         log.error("Authentication service is unavailable. Failed to unlock account for user: {}", 
                 request.getUserId());
-        return ApiResponse.<Void>builder()
-                .status(503)
-                .message("Authentication service is temporarily unavailable")
-                .build();
+        throw new RuntimeException("Authentication service is temporarily unavailable");
+    }
+    
+    @Override
+    public void updateUserEmail(UpdateEmailRequest request) {
+        log.error("Authentication service is unavailable. Failed to update email for user: {}", 
+                request.getUserId());
+        throw new RuntimeException("Authentication service is temporarily unavailable");
     }
 }
 

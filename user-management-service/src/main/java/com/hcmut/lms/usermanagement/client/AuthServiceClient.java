@@ -1,6 +1,5 @@
 package com.hcmut.lms.usermanagement.client;
 
-import com.hcmut.lms.common.dto.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,25 +20,31 @@ public interface AuthServiceClient {
      * Create user credentials in authentication service
      */
     @PostMapping("/api/auth/internal/create-credentials")
-    ApiResponse<Void> createUserCredentials(@RequestBody CreateCredentialsRequest request);
+    void createUserCredentials(@RequestBody CreateCredentialsRequest request);
     
     /**
      * Reset user password
      */
     @PostMapping("/api/auth/internal/reset-password")
-    ApiResponse<Void> resetUserPassword(@RequestBody ResetPasswordRequest request);
+    void resetUserPassword(@RequestBody ResetPasswordRequest request);
     
     /**
      * Lock user account
      */
     @PostMapping("/api/auth/internal/lock-account")
-    ApiResponse<Void> lockUserAccount(@RequestBody UserIdRequest request);
+    void lockUserAccount(@RequestBody UserIdRequest request);
     
     /**
      * Unlock user account
      */
     @PostMapping("/api/auth/internal/unlock-account")
-    ApiResponse<Void> unlockUserAccount(@RequestBody UserIdRequest request);
+    void unlockUserAccount(@RequestBody UserIdRequest request);
+    
+    /**
+     * Update user email (sync from user-management to authentication)
+     */
+    @PostMapping("/api/auth/internal/update-email")
+    void updateUserEmail(@RequestBody UpdateEmailRequest request);
     
     // DTO Classes
     class CreateCredentialsRequest {
@@ -94,6 +99,29 @@ public interface AuthServiceClient {
         
         public UUID getUserId() { return userId; }
         public void setUserId(UUID userId) { this.userId = userId; }
+    }
+    
+    class UpdateEmailRequest {
+        private UUID userId;
+        private String oldEmail;
+        private String newEmail;
+        
+        public UpdateEmailRequest() {}
+        
+        public UpdateEmailRequest(UUID userId, String oldEmail, String newEmail) {
+            this.userId = userId;
+            this.oldEmail = oldEmail;
+            this.newEmail = newEmail;
+        }
+        
+        public UUID getUserId() { return userId; }
+        public void setUserId(UUID userId) { this.userId = userId; }
+        
+        public String getOldEmail() { return oldEmail; }
+        public void setOldEmail(String oldEmail) { this.oldEmail = oldEmail; }
+        
+        public String getNewEmail() { return newEmail; }
+        public void setNewEmail(String newEmail) { this.newEmail = newEmail; }
     }
 }
 

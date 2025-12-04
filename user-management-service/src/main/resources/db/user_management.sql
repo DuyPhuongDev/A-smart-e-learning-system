@@ -22,7 +22,6 @@ CREATE TABLE "roles" (
 
 CREATE TABLE "users" (
   "id" uuid PRIMARY KEY,
-  "password" varchar,
   "email" varchar UNIQUE,
   "avatar_url" varchar,
   "first_name" varchar,

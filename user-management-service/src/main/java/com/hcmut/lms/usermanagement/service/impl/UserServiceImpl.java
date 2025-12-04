@@ -1,5 +1,6 @@
 package com.hcmut.lms.usermanagement.service.impl;
 
+import com.hcmut.lms.usermanagement.client.AuthServiceClient;
 import com.hcmut.lms.usermanagement.exception.DuplicateResourceException;
 import com.hcmut.lms.usermanagement.exception.ResourceNotFoundException;
 import com.hcmut.lms.usermanagement.mapper.UserMapper;
@@ -10,6 +11,7 @@ import com.hcmut.lms.usermanagement.model.entity.*;
 import com.hcmut.lms.usermanagement.repository.*;
 import com.hcmut.lms.usermanagement.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -27,6 +30,7 @@ public class UserServiceImpl implements UserService {
     private final TeacherRepository teacherRepository;
     private final AdminRepository adminRepository;
     private final UserMapper userMapper;
+    private final AuthServiceClient authServiceClient;
     
     @Override
     @Transactional
@@ -110,10 +114,14 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
         
+        String oldEmail = user.getEmail();
+        boolean emailChanged = false;
+        
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new DuplicateResourceException("User", "email", request.getEmail());
             }
+            emailChanged = true;
         }
         
         if (request.getRoleId() != null) {
@@ -124,6 +132,20 @@ public class UserServiceImpl implements UserService {
         
         userMapper.updateEntity(request, user);
         user = userRepository.save(user);
+        
+        // Sync email to authentication service if email changed
+        if (emailChanged) {
+            try {
+                AuthServiceClient.UpdateEmailRequest updateEmailRequest = 
+                    new AuthServiceClient.UpdateEmailRequest(user.getId(), oldEmail, request.getEmail());
+                authServiceClient.updateUserEmail(updateEmailRequest);
+                log.info("Email synced to authentication service for user: {}", user.getId());
+            } catch (Exception e) {
+                log.warn("Failed to sync email to authentication service for user {}: {}", 
+                        user.getId(), e.getMessage());
+                // Continue even if sync fails - can be retried later
+            }
+        }
         
         // Update user type specific records
         if (request.getStudentCode() != null) {

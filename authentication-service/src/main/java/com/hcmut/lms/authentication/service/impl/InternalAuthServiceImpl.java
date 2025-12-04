@@ -3,6 +3,7 @@ package com.hcmut.lms.authentication.service.impl;
 import com.hcmut.lms.authentication.exception.DuplicateResourceException;
 import com.hcmut.lms.authentication.exception.ResourceNotFoundException;
 import com.hcmut.lms.authentication.model.dto.request.CreateCredentialsRequest;
+import com.hcmut.lms.authentication.model.dto.request.UpdateEmailRequest;
 import com.hcmut.lms.authentication.model.entity.UserCredentials;
 import com.hcmut.lms.authentication.repository.RefreshTokenRepository;
 import com.hcmut.lms.authentication.repository.UserCredentialsRepository;
@@ -85,6 +86,30 @@ public class InternalAuthServiceImpl implements InternalAuthService {
         userCredentialsRepository.save(credentials);
         
         log.info("Account unlocked for user {}", userId);
+    }
+    
+    @Override
+    @Transactional
+    public void updateEmail(UpdateEmailRequest request) {
+        UserCredentials credentials = userCredentialsRepository.findByUserId(request.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", request.getUserId()));
+        
+        // Verify old email matches
+        if (!credentials.getEmail().equals(request.getOldEmail())) {
+            throw new IllegalArgumentException("Old email does not match current email");
+        }
+        
+        // Check if new email already exists
+        if (userCredentialsRepository.existsByEmail(request.getNewEmail())) {
+            throw new DuplicateResourceException("UserCredentials", "email", request.getNewEmail());
+        }
+        
+        // Update email
+        credentials.setEmail(request.getNewEmail());
+        userCredentialsRepository.save(credentials);
+        
+        log.info("Email updated for user {} from {} to {}", 
+                request.getUserId(), request.getOldEmail(), request.getNewEmail());
     }
 }
 
