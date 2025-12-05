@@ -30,6 +30,7 @@ public interface CourseInfoMapper {
     void updateEntityFromRequest(CourseInfoRequest request, @MappingTarget CourseInfo entity);
 
     @Mapping(target = "classSectionId", source = "classSection.id")
+    @Mapping(target = "thumbnail", source = "thumbnailUrl")
     CourseInfoResponse toResponseEntity(CourseInfo entity);
 }
 

@@ -1,6 +1,7 @@
 package com.hcmut.lms.coursemanagement.controller;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.ChapterRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.ReorderListRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ChapterResponse;
 import com.hcmut.lms.coursemanagement.application.service.ChapterService;
 import jakarta.validation.Valid;
@@ -50,6 +51,13 @@ public class ChapterController {
     public ResponseEntity<Void> deleteChapter(@PathVariable UUID id) {
         chapterService.deleteChapter(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    @PutMapping("/reorder")
+    public ResponseEntity<List<ChapterResponse>> reorderChapters(
+            @Valid @RequestBody ReorderListRequest request) {
+        List<ChapterResponse> response = chapterService.reorderChapters(request);
+        return ResponseEntity.ok(response);
     }
 }
 

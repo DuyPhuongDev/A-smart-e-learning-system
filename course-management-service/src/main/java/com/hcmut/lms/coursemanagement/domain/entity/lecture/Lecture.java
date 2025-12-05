@@ -4,7 +4,6 @@ import com.hcmut.lms.coursemanagement.domain.entity.BaseEntity;
 import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 

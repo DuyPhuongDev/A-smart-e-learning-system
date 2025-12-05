@@ -1,8 +1,8 @@
 package com.hcmut.lms.coursemanagement.application.factory;
 
-import com.hcmut.lms.coursemanagement.application.dto.request.LectureRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.BaseLectureRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.TextLectureRequest;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
-import com.hcmut.lms.coursemanagement.domain.entity.lecture.LectureType;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.TextLecture;
 import com.hcmut.lms.coursemanagement.domain.factory.LectureFactory;
 import org.springframework.stereotype.Component;
@@ -10,11 +10,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class TextLectureFactory implements LectureFactory {
     @Override
-    public Lecture createLecture(LectureRequest request) {
+    public Lecture createLecture(BaseLectureRequest request) {
+        TextLectureRequest req = (TextLectureRequest) request;
         TextLecture lecture = new TextLecture(
-                request.getTitle(),
-                request.getContent(),
-                request.getFormatType()
+                req.getTitle(),
+                req.getContent(),
+                req.getFormatType()
         );
 
         setCommonProperties(lecture, request);
@@ -22,11 +23,11 @@ public class TextLectureFactory implements LectureFactory {
     }
 
     @Override
-    public boolean supports(LectureRequest request) {
-        return LectureType.TEXT.equals(request.getLectureType());
+    public boolean supports(BaseLectureRequest request) {
+        return request instanceof TextLectureRequest;
     }
 
-    private void setCommonProperties(Lecture lecture, LectureRequest request) {
+    private void setCommonProperties(Lecture lecture, BaseLectureRequest request) {
         lecture.setDescription(request.getDescription());
         lecture.setIsMandatory(request.getIsMandatory());
         lecture.setAllowPreview(request.getAllowPreview());

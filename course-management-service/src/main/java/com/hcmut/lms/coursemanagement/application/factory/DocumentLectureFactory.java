@@ -1,5 +1,7 @@
 package com.hcmut.lms.coursemanagement.application.factory;
 
+import com.hcmut.lms.coursemanagement.application.dto.request.BaseLectureRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.DocumentLectureRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.LectureRequest;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.DocumentLecture;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
@@ -11,12 +13,15 @@ import org.springframework.stereotype.Component;
 public class DocumentLectureFactory implements LectureFactory {
 
     @Override
-    public Lecture createLecture(LectureRequest request) {
+    public Lecture createLecture(BaseLectureRequest request) {
+        // cast baselecture to DocumentLecture
+        DocumentLectureRequest req = (DocumentLectureRequest) request;
+
         DocumentLecture documentLecture = new DocumentLecture(
-                request.getTitle(),
-                request.getFileUrl(),
-                request.getNumPages(),
-                request.getFileFormat()
+                req.getTitle(),
+                req.getFileUrl(),
+                req.getNumPages(),
+                req.getFileFormat()
         );
 
         setCommonProperties(documentLecture, request);
@@ -24,11 +29,11 @@ public class DocumentLectureFactory implements LectureFactory {
     }
 
     @Override
-    public boolean supports(LectureRequest request) {
-        return LectureType.DOCUMENT.equals(request.getLectureType());
+    public boolean supports(BaseLectureRequest request) {
+        return request instanceof DocumentLectureRequest;
     }
 
-    private void setCommonProperties(Lecture lecture, LectureRequest request) {
+    private void setCommonProperties(Lecture lecture, BaseLectureRequest request) {
         lecture.setDescription(request.getDescription());
         lecture.setIsMandatory(request.getIsMandatory());
         lecture.setAllowPreview(request.getAllowPreview());

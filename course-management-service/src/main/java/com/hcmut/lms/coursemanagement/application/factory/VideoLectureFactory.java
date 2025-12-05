@@ -1,21 +1,27 @@
 package com.hcmut.lms.coursemanagement.application.factory;
 
-import com.hcmut.lms.coursemanagement.application.dto.request.LectureRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.BaseLectureRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.VideoLectureRequest;
+import com.hcmut.lms.coursemanagement.application.service.FileService;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
-import com.hcmut.lms.coursemanagement.domain.entity.lecture.LectureType;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.VideoLecture;
 import com.hcmut.lms.coursemanagement.domain.factory.LectureFactory;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class VideoLectureFactory implements LectureFactory {
 
+    private final FileService fileService;
+
     @Override
-    public Lecture createLecture(LectureRequest request) {
+    public Lecture createLecture(BaseLectureRequest request) {
+        VideoLectureRequest req = (VideoLectureRequest) request;
         VideoLecture lecture = new VideoLecture(
-                request.getTitle(),
-                request.getVideoUrl(),
-                request.getDuration()
+                req.getTitle(),
+                req.getVideoUrl(),
+                req.getDuration()
         );
 
         setCommonProperties(lecture, request);
@@ -23,11 +29,11 @@ public class VideoLectureFactory implements LectureFactory {
     }
 
     @Override
-    public boolean supports(LectureRequest request) {
-        return LectureType.VIDEO.equals(request.getLectureType());
+    public boolean supports(BaseLectureRequest request) {
+        return request instanceof VideoLectureRequest;
     }
 
-    private void setCommonProperties(Lecture lecture, LectureRequest request) {
+    private void setCommonProperties(Lecture lecture, BaseLectureRequest request) {
         lecture.setDescription(request.getDescription());
         lecture.setIsMandatory(request.getIsMandatory());
         lecture.setAllowPreview(request.getAllowPreview());

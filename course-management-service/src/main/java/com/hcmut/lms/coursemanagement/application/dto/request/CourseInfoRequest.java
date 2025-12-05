@@ -8,7 +8,6 @@ import java.util.UUID;
 
 @Data
 public class CourseInfoRequest {
-    @NotNull(message = "Course name is mandatory")
     private String courseName;
 
     private String description;
@@ -19,11 +18,11 @@ public class CourseInfoRequest {
 
     private String language;
 
-    private MultipartFile introVideo;
+//    private MultipartFile introVideo;
 
     @NotNull(message = "Class section ID is required")
     private UUID classSectionId;
 
-    private MultipartFile thumbnail;
+//    private MultipartFile thumbnail;
 
 }

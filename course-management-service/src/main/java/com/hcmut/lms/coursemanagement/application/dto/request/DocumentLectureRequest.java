@@ -1,4 +1,12 @@
 package com.hcmut.lms.coursemanagement.application.dto.request;
 
-public class DocumentLectureRequest {
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@EqualsAndHashCode(callSuper = true)
+@Data
+public class DocumentLectureRequest extends BaseLectureRequest {
+    private String fileUrl;
+    private Integer numPages;
+    private String fileFormat;
 }
