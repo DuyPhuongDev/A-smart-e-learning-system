@@ -12,3 +12,4 @@ ALTER TABLE users DROP COLUMN IF EXISTS password;
 -- Note: last_login is kept in users table for display purposes
 -- It can be synced from authentication-service if needed
 
+
