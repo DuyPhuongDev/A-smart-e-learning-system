@@ -1,5 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.mapper;
 
+import com.hcmut.lms.coursemanagement.application.dto.request.BaseLectureRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.LectureRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.LectureResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
@@ -14,7 +15,7 @@ public interface LectureMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "viewCount", ignore = true)
     @Mapping(target = "completionRate", ignore = true)
-    void updateEntityFromDTO(LectureRequest dto, @MappingTarget Lecture entity);
+    void updateEntityFromDTO(BaseLectureRequest dto, @MappingTarget Lecture entity);
     
     @Mapping(target = "chapterId", source = "chapter.id")
     @Mapping(target = "content", ignore = true)
