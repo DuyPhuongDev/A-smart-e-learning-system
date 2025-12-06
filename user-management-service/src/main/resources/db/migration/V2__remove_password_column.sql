@@ -13,3 +13,7 @@ ALTER TABLE users DROP COLUMN IF EXISTS password;
 -- It can be synced from authentication-service if needed
 
 
+
+
+
+

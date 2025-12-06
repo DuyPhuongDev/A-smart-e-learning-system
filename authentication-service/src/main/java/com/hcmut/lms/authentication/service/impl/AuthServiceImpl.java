@@ -86,7 +86,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshTokenHash = passwordUtil.hashToken(refreshTokenValue);
         @SuppressWarnings("null")
         RefreshToken refreshTokenEntity = RefreshToken.builder()
-                .userId(credentials.getUserId())
+                .userCredentials(credentials)
                 .tokenHash(refreshTokenHash)
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .isRevoked(false)
@@ -133,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
         refreshToken.setRevokedAt(LocalDateTime.now());
         refreshTokenRepository.save(refreshToken);
         
-        log.info("User {} logged out", refreshToken.getUserId());
+        log.info("User {} logged out", refreshToken.getUserCredentials().getUserId());
     }
     
     @Override
@@ -151,9 +151,8 @@ public class AuthServiceImpl implements AuthService {
             throw new TokenExpiredException("Refresh token has expired");
         }
         
-        // Get user credentials
-        UserCredentials credentials = userCredentialsRepository.findByUserId(refreshToken.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", refreshToken.getUserId()));
+        // Get user credentials from relationship
+        UserCredentials credentials = refreshToken.getUserCredentials();
         
         // Get user role from user-management-service
         String role = getUserRole(credentials.getUserId());
@@ -246,7 +245,7 @@ public class AuthServiceImpl implements AuthService {
         // Save reset token
         @SuppressWarnings("null")
         PasswordResetToken resetTokenEntity = PasswordResetToken.builder()
-                .userId(credentials.getUserId())
+                .userCredentials(credentials)
                 .tokenHash(resetTokenHash)
                 .expiresAt(LocalDateTime.now().plusHours(1)) // 1 hour expiration
                 .isUsed(false)
@@ -274,9 +273,8 @@ public class AuthServiceImpl implements AuthService {
             throw new TokenExpiredException("Reset token has expired");
         }
         
-        // Update password
-        UserCredentials credentials = userCredentialsRepository.findByUserId(passwordResetToken.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", passwordResetToken.getUserId()));
+        // Update password - get credentials from relationship
+        UserCredentials credentials = passwordResetToken.getUserCredentials();
         
         credentials.setPasswordHash(passwordUtil.hashPassword(request.getNewPassword()));
         userCredentialsRepository.save(credentials);
