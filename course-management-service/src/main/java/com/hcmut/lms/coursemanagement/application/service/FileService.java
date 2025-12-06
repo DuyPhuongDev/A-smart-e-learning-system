@@ -8,4 +8,6 @@ public interface FileService {
     String deleteFile(String filePath);
 
     String replaceFile(String oldFileUrl, String folderPath, MultipartFile newFile);
+
+    Integer getPageNumber(MultipartFile file);
 }

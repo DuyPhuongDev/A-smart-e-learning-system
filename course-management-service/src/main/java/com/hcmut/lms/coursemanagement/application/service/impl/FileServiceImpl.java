@@ -2,6 +2,8 @@ package com.hcmut.lms.coursemanagement.application.service.impl;
 
 import com.hcmut.lms.coursemanagement.application.service.FileService;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -107,6 +109,15 @@ public class FileServiceImpl  implements FileService {
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to replace file", e);
+        }
+    }
+
+    @Override
+    public Integer getPageNumber(MultipartFile file) {
+        try (PDDocument document = Loader.loadPDF(file.getBytes())) {
+            return document.getNumberOfPages();
+        } catch (Exception e) {
+            return -1;
         }
     }
 

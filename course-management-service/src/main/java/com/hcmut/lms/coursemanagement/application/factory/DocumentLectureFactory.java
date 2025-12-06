@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class DocumentLectureFactory implements LectureFactory {
 
+    final
+
     @Override
     public Lecture createLecture(BaseLectureRequest request) {
         // cast baselecture to DocumentLecture

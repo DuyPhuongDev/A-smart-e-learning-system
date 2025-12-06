@@ -6,8 +6,10 @@ import com.hcmut.lms.coursemanagement.application.service.LectureService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,8 +33,11 @@ public class LectureController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping("/document")
-    public ResponseEntity<LectureResponse> createLecture(@Valid @RequestBody DocumentLectureRequest request) {
+    @PostMapping(path = "/document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<LectureResponse> createLecture(
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart("lecture-data") @Valid DocumentLectureRequest request) {
+        request.setFile(file);
         LectureResponse response = lectureService.createLecture(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

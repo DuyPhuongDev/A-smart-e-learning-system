@@ -1,11 +1,13 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.BaseLectureRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.DocumentLectureRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ReorderListRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ReorderRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.LectureResponse;
 import com.hcmut.lms.coursemanagement.application.mapper.LectureMapper;
 import com.hcmut.lms.coursemanagement.application.mapper.LectureMapperHelper;
+import com.hcmut.lms.coursemanagement.application.service.FileService;
 import com.hcmut.lms.coursemanagement.application.service.LectureService;
 import com.hcmut.lms.coursemanagement.application.strategy.LectureUpdateStrategy;
 import com.hcmut.lms.coursemanagement.application.strategy.LectureUpdateStrategyProvider;
@@ -37,6 +39,8 @@ public class LectureServiceImpl implements LectureService {
     private final LectureMapper lectureMapper;
     private final LectureMapperHelper lectureMapperHelper;
     private final LectureUpdateStrategyProvider strategyProvider;
+    private final FileService fileService;
+    private static final String DOCUMENT_FOLDER = "lecture/document";
     
     @Override
     public LectureResponse createLecture(BaseLectureRequest request) {
@@ -47,6 +51,13 @@ public class LectureServiceImpl implements LectureService {
                 .orElseThrow(() -> new EntityNotFoundException("Chapter not found with id: " + request.getChapterId()));
         
         // Sử dụng factory để tạo lecture
+        if (request instanceof DocumentLectureRequest) {
+            String fileUrl = fileService.uploadFile(DOCUMENT_FOLDER, ((DocumentLectureRequest) request).getFile());
+            ((DocumentLectureRequest) request).setFileUrl(fileUrl);
+            ((DocumentLectureRequest) request).setFileFormat("PDF");
+            ((DocumentLectureRequest) request).setNumPages(fileService.getPageNumber(((DocumentLectureRequest) request).getFile()));
+        }
+
         Lecture lecture = lectureFactoryProvider.createLecture(request);
         lecture.setChapter(chapter);
         
