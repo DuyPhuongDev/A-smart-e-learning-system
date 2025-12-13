@@ -15,8 +15,8 @@ import org.springframework.context.annotation.FilterType;
         classes = com.hcmut.lms.common.exception.GlobalExceptionHandler.class
     )
 )
-@EnableDiscoveryClient
-@EnableFeignClients
+//@EnableDiscoveryClient
+//@EnableFeignClients
 public class UserManagementServiceApplication {
 
     public static void main(String[] args) {
