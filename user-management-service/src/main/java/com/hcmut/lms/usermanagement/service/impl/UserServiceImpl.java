@@ -7,6 +7,7 @@ import com.hcmut.lms.usermanagement.mapper.UserMapper;
 import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
 import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
 import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
+import com.hcmut.lms.usermanagement.model.dto.response.UserRoleResponse;
 import com.hcmut.lms.usermanagement.model.entity.*;
 import com.hcmut.lms.usermanagement.repository.*;
 import com.hcmut.lms.usermanagement.service.UserService;
@@ -203,5 +204,18 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
         userRepository.delete(user);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public UserRoleResponse getUserRole(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+        
+        return UserRoleResponse.builder()
+                .userId(user.getId())
+                .roleId(user.getRole().getId())
+                .roleName(user.getRole().getName())
+                .build();
     }
 }

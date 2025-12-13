@@ -3,6 +3,7 @@ package com.hcmut.lms.usermanagement.service;
 import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
 import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
 import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
+import com.hcmut.lms.usermanagement.model.dto.response.UserRoleResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -14,4 +15,10 @@ public interface UserService {
     List<UserResponse> getAll();
     UserResponse update(UUID id, UpdateUserRequest request);
     void delete(UUID id);
+    
+    /**
+     * Get user's role information
+     * Used by authentication-service during login
+     */
+    UserRoleResponse getUserRole(UUID userId);
 }

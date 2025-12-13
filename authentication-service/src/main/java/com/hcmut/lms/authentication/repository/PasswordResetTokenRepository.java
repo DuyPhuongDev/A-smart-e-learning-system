@@ -1,6 +1,7 @@
 package com.hcmut.lms.authentication.repository;
 
 import com.hcmut.lms.authentication.model.entity.PasswordResetToken;
+import com.hcmut.lms.authentication.model.entity.UserCredentials;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,7 +16,8 @@ import java.util.UUID;
 @Repository
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, UUID> {
     Optional<PasswordResetToken> findByTokenHash(String tokenHash);
-    List<PasswordResetToken> findByUserId(UUID userId);
+    List<PasswordResetToken> findByUserCredentials(UserCredentials userCredentials);
+    List<PasswordResetToken> findByUserCredentials_UserId(UUID userId);
     
     @Modifying
     @Query("DELETE FROM PasswordResetToken prt WHERE prt.expiresAt < :now OR prt.isUsed = true")

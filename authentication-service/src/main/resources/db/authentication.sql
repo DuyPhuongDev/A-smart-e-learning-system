@@ -46,6 +46,15 @@ CREATE TABLE password_reset_tokens (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Foreign Keys
+ALTER TABLE refresh_tokens 
+    ADD CONSTRAINT fk_refresh_tokens_user 
+    FOREIGN KEY (user_id) REFERENCES user_credentials(user_id) ON DELETE CASCADE;
+
+ALTER TABLE password_reset_tokens 
+    ADD CONSTRAINT fk_password_reset_tokens_user 
+    FOREIGN KEY (user_id) REFERENCES user_credentials(user_id) ON DELETE CASCADE;
+
 -- Indexes
 CREATE INDEX idx_user_credentials_user_id ON user_credentials(user_id);
 CREATE INDEX idx_user_credentials_email ON user_credentials(email);

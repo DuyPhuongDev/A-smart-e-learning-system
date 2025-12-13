@@ -14,7 +14,7 @@ SET search_path TO user_management;
 CREATE TABLE "roles" (
   "id" uuid PRIMARY KEY,
   "is_active" bool DEFAULT true,
-  "name" varchar,
+  "name" varchar UNIQUE,
   "description" varchar,
   "created_at" timestamptz NOT NULL DEFAULT (now()),
   "updated_at" timestamptz NOT NULL DEFAULT (now())

@@ -20,5 +20,11 @@ public class UserManagementClientFallback implements UserManagementClient {
         log.error("User Management Service is unavailable. Failed to get user by email: {}", email);
         throw new RuntimeException("User Management Service is temporarily unavailable");
     }
+    
+    @Override
+    public UserRoleResponse getUserRole(UUID userId) {
+        log.error("User Management Service is unavailable. Failed to get user role for: {}", userId);
+        throw new RuntimeException("User Management Service is temporarily unavailable");
+    }
 }
 
