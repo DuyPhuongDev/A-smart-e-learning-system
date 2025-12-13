@@ -1,4 +1,4 @@
-package com.hcmut.lms.coursemanagement.domain.entity.course;
+package com.hcmut.lms.coursemanagement.domain.entity.classSection;
 
 public enum CourseLanguage {
     VIETNAMESE,

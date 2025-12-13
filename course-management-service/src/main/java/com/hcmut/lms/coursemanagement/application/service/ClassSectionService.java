@@ -4,6 +4,7 @@ import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +22,7 @@ public interface ClassSectionService {
     List<ClassSectionResponse> getClassSectionsByTeacherId(UUID teacherId);
     PageResponse<ClassSectionResponse> getClassSectionsByTeacherId(UUID teacherId, int page, int size);
     void deleteClassSection(UUID id);
-    ClassSectionResponse assignTeacherToClassSection(UUID id, ClassSectionRequest request);
+    ClassSectionResponse assignTeacherToClassSection(UUID id, UUID teacherId);
+    CourseMenuResponse getCourseMenu(UUID classSectionId);
 }
 

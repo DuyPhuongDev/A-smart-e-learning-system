@@ -21,9 +21,7 @@ public class DocumentLectureFactory implements LectureFactory {
 
         DocumentLecture documentLecture = new DocumentLecture(
                 req.getTitle(),
-                req.getFileUrl(),
-                req.getNumPages(),
-                req.getFileFormat()
+                req.getFileUrl()
         );
 
         setCommonProperties(documentLecture, request);

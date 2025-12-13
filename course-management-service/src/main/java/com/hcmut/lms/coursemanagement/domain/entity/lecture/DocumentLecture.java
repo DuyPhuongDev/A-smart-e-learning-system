@@ -21,12 +21,10 @@ public class DocumentLecture extends Lecture {
     @Column(name = "file_format")
     private String fileFormat;
 
-    public DocumentLecture(String title, String fileUrl, Integer numPages, String fileFormat) {
+    public DocumentLecture(String title, String fileUrl) {
         this.setTitle(title);
         this.setLectureType(LectureType.DOCUMENT);
         this.fileUrl = fileUrl;
-        this.numPages = numPages;
-        this.fileFormat = fileFormat;
     }
 }
 

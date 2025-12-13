@@ -49,14 +49,7 @@ public class LectureServiceImpl implements LectureService {
         // Tìm chapter
         Chapter chapter = chapterRepository.findById(request.getChapterId())
                 .orElseThrow(() -> new EntityNotFoundException("Chapter not found with id: " + request.getChapterId()));
-        
-        // Sử dụng factory để tạo lecture
-        if (request instanceof DocumentLectureRequest) {
-            String fileUrl = fileService.uploadFile(DOCUMENT_FOLDER, ((DocumentLectureRequest) request).getFile());
-            ((DocumentLectureRequest) request).setFileUrl(fileUrl);
-            ((DocumentLectureRequest) request).setFileFormat("PDF");
-            ((DocumentLectureRequest) request).setNumPages(fileService.getPageNumber(((DocumentLectureRequest) request).getFile()));
-        }
+
 
         Lecture lecture = lectureFactoryProvider.createLecture(request);
         lecture.setChapter(chapter);

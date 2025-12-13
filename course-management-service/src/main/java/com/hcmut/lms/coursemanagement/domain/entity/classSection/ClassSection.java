@@ -48,6 +48,35 @@ public class ClassSection extends BaseEntity {
 
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
+
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "language")
+    @Enumerated(EnumType.STRING)
+    private CourseLanguage language;
+
+    @Column(name = "level")
+    @Enumerated(EnumType.STRING)
+    private CourseLevel level;
+
+    @Column(name = "thumbnail_url")
+    private String thumbnailUrl;
+
+    @Column(name = "intro_video")
+    private String introVideo;
+
+    @Column(name = "duration_hours")
+    private Integer durationHours;
+
+    @Column(name = "objective")
+    private String objective;
+
+    @Column(name = "topic")
+    private String topic;
+
+    @Column(name = "code", nullable = false, unique = true)
+    private String code;
     
     @OneToMany(mappedBy = "classSection", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

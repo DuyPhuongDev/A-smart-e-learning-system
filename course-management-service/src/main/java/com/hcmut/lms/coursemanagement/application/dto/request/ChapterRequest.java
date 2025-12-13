@@ -8,14 +8,14 @@ import java.util.UUID;
 @Data
 public class ChapterRequest {
     
-    @NotBlank(message = "Title is required")
+
     private String title;
     
     private String description;
     
     private Integer orderIndex;
     
-    private String status;
+//    private String status;
     
     @NotNull(message = "Class section ID is required")
     private UUID classSectionId;

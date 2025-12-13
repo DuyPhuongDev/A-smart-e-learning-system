@@ -4,7 +4,9 @@ import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUser;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.TeacherAssignRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -24,8 +27,13 @@ public class ClassSectionController {
     
     @PostMapping
     public ResponseEntity<ClassSectionResponse> createClassSection(
-            @CurrentUser CurrentUserInfo currentUser,
+//            @CurrentUser CurrentUserInfo currentUser,
             @Valid @RequestBody ClassSectionRequest request) {
+        // test
+        CurrentUserInfo currentUser = CurrentUserInfo.builder()
+                .id(UUID.fromString("811ba53a-0eb3-4cc3-a6a2-49214ca25b18"))
+                .role("TEACHER")
+                .build();
         ClassSectionResponse response = classSectionService.createClassSection(currentUser, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -102,8 +110,28 @@ public class ClassSectionController {
     }
 
     @PutMapping("/assign-teacher/{id}")
-    public ResponseEntity<ClassSectionResponse> assignTeacherToClassSection(@PathVariable UUID id, @Valid @RequestBody ClassSectionRequest request) {
-        ClassSectionResponse response = classSectionService.assignTeacherToClassSection(id, request);
+    public ResponseEntity<ClassSectionResponse> assignTeacherToClassSection(@PathVariable UUID id, @RequestBody TeacherAssignRequest request) {
+        ClassSectionResponse response = classSectionService.assignTeacherToClassSection(id, request.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/my-classes")
+    public ResponseEntity<?> getMyClassSections(
+                @CurrentUser CurrentUserInfo currentUserInfo,
+                @RequestParam(required = false) Integer page,
+                @RequestParam(required = false) Integer size) {
+
+            if (page != null && size != null) {
+                PageResponse<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(currentUserInfo.getId(), page, size);
+                return ResponseEntity.ok(response);
+            }
+            List<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(currentUserInfo.getId());
+            return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/{id}/menu")
+    public ResponseEntity<CourseMenuResponse> getCourseMenu(@PathVariable UUID id) {
+        CourseMenuResponse response = classSectionService.getCourseMenu(id);
         return ResponseEntity.ok(response);
     }
 }

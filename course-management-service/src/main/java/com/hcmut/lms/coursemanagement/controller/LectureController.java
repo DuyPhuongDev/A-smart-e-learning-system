@@ -33,11 +33,9 @@ public class LectureController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping(path = "/document", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(path = "/document")
     public ResponseEntity<LectureResponse> createLecture(
-            @RequestPart(value = "file", required = false) MultipartFile file,
-            @RequestPart("lecture-data") @Valid DocumentLectureRequest request) {
-        request.setFile(file);
+            @RequestBody @Valid DocumentLectureRequest request) {
         LectureResponse response = lectureService.createLecture(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

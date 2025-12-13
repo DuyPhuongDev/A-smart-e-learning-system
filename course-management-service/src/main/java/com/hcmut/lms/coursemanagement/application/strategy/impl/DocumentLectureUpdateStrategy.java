@@ -36,14 +36,6 @@ public class DocumentLectureUpdateStrategy implements LectureUpdateStrategy {
         if (documentRequest.getFileUrl() != null) {
             documentLecture.setFileUrl(documentRequest.getFileUrl());
         }
-        
-        if (documentRequest.getNumPages() != null) {
-            documentLecture.setNumPages(documentRequest.getNumPages());
-        }
-        
-        if (documentRequest.getFileFormat() != null) {
-            documentLecture.setFileFormat(documentRequest.getFileFormat());
-        }
     }
     
     @Override
@@ -58,18 +50,6 @@ public class DocumentLectureUpdateStrategy implements LectureUpdateStrategy {
         }
         
         DocumentLectureRequest documentRequest = (DocumentLectureRequest) request;
-        
-        // Add specific validation for document lecture if needed
-        if (documentRequest.getNumPages() != null && documentRequest.getNumPages() < 0) {
-            throw new IllegalArgumentException("Number of pages cannot be negative");
-        }
-        
-        if (documentRequest.getFileFormat() != null) {
-            String format = documentRequest.getFileFormat().toLowerCase();
-            if (!format.equals("pdf") && !format.equals("doc") && !format.equals("docx")) {
-                log.warn("Unsupported file format: {}", documentRequest.getFileFormat());
-            }
-        }
     }
     
     @Override

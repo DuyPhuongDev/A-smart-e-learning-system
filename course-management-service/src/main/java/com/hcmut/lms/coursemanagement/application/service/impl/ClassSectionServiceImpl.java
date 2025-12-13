@@ -1,14 +1,25 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
+import com.hcmut.lms.common.dto.ApiResponse;
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuChapterDTO;
+import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuLectureDTO;
+import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
 import com.hcmut.lms.coursemanagement.application.mapper.ClassSectionMapper;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
+import com.hcmut.lms.coursemanagement.application.service.FileService;
+import com.hcmut.lms.coursemanagement.client.UserManagementClient;
+import com.hcmut.lms.coursemanagement.client.dto.UserResponse;
+import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
+import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassStatus;
+import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
 import com.hcmut.lms.coursemanagement.domain.entity.semester.Semester;
 import com.hcmut.lms.coursemanagement.domain.entity.subject.Subject;
+import com.hcmut.lms.coursemanagement.repository.ChapterRepository;
 import com.hcmut.lms.coursemanagement.repository.ClassSectionRepository;
 import com.hcmut.lms.coursemanagement.repository.SemesterRepository;
 import com.hcmut.lms.coursemanagement.repository.SubjectRepository;
@@ -21,9 +32,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -34,39 +47,63 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     private final ClassSectionRepository classSectionRepository;
     private final SubjectRepository subjectRepository;
     private final SemesterRepository semesterRepository;
+    private final ChapterRepository chapterRepository;
     private final ClassSectionMapper classSectionMapper;
+    private final UserManagementClient userManagementClient;
+    private final FileService fileService;
     
     @Override
     public ClassSectionResponse createClassSection(CurrentUserInfo currentUser, ClassSectionRequest request) {
         log.info("Creating class section: {}", request.getSectionName());
         
         ClassSection classSection = classSectionMapper.toEntity(request);
+        StringBuilder classCode = new StringBuilder();
 
         classSection.setCreatedBy(currentUser.getId());
 
-        if (request.getSubjectId() != null && request.getSemesterId() != null) {
+        // Set subject if provided
+        if (request.getSubjectId() != null) {
             Subject subject = subjectRepository.findById(request.getSubjectId())
                     .orElseThrow(() -> new EntityNotFoundException("Subject not found with id: " + request.getSubjectId()));
             classSection.setSubject(subject);
+            classCode.append(subject.getCode());
+        }
 
+        // Set semester if provided
+        if (request.getSemesterId() != null) {
             Semester semester = semesterRepository.findById(request.getSemesterId())
                     .orElseThrow(() -> new EntityNotFoundException("Semester not found with id: " + request.getSemesterId()));
             classSection.setSemester(semester);
+            classCode.append("_").append(semester.getSemesterCode());
+        }
 
+        // Set isOfficial: false if subject and semester are provided (official class), true otherwise (teacher's own class)
+        if (request.getSubjectId() != null && request.getSemesterId() != null) {
             classSection.setIsOfficial(false);
-        }else {
+        } else {
             classSection.setIsOfficial(true);
-            classSection.setTeacherId(currentUser.getId());
         }
 
-        if(request.getTeacherId()!=null){
-            request.setTeacherId(request.getTeacherId());
+        if(request.getCode()!=null){
+            classSection.setCode(request.getCode());
+        }else{
+            classSection.setCode(classCode.append("_").append(classSection.getSectionName().toUpperCase()).toString());
         }
+
+        if(request.getThumbnail()!=null){
+           classSection.setThumbnailUrl(request.getThumbnail());
+        }
+
+        if(request.getIntroVideo()!=null){
+            classSection.setIntroVideo(request.getIntroVideo());
+        }
+
+        classSection.setStatus(ClassStatus.UP_COMING);
         
         ClassSection savedClassSection = classSectionRepository.save(classSection);
         
         log.info("Class section created successfully with id: {}", savedClassSection.getId());
-        return classSectionMapper.toResponseDTO(savedClassSection);
+        return enrichWithTeacherName(classSectionMapper.toResponseDTO(savedClassSection));
     }
     
     @Override
@@ -76,24 +113,35 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         ClassSection classSection = classSectionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + id));
         
+        // Update basic fields using mapper
         classSectionMapper.updateEntityFromDTO(request, classSection);
         
+        // Update subject if provided
         if (request.getSubjectId() != null) {
             Subject subject = subjectRepository.findById(request.getSubjectId())
                     .orElseThrow(() -> new EntityNotFoundException("Subject not found with id: " + request.getSubjectId()));
             classSection.setSubject(subject);
         }
         
+        // Update semester if provided
         if (request.getSemesterId() != null) {
             Semester semester = semesterRepository.findById(request.getSemesterId())
                     .orElseThrow(() -> new EntityNotFoundException("Semester not found with id: " + request.getSemesterId()));
             classSection.setSemester(semester);
         }
-        
+
+        if(request.getThumbnail()!=null){
+            classSection.setThumbnailUrl(request.getThumbnail());
+        }
+
+        if(request.getIntroVideo()!=null){
+            classSection.setIntroVideo(request.getIntroVideo());
+        }
+
         ClassSection updatedClassSection = classSectionRepository.save(classSection);
         
         log.info("Class section updated successfully with id: {}", id);
-        return classSectionMapper.toResponseDTO(updatedClassSection);
+        return enrichWithTeacherName(classSectionMapper.toResponseDTO(updatedClassSection));
     }
     
     @Override
@@ -104,7 +152,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         ClassSection classSection = classSectionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + id));
         
-        return classSectionMapper.toResponseDTO(classSection);
+        return enrichWithTeacherName(classSectionMapper.toResponseDTO(classSection));
     }
     
     @Override
@@ -114,6 +162,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         
         return classSectionRepository.findAll().stream()
                 .map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName)
                 .toList();
     }
     
@@ -125,7 +174,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         Pageable pageable = PageRequest.of(page, size);
         Page<ClassSection> classSectionPage = classSectionRepository.findAll(pageable);
         
-        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO);
+        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName);
         return PageResponse.fromPage(responsePage);
     }
     
@@ -136,6 +186,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         
         return classSectionRepository.findBySubjectId(subjectId).stream()
                 .map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName)
                 .toList();
     }
     
@@ -147,7 +198,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         Pageable pageable = PageRequest.of(page, size);
         Page<ClassSection> classSectionPage = classSectionRepository.findBySubjectId(subjectId, pageable);
         
-        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO);
+        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName);
         return PageResponse.fromPage(responsePage);
     }
     
@@ -158,6 +210,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         
         return classSectionRepository.findBySemesterId(semesterId).stream()
                 .map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName)
                 .toList();
     }
     
@@ -169,7 +222,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         Pageable pageable = PageRequest.of(page, size);
         Page<ClassSection> classSectionPage = classSectionRepository.findBySemesterId(semesterId, pageable);
         
-        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO);
+        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName);
         return PageResponse.fromPage(responsePage);
     }
     
@@ -180,6 +234,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         
         return classSectionRepository.findByTeacherId(teacherId).stream()
                 .map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName)
                 .toList();
     }
     
@@ -191,7 +246,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         Pageable pageable = PageRequest.of(page, size);
         Page<ClassSection> classSectionPage = classSectionRepository.findByTeacherId(teacherId, pageable);
         
-        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO);
+        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName);
         return PageResponse.fromPage(responsePage);
     }
     
@@ -208,18 +264,84 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     }
 
     @Override
-    public ClassSectionResponse assignTeacherToClassSection(UUID id, ClassSectionRequest request) {
-        log.info("Assign teacher {} to class {}",request.getTeacherId(), id);
+    public ClassSectionResponse assignTeacherToClassSection(UUID id, UUID teacherId) {
+        log.info("Assign teacher {} to class section {}", teacherId, id);
+
 
         ClassSection classSection = classSectionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + id));
 
-        classSection.setTeacherId(request.getTeacherId());
+        classSection.setTeacherId(teacherId);
 
         ClassSection updatedClassSection = classSectionRepository.save(classSection);
 
-        log.info("Assign successfully");
-        return classSectionMapper.toResponseDTO(updatedClassSection);
+        log.info("Teacher assigned successfully to class section {}", id);
+        return enrichWithTeacherName(classSectionMapper.toResponseDTO(updatedClassSection));
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public CourseMenuResponse getCourseMenu(UUID classSectionId) {
+        log.info("Getting course menu for class section id: {}", classSectionId);
+        
+        // Fetch ClassSection first
+        ClassSection classSection = classSectionRepository.findById(classSectionId)
+                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classSectionId));
+        
+        // Fetch chapters with lectures separately to avoid multiple bag fetch exception
+        List<Chapter> chapters = chapterRepository.findByClassSectionIdWithLectures(classSectionId);
+        
+        // Map chapters with lectures
+        List<CourseMenuChapterDTO> chapterDTOs = chapters.stream()
+                .sorted(Comparator.comparing(Chapter::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(chapter -> {
+                    List<CourseMenuLectureDTO> lectures = chapter.getLectures().stream()
+                            .sorted(Comparator.comparing(Lecture::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
+                            .map(lecture -> CourseMenuLectureDTO.builder()
+                                    .lectureId(lecture.getId())
+                                    .title(lecture.getTitle())
+                                    .order(lecture.getOrderIndex())
+                                    .type(lecture.getLectureType() != null ? lecture.getLectureType().name().toLowerCase() : null)
+                                    .build())
+                            .collect(Collectors.toList());
+                    
+                    return CourseMenuChapterDTO.builder()
+                            .chapterId(chapter.getId())
+                            .title(chapter.getTitle())
+                            .order(chapter.getOrderIndex())
+                            .lectures(lectures)
+                            .build();
+                })
+                .collect(Collectors.toList());
+        
+        return CourseMenuResponse.builder()
+                .courseId(classSection.getId())
+                .title(classSection.getSectionName())
+                .chapters(chapterDTOs)
+                .build();
+    }
+    
+    /**
+     * Enrich ClassSectionResponse with teacher name from user-management-service
+     */
+    private ClassSectionResponse enrichWithTeacherName(ClassSectionResponse response) {
+        if (response.getTeacherId() == null) {
+            return response;
+        }
+        
+        try {
+            ApiResponse<UserResponse> apiResponse = userManagementClient.getUserById(response.getTeacherId());
+            if (apiResponse != null && apiResponse.getData() != null) {
+                UserResponse userResponse = apiResponse.getData();
+                String teacherName = userResponse.getFullName();
+                response.setTeacherName(teacherName);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch teacher name for teacherId: {}. Error: {}", response.getTeacherId(), e.getMessage());
+            // Continue without teacher name if service call fails
+        }
+        
+        return response;
     }
 }
 

@@ -2,10 +2,7 @@ package com.hcmut.lms.coursemanagement.controller;
 
 import com.hcmut.lms.coursemanagement.application.service.FileService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
@@ -27,5 +24,10 @@ public class FileController {
         Map<String, String> response = new HashMap<>();
         response.put("url", fileUrl);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/upload-url")
+    public ResponseEntity<Map<String, String>> uploadUrl(@RequestParam String folderPath, @RequestParam String fileName) {
+        return  ResponseEntity.ok(fileService.generateUploadUrl(folderPath, fileName));
     }
 }

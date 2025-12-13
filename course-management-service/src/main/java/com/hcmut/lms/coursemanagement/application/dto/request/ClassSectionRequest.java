@@ -10,11 +10,27 @@ public class ClassSectionRequest {
     
     @NotBlank(message = "Section name is required")
     private String sectionName;
-    
+
+    private String code;
+
     private UUID subjectId;
     
     private UUID semesterId;
 
-    private UUID teacherId;
+    private String description;
+
+    private String level;
+
+    private Integer durationHours;
+
+    private String language;
+
+    private String topic;
+
+    private String objective;
+
+    private String thumbnail;
+
+    private String introVideo;
 }
 

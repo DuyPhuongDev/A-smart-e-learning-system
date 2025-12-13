@@ -34,7 +34,11 @@ eureka:
     register-with-eureka: true
 
 aws:
+  region: ap-southeast-1
+  profile: lms-wecancode
   s3:
     bucket-name: lms-wecancode
+    expiration:
+      hours: 1
   cloud-front:
     domain: d14s8phoypchnb.cloudfront.net
