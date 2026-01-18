@@ -5,10 +5,10 @@ spring:
   application:
     name: user-management-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lms_db}
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${DB_USER:lms_user}
+    password: ${DB_PASSWORD:lms_password}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -26,6 +26,16 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: user_management
+    default-schema: user_management
+    baseline-on-migrate: true
+    baseline-version: 0
+    table: flyway_schema_history
+    out-of-order: false
+    validate-on-migrate: true
 
 eureka:
   client:
