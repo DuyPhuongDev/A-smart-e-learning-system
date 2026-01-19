@@ -1,6 +1,6 @@
 -- DROP SCHEMA authentication;
 
-CREATE SCHEMA authentication AUTHORIZATION lms_user;
+CREATE SCHEMA IF NOT EXISTS authentication AUTHORIZATION lms_user;
 -- authentication.outbox definition
 
 -- Drop table

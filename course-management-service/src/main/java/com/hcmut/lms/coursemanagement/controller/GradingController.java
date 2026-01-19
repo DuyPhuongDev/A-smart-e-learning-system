@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/gradings")
+@RequestMapping("${prefix-api}/gradings")
 @RequiredArgsConstructor
 public class GradingController {
     

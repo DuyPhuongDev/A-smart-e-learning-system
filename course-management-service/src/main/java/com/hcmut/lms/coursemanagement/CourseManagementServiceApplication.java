@@ -7,7 +7,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication(scanBasePackages = {"com.hcmut.lms.coursemanagement", "com.hcmut.lms.common"})
 @EnableFeignClients
-//@EnableDiscoveryClient
+@EnableDiscoveryClient
 public class CourseManagementServiceApplication {
 
     public static void main(String[] args) {

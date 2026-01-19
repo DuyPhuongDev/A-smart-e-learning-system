@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/class-sections")
+@RequestMapping("${prefix-api}/class-sections")
 @RequiredArgsConstructor
 public class ClassSectionController {
     
@@ -27,13 +27,13 @@ public class ClassSectionController {
     
     @PostMapping
     public ResponseEntity<ClassSectionResponse> createClassSection(
-//            @CurrentUser CurrentUserInfo currentUser,
+            @CurrentUser CurrentUserInfo currentUser,
             @Valid @RequestBody ClassSectionRequest request) {
         // test
-        CurrentUserInfo currentUser = CurrentUserInfo.builder()
-                .id(UUID.fromString("811ba53a-0eb3-4cc3-a6a2-49214ca25b18"))
-                .role("TEACHER")
-                .build();
+//        CurrentUserInfo currentUser = CurrentUserInfo.builder()
+//                .id(UUID.fromString("811ba53a-0eb3-4cc3-a6a2-49214ca25b18"))
+//                .role("TEACHER")
+//                .build();
         ClassSectionResponse response = classSectionService.createClassSection(currentUser, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

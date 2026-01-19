@@ -1,6 +1,8 @@
 server:
   port: 8083
 
+prefix-api: /api/courses/v1
+
 spring:
   application:
     name: course-management-service
@@ -26,6 +28,18 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         default_schema: course_management
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: course_management
+    default-schema: course_management
+    baseline-on-migrate: true
+    baseline-version: 0
+    table: flyway_schema_history
+    out-of-order: false
+    validate-on-migrate: true
+
   cloud:
     openfeign:
       client:

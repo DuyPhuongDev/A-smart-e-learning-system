@@ -1,6 +1,6 @@
 -- DROP SCHEMA user_management;
 
-CREATE SCHEMA user_management AUTHORIZATION lms_user;
+CREATE SCHEMA IF NOT EXISTS user_management AUTHORIZATION lms_user;
 -- user_management.outbox definition
 
 -- Drop table

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/academic-years")
+@RequestMapping("${prefix-api}/academic-years")
 @RequiredArgsConstructor
 public class AcademicYearController {
     

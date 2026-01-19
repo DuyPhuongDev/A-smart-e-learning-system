@@ -7,6 +7,16 @@ spring:
   cloud:
     gateway:
       server:
+        globalcors:
+          cors-configurations:
+            '[/**]':
+              allowedOrigins: "http://localhost:3000"
+              allowedMethods:
+                - GET
+                - POST
+                - OPTION
+                - PUT
+                - DELETE
         webflux:
           discovery:
             locator:

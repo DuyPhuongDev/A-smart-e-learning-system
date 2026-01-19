@@ -1,6 +1,6 @@
 -- DROP SCHEMA course_management;
 
-CREATE SCHEMA course_management AUTHORIZATION lms_user;
+CREATE SCHEMA IF NOT EXISTS course_management AUTHORIZATION lms_user;
 -- course_management.academic_years definition
 
 -- Drop table
