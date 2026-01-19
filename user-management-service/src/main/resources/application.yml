@@ -5,10 +5,10 @@ spring:
   application:
     name: user-management-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lms_db}
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    username: ${DB_USER:lms_user}
+    password: ${DB_PASSWORD:lms_password}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -47,7 +47,7 @@ feign:
 resilience4j:
   circuitbreaker:
     instances:
-      authentication-service:  # ✅ Match với @FeignClient name
+      authentication-service:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 10000

@@ -1,5 +1,7 @@
 package com.hcmut.lms.usermanagement.controller;
 
+import com.hcmut.lms.common.helper.CurrentUser;
+import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.usermanagement.config.UserContextHolder;
 import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
 import com.hcmut.lms.usermanagement.service.UserService;
@@ -32,8 +34,8 @@ public class CurrentUserController {
      * after JWT validation
      */
     @GetMapping
-    public UserResponse getCurrentUser() {
-        UUID userId = UserContextHolder.getCurrentUserId();
+    public UserResponse getCurrentUser(@CurrentUser CurrentUserInfo userInfo) {
+        UUID userId = userInfo.getId();
         
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, 
@@ -48,8 +50,8 @@ public class CurrentUserController {
      * Useful for debugging/verification
      */
     @GetMapping("/email")
-    public String getCurrentUserEmail() {
-        String email = UserContextHolder.getCurrentUserEmail();
+    public String getCurrentUserEmail(@CurrentUser CurrentUserInfo userInfo) {
+        String email = userInfo.getEmail();
         
         if (email == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, 

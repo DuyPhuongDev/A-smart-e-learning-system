@@ -69,10 +69,14 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
             return body;
         }
 
+
         String path = "";
         if (request instanceof ServletServerHttpRequest) {
             path = ((ServletServerHttpRequest) request).getServletRequest().getRequestURI();
         }
+
+        // if internal -> no wrap
+        if(path.contains("internal")) return body;
 
         // Xác định status code: ưu tiên lấy từ response, nếu không có thì suy luận từ HTTP method
         int statusCode = determineStatusCode(returnType, request, response);

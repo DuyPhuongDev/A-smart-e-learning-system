@@ -28,8 +28,9 @@ public class CurrentUserHandlerMethodArgumentResolver implements HandlerMethodAr
         //take the request
         HttpServletRequest httpServletRequest = (HttpServletRequest) webRequest.getNativeRequest();
         //take our Authorization header from request and get access token
-        String userIdHeader = httpServletRequest.getHeader("x-user-id");
-        String userRoleHeader = httpServletRequest.getHeader("x-role");
-        return new CurrentUserInfo(UUID.fromString(userIdHeader), userRoleHeader);
+        String userIdHeader = httpServletRequest.getHeader("X-User-Id");
+        String userEmail = httpServletRequest.getHeader("X-User-Email");
+        String userRoleHeader = httpServletRequest.getHeader("X-Role");
+        return new CurrentUserInfo(UUID.fromString(userIdHeader), userEmail, userRoleHeader);
     }
 }

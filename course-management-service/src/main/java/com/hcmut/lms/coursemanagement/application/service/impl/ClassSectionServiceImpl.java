@@ -1,6 +1,5 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
-import com.hcmut.lms.common.dto.ApiResponse;
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
@@ -10,8 +9,8 @@ import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuLecture
 import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
 import com.hcmut.lms.coursemanagement.application.mapper.ClassSectionMapper;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
-import com.hcmut.lms.coursemanagement.application.service.FileService;
 import com.hcmut.lms.coursemanagement.client.UserManagementClient;
+import com.hcmut.lms.coursemanagement.client.UserServiceClient;
 import com.hcmut.lms.coursemanagement.client.dto.UserResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
@@ -50,7 +49,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     private final ChapterRepository chapterRepository;
     private final ClassSectionMapper classSectionMapper;
     private final UserManagementClient userManagementClient;
-    private final FileService fileService;
+    private final UserServiceClient userServiceClient;
     
     @Override
     public ClassSectionResponse createClassSection(CurrentUserInfo currentUser, ClassSectionRequest request) {
@@ -323,25 +322,22 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     
     /**
      * Enrich ClassSectionResponse with teacher name from user-management-service
+     * Fallback at here
      */
-    private ClassSectionResponse enrichWithTeacherName(ClassSectionResponse response) {
+
+    public ClassSectionResponse enrichWithTeacherName(ClassSectionResponse response) {
         if (response.getTeacherId() == null) {
             return response;
         }
-        
-        try {
-            ApiResponse<UserResponse> apiResponse = userManagementClient.getUserById(response.getTeacherId());
-            if (apiResponse != null && apiResponse.getData() != null) {
-                UserResponse userResponse = apiResponse.getData();
-                String teacherName = userResponse.getFullName();
-                response.setTeacherName(teacherName);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch teacher name for teacherId: {}. Error: {}", response.getTeacherId(), e.getMessage());
-            // Continue without teacher name if service call fails
+
+        UserResponse userResponse = userServiceClient.getUserById(response.getTeacherId());
+
+        if (userResponse != null) {
+            response.setTeacherName(userResponse.getFullName());
         }
-        
+
         return response;
     }
+
 }
 

@@ -1,5 +1,6 @@
 package com.hcmut.lms.usermanagement.controller;
 
+import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserRoleResponse;
 import com.hcmut.lms.usermanagement.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,11 @@ public class InternalUserController {
     @GetMapping("/{userId}/role")
     public UserRoleResponse getUserRole(@PathVariable UUID userId) {
         return userService.getUserRole(userId);
+    }
+
+    @GetMapping("/{id}")
+    public UserResponse getById(@PathVariable UUID id) {
+        return userService.getById(id);
     }
 }
 

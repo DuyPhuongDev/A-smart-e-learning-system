@@ -12,7 +12,8 @@ import java.util.UUID;
  */
 @FeignClient(
     name = "authentication-service",
-    fallback = AuthServiceClientFallback.class
+    fallback = AuthServiceClientFallback.class,
+        url = "http://localhost:8081"
 )
 public interface AuthServiceClient {
     
