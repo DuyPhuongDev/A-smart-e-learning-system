@@ -1,5 +1,6 @@
 package com.hcmut.lms.authentication.exception;
 
+import com.hcmut.lms.common.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -7,73 +8,87 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Slf4j
 @RestControllerAdvice(basePackages = "com.hcmut.lms.authentication")
 public class AuthenticationExceptionHandler {
     
     @ExceptionHandler(InvalidCredentialsException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public String handleInvalidCredentialsException(InvalidCredentialsException ex) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidCredentialsException(InvalidCredentialsException ex) {
         log.warn("Invalid credentials: {}", ex.getMessage());
-        return ex.getMessage();
+        return ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage())
+                .build();
     }
     
     @ExceptionHandler(AccountLockedException.class)
     @ResponseStatus(HttpStatus.LOCKED)
-    public Map<String, Object> handleAccountLockedException(AccountLockedException ex) {
+    public ErrorResponse handleAccountLockedException(AccountLockedException ex) {
         log.warn("Account locked: {}", ex.getMessage());
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", ex.getMessage());
-        response.put("lockedUntil", ex.getLockedUntil());
-        return response;
+        return ErrorResponse.builder()
+                .status(HttpStatus.LOCKED.value())
+                .message(ex.getMessage() + "util" + ex.getLockedUntil())
+                .build();
     }
     
     @ExceptionHandler(TokenExpiredException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public String handleTokenExpiredException(TokenExpiredException ex) {
+    public ErrorResponse handleTokenExpiredException(TokenExpiredException ex) {
         log.warn("Token expired: {}", ex.getMessage());
-        return ex.getMessage();
+        return ErrorResponse.builder()
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .message(ex.getMessage())
+                .build();
     }
     
     @ExceptionHandler(InvalidTokenException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public String handleInvalidTokenException(InvalidTokenException ex) {
+    public ErrorResponse handleInvalidTokenException(InvalidTokenException ex) {
         log.warn("Invalid token: {}", ex.getMessage());
-        return ex.getMessage();
+        return ErrorResponse.builder()
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .message(ex.getMessage())
+                .build();
     }
     
     @ExceptionHandler(ResourceNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public String handleResourceNotFoundException(ResourceNotFoundException ex) {
+    public ErrorResponse handleResourceNotFoundException(ResourceNotFoundException ex) {
         log.warn("Resource not found: {}", ex.getMessage());
-        return ex.getMessage();
+        return ErrorResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .message(ex.getMessage())
+                .build();
     }
     
     @ExceptionHandler(DuplicateResourceException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public String handleDuplicateResourceException(DuplicateResourceException ex) {
+    public ErrorResponse handleDuplicateResourceException(DuplicateResourceException ex) {
         log.warn("Duplicate resource: {}", ex.getMessage());
-        return ex.getMessage();
+        return ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .message(ex.getMessage())
+                .build();
     }
     
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> 
-            errors.put(error.getField(), error.getDefaultMessage())
-        );
-        return errors;
+    public ErrorResponse handleValidationExceptions(MethodArgumentNotValidException ex) {
+        return ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("Bad requests")
+                .build();
     }
     
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public String handleGenericException(Exception ex) {
+    public ErrorResponse handleGenericException(Exception ex) {
         log.error("Unexpected error: ", ex);
-        return "An unexpected error occurred";
+        return ErrorResponse.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message( "An unexpected error occurred")
+                .build();
     }
 }
 
