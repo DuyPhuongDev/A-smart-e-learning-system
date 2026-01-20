@@ -22,7 +22,7 @@ spring:
         format_sql: true
         default_schema: authentication
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     schemas: authentication
     default-schema: authentication
