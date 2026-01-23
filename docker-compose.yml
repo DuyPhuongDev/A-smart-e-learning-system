@@ -23,6 +23,27 @@ services:
       retries: 5
 
   # ========================================
+  # Qdrant - Vector Database for RAG Chatbot
+  # ========================================
+  qdrant-vector-db:
+    image: qdrant/qdrant:v1.16.3
+    container_name: lms-qdrant
+    environment:
+      QDRANT__SERVICE__API_KEY: lms_qdrant_vector_secret_key
+    ports:
+      - "6333:6333" # HTTP Port
+      - "6334:6334" # gRPC Port
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - lms-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail http://localhost:6333/readyz || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
   # Infrastructure Services
   # ========================================
   
@@ -267,3 +288,4 @@ networks:
 
 volumes:
   postgres-data:
+  qdrant-data:
