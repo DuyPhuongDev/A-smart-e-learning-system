@@ -1,7 +1,7 @@
 package com.hcmut.lms.coursemanagement.controller;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.ChapterRequest;
-import com.hcmut.lms.coursemanagement.application.dto.request.ReorderListRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.ReorderRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ChapterResponse;
 import com.hcmut.lms.coursemanagement.application.service.ChapterService;
 import jakarta.validation.Valid;
@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/chapters")
+@RequestMapping("${prefix-api}/chapters")
 @RequiredArgsConstructor
 public class ChapterController {
     
@@ -53,9 +53,16 @@ public class ChapterController {
         return ResponseEntity.noContent().build();
     }
     
+//    @PutMapping("/reorder")
+//    public ResponseEntity<List<ChapterResponse>> reorderChapters(
+//            @Valid @RequestBody ReorderListRequest request) {
+//        List<ChapterResponse> response = chapterService.reorderChapters(request);
+//        return ResponseEntity.ok(response);
+//    }
+
     @PutMapping("/reorder")
     public ResponseEntity<List<ChapterResponse>> reorderChapters(
-            @Valid @RequestBody ReorderListRequest request) {
+            @Valid @RequestBody ReorderRequest request) {
         List<ChapterResponse> response = chapterService.reorderChapters(request);
         return ResponseEntity.ok(response);
     }

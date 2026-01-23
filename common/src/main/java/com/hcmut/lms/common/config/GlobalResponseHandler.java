@@ -1,7 +1,7 @@
 package com.hcmut.lms.common.config;
 
 import com.hcmut.lms.common.dto.ApiResponse;
-import com.hcmut.lms.common.exception.GlobalExceptionHandler;
+import com.hcmut.lms.common.dto.ErrorResponse;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -47,9 +47,9 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         }
 
         // Bỏ qua GlobalExceptionHandler vì đã có format riêng
-        if (returnType.getDeclaringClass().equals(GlobalExceptionHandler.class)) {
-            return false;
-        }
+//        if (returnType.getDeclaringClass().equals(GlobalExceptionHandler.class)) {
+//            return false;
+//        }
 
         // Cho phép xử lý cả ResponseEntity và các return type khác
         // Khi controller trả về ResponseEntity<T>, Spring sẽ unwrap và body sẽ được truyền vào beforeBodyWrite()
@@ -69,19 +69,20 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
             return body;
         }
 
+
         String path = "";
         if (request instanceof ServletServerHttpRequest) {
             path = ((ServletServerHttpRequest) request).getServletRequest().getRequestURI();
         }
+
+        // if internal -> no wrap
+        if(path.contains("internal")) return body;
 
         // Xác định status code: ưu tiên lấy từ response, nếu không có thì suy luận từ HTTP method
         int statusCode = determineStatusCode(returnType, request, response);
         
         // Nếu body là String (thường là error message từ exception handlers), dùng làm message
         String message = "Success";
-        if (body instanceof String) {
-            message = (String) body;
-        }
 
         // Nếu body là null (ví dụ: @ResponseStatus(NO_CONTENT) hoặc void return type)
         // Vẫn wrap vào ApiResponse format để đảm bảo consistency
@@ -96,10 +97,10 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         }
 
         // Nếu body là String (error message), đặt vào message và data = null
-        if (body instanceof String) {
+        if (body instanceof ErrorResponse) {
             return ApiResponse.builder()
-                    .status(statusCode)
-                    .message((String) body)
+                    .status(((ErrorResponse) body).getStatus())
+                    .message(((ErrorResponse) body).getMessage())
                     .data(null)
                     .timestamp(LocalDateTime.now())
                     .path(path)

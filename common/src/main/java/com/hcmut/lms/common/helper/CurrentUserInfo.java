@@ -11,6 +11,7 @@ import java.util.UUID;
 @Builder
 public class CurrentUserInfo {
     private UUID id;
+    private String email;
     private String role;
 
     public boolean hasRole(String role) {

@@ -1,5 +1,6 @@
 package com.hcmut.lms.authentication.service.impl;
 
+import com.hcmut.lms.authentication.client.UserManagementClient;
 import com.hcmut.lms.authentication.exception.*;
 import com.hcmut.lms.authentication.model.dto.request.*;
 import com.hcmut.lms.authentication.model.dto.response.AuthResponse;
@@ -32,6 +33,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordUtil passwordUtil;
     private final JwtUtil jwtUtil;
+    private final UserManagementClient userManagementClient;
     
     @Value("${auth.max-failed-attempts:5}")
     private int maxFailedAttempts;
@@ -73,15 +75,18 @@ public class AuthServiceImpl implements AuthService {
         credentials.setLockedUntil(null);
         userCredentialsRepository.save(credentials);
         
-        // Generate tokens
-        String accessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail());
-        String refreshTokenValue = jwtUtil.generateRefreshToken(credentials.getUserId(), credentials.getEmail());
+        // Get user role from user-management-service
+        String role = getUserRole(credentials.getUserId());
+        
+        // Generate tokens with role
+        String accessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail(), role);
+        String refreshTokenValue = jwtUtil.generateRefreshToken(credentials.getUserId(), credentials.getEmail(), role);
         
         // Save refresh token
         String refreshTokenHash = passwordUtil.hashToken(refreshTokenValue);
         @SuppressWarnings("null")
         RefreshToken refreshTokenEntity = RefreshToken.builder()
-                .userId(credentials.getUserId())
+                .userCredentials(credentials)
                 .tokenHash(refreshTokenHash)
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .isRevoked(false)
@@ -97,6 +102,7 @@ public class AuthServiceImpl implements AuthService {
                 .tokenType("Bearer")
                 .userId(credentials.getUserId())
                 .email(credentials.getEmail())
+                .role(role)
                 .build();
     }
     
@@ -128,7 +134,7 @@ public class AuthServiceImpl implements AuthService {
         refreshToken.setRevokedAt(LocalDateTime.now());
         refreshTokenRepository.save(refreshToken);
         
-        log.info("User {} logged out", refreshToken.getUserId());
+        log.info("User {} logged out", refreshToken.getUserCredentials().getUserId());
     }
     
     @Override
@@ -146,12 +152,14 @@ public class AuthServiceImpl implements AuthService {
             throw new TokenExpiredException("Refresh token has expired");
         }
         
-        // Get user credentials
-        UserCredentials credentials = userCredentialsRepository.findByUserId(refreshToken.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", refreshToken.getUserId()));
+        // Get user credentials from relationship
+        UserCredentials credentials = refreshToken.getUserCredentials();
         
-        // Generate new access token
-        String newAccessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail());
+        // Get user role from user-management-service
+        String role = getUserRole(credentials.getUserId());
+        
+        // Generate new access token with role
+        String newAccessToken = jwtUtil.generateAccessToken(credentials.getUserId(), credentials.getEmail(), role);
         
         log.info("Token refreshed for user {}", credentials.getEmail());
         
@@ -175,17 +183,32 @@ public class AuthServiceImpl implements AuthService {
             
             UUID userId = jwtUtil.extractUserId(token);
             String email = jwtUtil.extractEmail(token);
+            String role = jwtUtil.extractRole(token);
             
             return TokenValidationResponse.builder()
                     .valid(true)
                     .userId(userId)
                     .email(email)
+                    .role(role)
                     .build();
         } catch (Exception e) {
             log.warn("Token validation failed: {}", e.getMessage());
             return TokenValidationResponse.builder()
                     .valid(false)
                     .build();
+        }
+    }
+    
+    /**
+     * Get user role from user-management-service
+     */
+    private String getUserRole(UUID userId) {
+        try {
+            UserManagementClient.UserRoleResponse roleResponse = userManagementClient.getUserRole(userId);
+            return roleResponse.getRoleName();
+        } catch (Exception e) {
+            log.warn("Failed to get user role for {}: {}", userId, e.getMessage());
+            return "UNKNOWN"; // Default role if service unavailable
         }
     }
     
@@ -223,7 +246,7 @@ public class AuthServiceImpl implements AuthService {
         // Save reset token
         @SuppressWarnings("null")
         PasswordResetToken resetTokenEntity = PasswordResetToken.builder()
-                .userId(credentials.getUserId())
+                .userCredentials(credentials)
                 .tokenHash(resetTokenHash)
                 .expiresAt(LocalDateTime.now().plusHours(1)) // 1 hour expiration
                 .isUsed(false)
@@ -251,9 +274,8 @@ public class AuthServiceImpl implements AuthService {
             throw new TokenExpiredException("Reset token has expired");
         }
         
-        // Update password
-        UserCredentials credentials = userCredentialsRepository.findByUserId(passwordResetToken.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", passwordResetToken.getUserId()));
+        // Update password - get credentials from relationship
+        UserCredentials credentials = passwordResetToken.getUserCredentials();
         
         credentials.setPasswordHash(passwordUtil.hashPassword(request.getNewPassword()));
         userCredentialsRepository.save(credentials);

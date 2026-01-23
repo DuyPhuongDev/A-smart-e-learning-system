@@ -15,5 +15,6 @@ public class TokenValidationResponse {
     private Boolean valid;
     private UUID userId;
     private String email;
+    private String role;
 }
 

@@ -43,19 +43,19 @@ services:
       retries: 5
 
   # Config Server
-  config-server:
-    build:
-      context: .
-      dockerfile: config-server/Dockerfile
-    container_name: config-server
-    ports:
-      - "8888:8888"
-    environment:
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-    depends_on:
-      - eureka-server
-    networks:
-      - lms-network
+#  config-server:
+#    build:
+#      context: .
+#      dockerfile: config-server/Dockerfile
+#    container_name: config-server
+#    ports:
+#      - "8888:8888"
+#    environment:
+#      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+#    depends_on:
+#      - eureka-server
+#    networks:
+#      - lms-network
 
   # API Gateway
   api-gateway:

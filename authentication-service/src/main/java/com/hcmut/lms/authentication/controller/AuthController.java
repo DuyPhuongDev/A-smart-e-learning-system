@@ -27,7 +27,7 @@ public class AuthController {
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
+            return authService.login(request);
     }
 
     @PostMapping("/refresh-token")

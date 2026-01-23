@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/subjects")
+@RequestMapping("${prefix-api}/subjects")
 @RequiredArgsConstructor
 public class SubjectController {
     

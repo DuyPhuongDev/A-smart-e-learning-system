@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/files")
+@RequestMapping("${prefix-api}/files")
 public class FileController {
 
     private final FileService fileService;
