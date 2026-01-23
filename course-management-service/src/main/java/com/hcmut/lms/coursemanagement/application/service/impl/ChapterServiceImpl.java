@@ -1,7 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.ChapterRequest;
-import com.hcmut.lms.coursemanagement.application.dto.request.ReorderListRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ReorderRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ChapterResponse;
 import com.hcmut.lms.coursemanagement.application.mapper.ChapterMapper;
@@ -16,10 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -111,32 +107,68 @@ public class ChapterServiceImpl implements ChapterService {
         chapterRepository.deleteById(id);
         log.info("Chapter deleted successfully with id: {}", id);
     }
-    
-    @Override
-    public List<ChapterResponse> reorderChapters(ReorderListRequest request) {
-        log.info("Reordering chapters");
-        
-        Map<UUID, Integer> orderMap = request.getItems().stream()
-                .collect(Collectors.toMap(ReorderRequest::getId, ReorderRequest::getNewOrderIndex));
-        
-        List<Chapter> chapters = chapterRepository.findAllById(orderMap.keySet());
-        
-        if (chapters.size() != orderMap.size()) {
-            throw new EntityNotFoundException("Some chapters not found");
+
+    @Transactional
+    public List<ChapterResponse> reorderChapters(ReorderRequest request) {
+        log.info("Reordering chapter with id: {} to new order: {}", request.getId(), request.getNewOrderIndex());
+
+        Chapter target = chapterRepository.findById(request.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Chapter not found with id: " + request.getId()));
+
+        int oldOrder = target.getOrderIndex();
+        List<Chapter> chapters = getSortedChapters(target);
+        int newOrder = validateNewOrder(request.getNewOrderIndex(), chapters.size());
+
+        // If order doesn't change, return early
+        if (oldOrder == newOrder) {
+            log.info("Order unchanged, returning current state");
+            return chapters.stream().map(chapterMapper::toResponseDTO).toList();
+        }
+
+        // Step 1: Set target chapter to temporary order index (-1) to avoid constraint violation
+        target.setOrderIndex(-1);
+        chapterRepository.saveAndFlush(target);
+        log.debug("Set target chapter to temporary order index: -1");
+
+        // Step 2: Shift other chapters
+        if (newOrder > oldOrder) {
+            // Moving down: shift chapters between oldOrder and newOrder up
+            for (int i = oldOrder + 1; i <= newOrder; i++) {
+                chapters.get(i).setOrderIndex(i - 1);
+            }
+        } else {
+            // Moving up: shift chapters between newOrder and oldOrder down
+            for (int i = newOrder; i < oldOrder; i++) {
+                chapters.get(i).setOrderIndex(i + 1);
+            }
         }
         
-        chapters.forEach(chapter -> {
-            Integer newOrderIndex = orderMap.get(chapter.getId());
-            chapter.setOrderIndex(newOrderIndex);
-        });
-        
-        List<Chapter> savedChapters = chapterRepository.saveAll(chapters);
-        
-        log.info("Chapters reordered successfully");
-        return savedChapters.stream()
-                .sorted((c1, c2) -> c1.getOrderIndex().compareTo(c2.getOrderIndex()))
-                .map(chapterMapper::toResponseDTO)
-                .toList();
+        // Step 3: Save shifted chapters
+        chapterRepository.saveAllAndFlush(chapters);
+        log.debug("Shifted chapters saved");
+
+        // Step 4: Set target chapter to final position
+        target.setOrderIndex(newOrder);
+        chapterRepository.saveAndFlush(target);
+        log.info("Target chapter moved to new order index: {}", newOrder);
+
+        // Return all chapters in sorted order
+        List<Chapter> result = getSortedChapters(target);
+        return result.stream().map(chapterMapper::toResponseDTO).toList();
+    }
+
+    private List<Chapter> getSortedChapters(Chapter target) {
+        List<Chapter> chapters = new ArrayList<>(
+                target.getClassSection().getChapters()
+        );
+        chapters.sort(Comparator.comparing(Chapter::getOrderIndex));
+        return chapters;
+    }
+
+    private Integer validateNewOrder(int newOrder, int size) {
+        if (newOrder > size) return size-1;
+        if (newOrder < 0) return 0;
+        return newOrder;
     }
 }
 

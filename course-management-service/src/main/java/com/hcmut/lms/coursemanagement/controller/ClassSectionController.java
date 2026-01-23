@@ -14,8 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -29,11 +27,6 @@ public class ClassSectionController {
     public ResponseEntity<ClassSectionResponse> createClassSection(
             @CurrentUser CurrentUserInfo currentUser,
             @Valid @RequestBody ClassSectionRequest request) {
-        // test
-//        CurrentUserInfo currentUser = CurrentUserInfo.builder()
-//                .id(UUID.fromString("811ba53a-0eb3-4cc3-a6a2-49214ca25b18"))
-//                .role("TEACHER")
-//                .build();
         ClassSectionResponse response = classSectionService.createClassSection(currentUser, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -53,53 +46,13 @@ public class ClassSectionController {
     }
     
     @GetMapping
-    public ResponseEntity<?> getAllClassSections(
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        if (page != null && size != null) {
-            PageResponse<ClassSectionResponse> response = classSectionService.getAllClassSections(page, size);
-            return ResponseEntity.ok(response);
-        }
-        List<ClassSectionResponse> response = classSectionService.getAllClassSections();
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/subject/{subjectId}")
-    public ResponseEntity<?> getClassSectionsBySubjectId(
-            @PathVariable UUID subjectId,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        if (page != null && size != null) {
-            PageResponse<ClassSectionResponse> response = classSectionService.getClassSectionsBySubjectId(subjectId, page, size);
-            return ResponseEntity.ok(response);
-        }
-        List<ClassSectionResponse> response = classSectionService.getClassSectionsBySubjectId(subjectId);
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/semester/{semesterId}")
-    public ResponseEntity<?> getClassSectionsBySemesterId(
-            @PathVariable UUID semesterId,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        if (page != null && size != null) {
-            PageResponse<ClassSectionResponse> response = classSectionService.getClassSectionsBySemesterId(semesterId, page, size);
-            return ResponseEntity.ok(response);
-        }
-        List<ClassSectionResponse> response = classSectionService.getClassSectionsBySemesterId(semesterId);
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/teacher/{teacherId}")
-    public ResponseEntity<?> getClassSectionsByTeacherId(
-            @PathVariable UUID teacherId,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        if (page != null && size != null) {
-            PageResponse<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(teacherId, page, size);
-            return ResponseEntity.ok(response);
-        }
-        List<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(teacherId);
+    public ResponseEntity<PageResponse<ClassSectionResponse>> getAllClassSections(
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size,
+            @RequestParam(required = false) String semester,
+            @RequestParam(required = false) UUID teacherId) {
+        PageResponse<ClassSectionResponse> response = classSectionService.getAllClassSections(
+                page, size, semester, teacherId);
         return ResponseEntity.ok(response);
     }
     
@@ -116,17 +69,14 @@ public class ClassSectionController {
     }
 
     @GetMapping("/my-classes")
-    public ResponseEntity<?> getMyClassSections(
+    public ResponseEntity<PageResponse<ClassSectionResponse>> getMyClassSections(
                 @CurrentUser CurrentUserInfo currentUserInfo,
-                @RequestParam(required = false) Integer page,
-                @RequestParam(required = false) Integer size) {
-
-            if (page != null && size != null) {
-                PageResponse<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(currentUserInfo.getId(), page, size);
-                return ResponseEntity.ok(response);
-            }
-            List<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(currentUserInfo.getId());
-            return ResponseEntity.ok(response);
+                @RequestParam(required = false, defaultValue = "0") Integer page,
+                @RequestParam(required = false, defaultValue = "10") Integer size,
+                @RequestParam(required = false) String semester) {
+        PageResponse<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(
+                currentUserInfo.getId(), page, size, semester);
+        return ResponseEntity.ok(response);
     }
     
     @GetMapping("/{id}/menu")

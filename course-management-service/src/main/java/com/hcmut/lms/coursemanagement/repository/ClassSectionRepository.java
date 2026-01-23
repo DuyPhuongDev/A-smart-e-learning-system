@@ -16,17 +16,17 @@ import java.util.UUID;
 
 @Repository
 public interface ClassSectionRepository extends JpaRepository<ClassSection, UUID> {
-    List<ClassSection> findBySubjectId(UUID subjectId);
-    Page<ClassSection> findBySubjectId(UUID subjectId, Pageable pageable);
-    List<ClassSection> findBySemesterId(UUID semesterId);
-    Page<ClassSection> findBySemesterId(UUID semesterId, Pageable pageable);
-    List<ClassSection> findByTeacherId(UUID teacherId);
     Page<ClassSection> findByTeacherId(UUID teacherId, Pageable pageable);
-    List<ClassSection> findByStatus(ClassStatus status);
-    Page<ClassSection> findByStatus(ClassStatus status, Pageable pageable);
     
     @EntityGraph(attributePaths = {"chapters"})
     @Query("SELECT DISTINCT cs FROM ClassSection cs LEFT JOIN FETCH cs.chapters WHERE cs.id = :id")
     Optional<ClassSection> findByIdWithChapters(@Param("id") UUID id);
+    
+    @Query("SELECT cs FROM ClassSection cs WHERE " +
+           "(:semesterCode IS NULL OR cs.semester.semesterCode = :semesterCode) AND " +
+           "(:teacherId IS NULL OR cs.teacherId = :teacherId)")
+    Page<ClassSection> findByFilters(@Param("semesterCode") String semesterCode,
+                                     @Param("teacherId") UUID teacherId,
+                                     Pageable pageable);
 }
 

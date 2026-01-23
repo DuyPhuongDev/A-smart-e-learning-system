@@ -1,8 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.BaseLectureRequest;
-import com.hcmut.lms.coursemanagement.application.dto.request.DocumentLectureRequest;
-import com.hcmut.lms.coursemanagement.application.dto.request.ReorderListRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ReorderRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.LectureResponse;
 import com.hcmut.lms.coursemanagement.application.mapper.LectureMapper;
@@ -22,9 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -166,32 +162,68 @@ public class LectureServiceImpl implements LectureService {
         
         log.info("Lecture deleted successfully with id: {}", id);
     }
-    
-    @Override
-    public List<LectureResponse> reorderLectures(ReorderListRequest request) {
-        log.info("Reordering lectures");
-        
-        Map<UUID, Integer> orderMap = request.getItems().stream()
-                .collect(Collectors.toMap(ReorderRequest::getId, ReorderRequest::getNewOrderIndex));
-        
-        List<Lecture> lectures = lectureRepository.findAllById(orderMap.keySet());
-        
-        if (lectures.size() != orderMap.size()) {
-            throw new RuntimeException("Some lectures not found");
+
+    @Transactional
+    public List<LectureResponse> reorderLectures(ReorderRequest request) {
+        log.info("Reordering lecture with id: {} to new order: {}", request.getId(), request.getNewOrderIndex());
+
+        Lecture target = lectureRepository.findById(request.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Lecture not found with id: " + request.getId()));
+
+        int oldOrder = target.getOrderIndex();
+        List<Lecture> lectures = getSortedLectures(target);
+        int newOrder = validateNewOrder(request.getNewOrderIndex(), lectures.size());
+
+        // If order doesn't change, return early
+        if (oldOrder == newOrder) {
+            log.info("Order unchanged, returning current state");
+            return lectures.stream().map(lectureMapper::toResponseDTO).toList();
         }
-        
-        lectures.forEach(lecture -> {
-            Integer newOrderIndex = orderMap.get(lecture.getId());
-            lecture.setOrderIndex(newOrderIndex);
-        });
-        
-        List<Lecture> savedLectures = lectureRepository.saveAll(lectures);
-        
-        log.info("Lectures reordered successfully");
-        return savedLectures.stream()
-                .sorted((l1, l2) -> l1.getOrderIndex().compareTo(l2.getOrderIndex()))
-                .map(lectureMapperHelper::toResponseDTO)
-                .collect(Collectors.toList());
+
+        // Step 1: Set target lecture to temporary order index (-1) to avoid constraint violation
+        target.setOrderIndex(-1);
+        lectureRepository.saveAndFlush(target);
+        log.debug("Set target lecture to temporary order index: -1");
+
+        // Step 2: Shift other lecture
+        if (newOrder > oldOrder) {
+            // Moving down: shift lectures between oldOrder and newOrder up
+            for (int i = oldOrder + 1; i <= newOrder; i++) {
+                lectures.get(i).setOrderIndex(i - 1);
+            }
+        } else {
+            // Moving up: shift lectures between newOrder and oldOrder down
+            for (int i = newOrder; i < oldOrder; i++) {
+                lectures.get(i).setOrderIndex(i + 1);
+            }
+        }
+
+        // Step 3: Save shifted lectures
+        lectureRepository.saveAllAndFlush(lectures);
+        log.debug("Shifted chapters saved");
+
+        // Step 4: Set target lecture to final position
+        target.setOrderIndex(newOrder);
+        lectureRepository.saveAndFlush(target);
+        log.info("Target lecture moved to new order index: {}", newOrder);
+
+        // Return all lectures in sorted order
+        List<Lecture> result = getSortedLectures(target);
+        return result.stream().map(lectureMapper::toResponseDTO).toList();
+    }
+
+    private List<Lecture> getSortedLectures(Lecture target) {
+        List<Lecture> lectures = new ArrayList<>(
+                target.getChapter().getLectures()
+        );
+        lectures.sort(Comparator.comparing(Lecture::getOrderIndex));
+        return lectures;
+    }
+
+    private Integer validateNewOrder(int newOrder, int size) {
+        if (newOrder > size) return size-1;
+        if (newOrder < 0) return 0;
+        return newOrder;
     }
 }
 
