@@ -9,7 +9,5 @@ public interface ImportExportService {
     ImportResultDto importUsersFromExcel(MultipartFile file);
     
     byte[] exportUsersToExcel(String search, UserStatus status, String department);
-    
-    byte[] generateImportTemplate();
 }
 

@@ -19,21 +19,22 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.time.LocalDateTime;
 
 /**
- * Global Response Handler - Tự động wrap tất cả API responses vào ApiResponse format
+ * Global Response Handler - Tự động wrap tất cả API responses vào ApiResponse
+ * format
  * 
  * Sử dụng trong tất cả microservices để đảm bảo consistent response format.
  * 
  * Response format:
  * {
- *   "status": 200,
- *   "message": "Success",
- *   "data": {...},
- *   "timestamp": "2024-01-15T10:30:00",
- *   "path": "/api/resource"
+ * "status": 200,
+ * "message": "Success",
+ * "data": {...},
+ * "timestamp": "2024-01-15T10:30:00",
+ * "path": "/api/resource"
  * }
  */
 @RestControllerAdvice
-@SuppressWarnings({"NullableProblems", "null"})
+@SuppressWarnings({ "NullableProblems", "null" })
 public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
 
     @Override
@@ -41,34 +42,38 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         String declaringClassName = returnType.getDeclaringClass().getName();
 
         // Bỏ qua nếu là handler của Swagger / Springdoc
-        if (declaringClassName.startsWith("org.springdoc") || 
-            declaringClassName.startsWith("org.springframework.boot.actuate")) {
-            return false;
-        }
+        return !declaringClassName.startsWith("org.springdoc") &&
+                !declaringClassName.startsWith("org.springframework.boot.actuate");
 
         // Bỏ qua GlobalExceptionHandler vì đã có format riêng
-//        if (returnType.getDeclaringClass().equals(GlobalExceptionHandler.class)) {
-//            return false;
-//        }
+        // if (returnType.getDeclaringClass().equals(GlobalExceptionHandler.class)) {
+        // return false;
+        // }
 
         // Cho phép xử lý cả ResponseEntity và các return type khác
-        // Khi controller trả về ResponseEntity<T>, Spring sẽ unwrap và body sẽ được truyền vào beforeBodyWrite()
-        return true;
+        // Khi controller trả về ResponseEntity<T>, Spring sẽ unwrap và body sẽ được
+        // truyền vào beforeBodyWrite()
     }
 
     @Override
     public Object beforeBodyWrite(Object body,
-                                  MethodParameter returnType,
-                                  MediaType selectedContentType,
-                                  Class<? extends HttpMessageConverter<?>> selectedConverterType,
-                                  ServerHttpRequest request,
-                                  ServerHttpResponse response) {
+            MethodParameter returnType,
+            MediaType selectedContentType,
+            Class<? extends HttpMessageConverter<?>> selectedConverterType,
+            ServerHttpRequest request,
+            ServerHttpResponse response) {
 
         // Nếu đã là ApiResponse thì không wrap lại
         if (body instanceof ApiResponse) {
             return body;
         }
 
+        // Bỏ qua binary data (file downloads) - KHÔNG wrap vào JSON
+        // Kiểm tra nếu body là byte[] hoặc content type là binary
+        if (body instanceof byte[] || selectedContentType.equals(MediaType.APPLICATION_OCTET_STREAM) || selectedContentType.toString()
+                .contains("application/vnd.openxmlformats-officedocument")) {
+            return body;
+        }
 
         String path = "";
         if (request instanceof ServletServerHttpRequest) {
@@ -76,12 +81,15 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
         }
 
         // if internal -> no wrap
-        if(path.contains("internal")) return body;
+        if (path.contains("internal"))
+            return body;
 
-        // Xác định status code: ưu tiên lấy từ response, nếu không có thì suy luận từ HTTP method
+        // Xác định status code: ưu tiên lấy từ response, nếu không có thì suy luận từ
+        // HTTP method
         int statusCode = determineStatusCode(returnType, request, response);
-        
-        // Nếu body là String (thường là error message từ exception handlers), dùng làm message
+
+        // Nếu body là String (thường là error message từ exception handlers), dùng làm
+        // message
         String message = "Success";
 
         // Nếu body là null (ví dụ: @ResponseStatus(NO_CONTENT) hoặc void return type)
@@ -117,16 +125,19 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
     }
 
     /**
-     * Xác định status code dựa trên @ResponseStatus annotation, response và HTTP method
-     * Best practice: Ưu tiên @ResponseStatus > HttpServletResponse > suy luận từ HTTP method
+     * Xác định status code dựa trên @ResponseStatus annotation, response và HTTP
+     * method
+     * Best practice: Ưu tiên @ResponseStatus > HttpServletResponse > suy luận từ
+     * HTTP method
      */
-    private int determineStatusCode(MethodParameter returnType, ServerHttpRequest request, ServerHttpResponse response) {
+    private int determineStatusCode(MethodParameter returnType, ServerHttpRequest request,
+            ServerHttpResponse response) {
         // Ưu tiên 1: Kiểm tra @ResponseStatus annotation trên method
         ResponseStatus responseStatus = returnType.getMethodAnnotation(ResponseStatus.class);
         if (responseStatus != null) {
             return responseStatus.value().value();
         }
-        
+
         // Ưu tiên 2: Lấy status code từ HttpServletResponse (nếu đã được set)
         if (response instanceof ServletServerHttpResponse) {
             HttpServletResponse servletResponse = ((ServletServerHttpResponse) response).getServletResponse();
@@ -136,11 +147,12 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
                 return status;
             }
         }
-        
+
         // Ưu tiên 3: Suy luận từ HTTP method nếu return type là ResponseEntity
         Class<?> returnTypeClass = returnType.getParameterType();
         if (ResponseEntity.class.isAssignableFrom(returnTypeClass)) {
-            String method = request.getMethod() != null ? request.getMethod().name() : "GET";
+            request.getMethod();
+            String method = request.getMethod().name();
             return switch (method) {
                 case "POST" -> HttpStatus.CREATED.value(); // 201
                 case "PUT", "PATCH" -> HttpStatus.OK.value(); // 200
@@ -148,9 +160,8 @@ public class GlobalResponseHandler implements ResponseBodyAdvice<Object> {
                 default -> HttpStatus.OK.value(); // 200
             };
         }
-        
+
         // Mặc định: 200 OK
         return HttpStatus.OK.value();
     }
 }
-
