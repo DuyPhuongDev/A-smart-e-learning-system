@@ -8,7 +8,10 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "lectures")
+@Table(name = "lectures",
+uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"order_index", "chapter_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,7 +23,7 @@ public abstract class Lecture extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
     
-    @Column(name = "order_index")
+    @Column(name = "order_index", nullable = false)
     private Integer orderIndex;
     
     @Column(name = "title")

@@ -6,10 +6,8 @@ import com.hcmut.lms.coursemanagement.application.service.LectureService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -69,7 +67,7 @@ public class LectureController {
     
     @PutMapping("/reorder")
     public ResponseEntity<List<LectureResponse>> reorderLectures(
-            @Valid @RequestBody ReorderListRequest request) {
+            @Valid @RequestBody ReorderRequest request) {
         List<LectureResponse> response = lectureService.reorderLectures(request);
         return ResponseEntity.ok(response);
     }

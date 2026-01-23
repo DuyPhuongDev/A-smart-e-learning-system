@@ -1,7 +1,7 @@
 package com.hcmut.lms.coursemanagement.application.service;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.ChapterRequest;
-import com.hcmut.lms.coursemanagement.application.dto.request.ReorderListRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.ReorderRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ChapterResponse;
 
 import java.util.List;
@@ -13,6 +13,6 @@ public interface ChapterService {
     ChapterResponse getChapterById(UUID id);
     List<ChapterResponse> getChaptersByClassSectionId(UUID classSectionId);
     void deleteChapter(UUID id);
-    List<ChapterResponse> reorderChapters(ReorderListRequest request);
+    List<ChapterResponse> reorderChapters(ReorderRequest request);
 }
 

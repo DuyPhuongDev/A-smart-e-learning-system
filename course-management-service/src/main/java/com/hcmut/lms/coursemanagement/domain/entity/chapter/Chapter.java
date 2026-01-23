@@ -12,7 +12,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "chapters")
+@Table(name = "chapters",
+uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"order_index", "class_section_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,7 +33,7 @@ public class Chapter extends BaseEntity {
     @Column(name = "description")
     private String description;
     
-    @Column(name = "order_index")
+    @Column(name = "order_index",  nullable = false)
     private Integer orderIndex;
     
     @Column(name = "status")

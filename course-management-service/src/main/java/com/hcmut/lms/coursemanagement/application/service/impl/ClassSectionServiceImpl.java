@@ -48,7 +48,6 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     private final SemesterRepository semesterRepository;
     private final ChapterRepository chapterRepository;
     private final ClassSectionMapper classSectionMapper;
-    private final UserManagementClient userManagementClient;
     private final UserServiceClient userServiceClient;
     
     @Override
@@ -153,97 +152,29 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         
         return enrichWithTeacherName(classSectionMapper.toResponseDTO(classSection));
     }
-    
+
     @Override
     @Transactional(readOnly = true)
-    public List<ClassSectionResponse> getAllClassSections() {
-        log.info("Getting all class sections");
-        
-        return classSectionRepository.findAll().stream()
-                .map(classSectionMapper::toResponseDTO)
-                .map(this::enrichWithTeacherName)
-                .toList();
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<ClassSectionResponse> getAllClassSections(int page, int size) {
-        log.info("Getting all class sections with pagination - page: {}, size: {}", page, size);
-        
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ClassSection> classSectionPage = classSectionRepository.findAll(pageable);
+    public PageResponse<ClassSectionResponse> getAllClassSections(int page, int size, String semester, UUID teacherId) {
+        log.info("Getting all class sections with filters - page: {}, size: {}, semester: {}, teacherId: {}", 
+                 page, size, semester, teacherId);
+
+        if(semester != null && semester.isBlank()) semester = null;
+        Page<ClassSection> classSectionPage = classSectionRepository.findByFilters(semester, teacherId, PageRequest.of(page, size));
         
         Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
                 .map(this::enrichWithTeacherName);
         return PageResponse.fromPage(responsePage);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
-    public List<ClassSectionResponse> getClassSectionsBySubjectId(UUID subjectId) {
-        log.info("Getting class sections by subject id: {}", subjectId);
-        
-        return classSectionRepository.findBySubjectId(subjectId).stream()
-                .map(classSectionMapper::toResponseDTO)
-                .map(this::enrichWithTeacherName)
-                .toList();
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<ClassSectionResponse> getClassSectionsBySubjectId(UUID subjectId, int page, int size) {
-        log.info("Getting class sections by subject id: {} with pagination - page: {}, size: {}", subjectId, page, size);
-        
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ClassSection> classSectionPage = classSectionRepository.findBySubjectId(subjectId, pageable);
-        
-        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
-                .map(this::enrichWithTeacherName);
-        return PageResponse.fromPage(responsePage);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClassSectionResponse> getClassSectionsBySemesterId(UUID semesterId) {
-        log.info("Getting class sections by semester id: {}", semesterId);
-        
-        return classSectionRepository.findBySemesterId(semesterId).stream()
-                .map(classSectionMapper::toResponseDTO)
-                .map(this::enrichWithTeacherName)
-                .toList();
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<ClassSectionResponse> getClassSectionsBySemesterId(UUID semesterId, int page, int size) {
-        log.info("Getting class sections by semester id: {} with pagination - page: {}, size: {}", semesterId, page, size);
-        
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ClassSection> classSectionPage = classSectionRepository.findBySemesterId(semesterId, pageable);
-        
-        Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
-                .map(this::enrichWithTeacherName);
-        return PageResponse.fromPage(responsePage);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClassSectionResponse> getClassSectionsByTeacherId(UUID teacherId) {
-        log.info("Getting class sections by teacher id: {}", teacherId);
-        
-        return classSectionRepository.findByTeacherId(teacherId).stream()
-                .map(classSectionMapper::toResponseDTO)
-                .map(this::enrichWithTeacherName)
-                .toList();
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<ClassSectionResponse> getClassSectionsByTeacherId(UUID teacherId, int page, int size) {
-        log.info("Getting class sections by teacher id: {} with pagination - page: {}, size: {}", teacherId, page, size);
-        
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ClassSection> classSectionPage = classSectionRepository.findByTeacherId(teacherId, pageable);
+    public PageResponse<ClassSectionResponse> getClassSectionsByTeacherId(UUID teacherId, int page, int size, String semester) {
+        log.info("Getting class sections by teacher id: {} with pagination and filters - page: {}, size: {}, semester: {}", 
+                 teacherId, page, size, semester);
+
+        if(semester != null && semester.isBlank()) semester = null;
+        Page<ClassSection> classSectionPage = classSectionRepository.findByFilters(semester, teacherId, PageRequest.of(page, size));
         
         Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
                 .map(this::enrichWithTeacherName);
