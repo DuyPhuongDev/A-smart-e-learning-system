@@ -17,8 +17,8 @@ public class ImportExportController {
     
     private final ImportExportService importExportService;
     
-    @PostMapping("/users/import")
-    public ResponseEntity<ImportResultDto> importUsers(@RequestParam("file") MultipartFile file) {
+    @PostMapping(value = "/users/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResultDto> importUsers(@RequestPart("file") MultipartFile file) {
         ImportResultDto result = importExportService.importUsersFromExcel(file);
         return ResponseEntity.ok(result);
     }
@@ -37,19 +37,6 @@ public class ImportExportController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(excelData);
-    }
-    
-    @GetMapping("/users/template")
-    public ResponseEntity<byte[]> downloadTemplate() {
-        byte[] template = importExportService.generateImportTemplate();
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDispositionFormData("attachment", "user_import_template.xlsx");
-        
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(template);
     }
 }
 

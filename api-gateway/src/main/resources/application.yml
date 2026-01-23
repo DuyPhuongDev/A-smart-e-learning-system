@@ -34,7 +34,7 @@ spring:
             - id: user-management-service
               uri: lb://user-management-service
               predicates:
-                - Path=/api/users/**,/api/roles/**
+                - Path=/api/users/**,/api/roles/**,/api/import-export/**
                 
             # Course Management Service
             - id: course-management-service

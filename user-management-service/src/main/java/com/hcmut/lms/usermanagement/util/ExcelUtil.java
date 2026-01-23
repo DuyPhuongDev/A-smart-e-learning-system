@@ -2,6 +2,7 @@ package com.hcmut.lms.usermanagement.util;
 
 import com.hcmut.lms.usermanagement.exception.ExcelProcessingException;
 import com.hcmut.lms.usermanagement.model.entity.User;
+import lombok.Data;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExcelUtil {
-    
+
     // Template column names
     public static final String COL_EMAIL = "Email";
     public static final String COL_FIRST_NAME = "First Name";
@@ -25,68 +26,35 @@ public class ExcelUtil {
     public static final String COL_TEACHER_CODE = "Teacher Code";
     public static final String COL_TEACHER_BIO = "Teacher Bio";
     public static final String COL_ADMIN_CODE = "Admin Code";
-    
-    public static byte[] generateTemplate() {
-        try (Workbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Users");
-            
-            // Create header row
-            Row headerRow = sheet.createRow(0);
-            CellStyle headerStyle = createHeaderStyle(workbook);
-            
-            String[] headers = {
-                COL_EMAIL, COL_FIRST_NAME, COL_LAST_NAME, COL_PHONE, 
-                COL_SPECIALIZATION_ID, COL_ROLE_NAME, COL_STUDENT_CODE, 
-                COL_TEACHER_CODE, COL_TEACHER_BIO, COL_ADMIN_CODE
-            };
-            for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
-                sheet.setColumnWidth(i, 4000);
-            }
-            
-            // Add sample data
-            Row sampleRow = sheet.createRow(1);
-            sampleRow.createCell(0).setCellValue("student@hcmut.edu.vn");
-            sampleRow.createCell(1).setCellValue("Van");
-            sampleRow.createCell(2).setCellValue("A");
-            sampleRow.createCell(3).setCellValue("0901234567");
-            sampleRow.createCell(4).setCellValue("1");
-            sampleRow.createCell(5).setCellValue("STUDENT");
-            sampleRow.createCell(6).setCellValue("2110001");
-            
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            workbook.write(outputStream);
-            return outputStream.toByteArray();
-            
-        } catch (IOException e) {
-            throw new ExcelProcessingException("Failed to generate template", e);
-        }
-    }
-    
+
     public static List<UserImportData> parseExcelFile(MultipartFile file) {
         List<UserImportData> users = new ArrayList<>();
-        
+
         try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
-            
+
             // Read header row to get column indices
             Row headerRow = sheet.getRow(0);
             if (headerRow == null) {
                 throw new ExcelProcessingException("Excel file is empty");
             }
-            
+
             // Map column headers to indices
             int emailIdx = -1, firstNameIdx = -1, lastNameIdx = -1, phoneIdx = -1;
             int specializationIdIdx = -1, roleNameIdx = -1, studentCodeIdx = -1;
             int teacherCodeIdx = -1, teacherBioIdx = -1, adminCodeIdx = -1;
-            
+
             for (int i = 0; i < headerRow.getLastCellNum(); i++) {
                 Cell cell = headerRow.getCell(i);
-                if (cell == null) continue;
-                
-                String headerValue = cell.getStringCellValue().trim();
+                if (cell == null)
+                    continue;
+
+                String headerValue;
+                try {
+                    headerValue = cell.getStringCellValue().trim();
+                } catch (Exception ex) {
+                    headerValue = cell.toString().trim();
+                }
                 switch (headerValue) {
                     case COL_EMAIL -> emailIdx = i;
                     case COL_FIRST_NAME -> firstNameIdx = i;
@@ -100,22 +68,38 @@ public class ExcelUtil {
                     case COL_ADMIN_CODE -> adminCodeIdx = i;
                 }
             }
-            
+
+            // Validate required columns to avoid row.getCell(-1) -> "Cell index must be >=
+            // 0"
+            List<String> missing = new ArrayList<>();
+            if (emailIdx < 0)
+                missing.add(COL_EMAIL);
+            if (firstNameIdx < 0)
+                missing.add(COL_FIRST_NAME);
+            if (lastNameIdx < 0)
+                missing.add(COL_LAST_NAME);
+            if (roleNameIdx < 0)
+                missing.add(COL_ROLE_NAME);
+            if (!missing.isEmpty()) {
+                throw new ExcelProcessingException(
+                        "File import không đúng template. Thiếu cột: " + String.join(", ", missing));
+            }
+
             // Start from row 1 (skip header)
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null || isRowEmpty(row)) {
                     continue;
                 }
-                
+
                 UserImportData userData = new UserImportData();
                 userData.setRowNumber(i + 1);
-                userData.setEmail(getCellValueAsString(row.getCell(emailIdx)));
-                userData.setFirstName(getCellValueAsString(row.getCell(firstNameIdx)));
-                userData.setLastName(getCellValueAsString(row.getCell(lastNameIdx)));
-                userData.setPhone(getCellValueAsString(row.getCell(phoneIdx)));
-                
-                String specIdStr = getCellValueAsString(row.getCell(specializationIdIdx));
+                userData.setEmail(getCellValueAsString(getCellSafe(row, emailIdx)));
+                userData.setFirstName(getCellValueAsString(getCellSafe(row, firstNameIdx)));
+                userData.setLastName(getCellValueAsString(getCellSafe(row, lastNameIdx)));
+                userData.setPhone(getCellValueAsString(getCellSafe(row, phoneIdx)));
+
+                String specIdStr = getCellValueAsString(getCellSafe(row, specializationIdIdx));
                 if (specIdStr != null && !specIdStr.isEmpty()) {
                     try {
                         userData.setSpecializationId(Integer.parseInt(specIdStr));
@@ -123,35 +107,35 @@ public class ExcelUtil {
                         // Ignore invalid specialization ID
                     }
                 }
-                
-                userData.setRoleName(getCellValueAsString(row.getCell(roleNameIdx)));
-                userData.setStudentCode(getCellValueAsString(row.getCell(studentCodeIdx)));
-                userData.setTeacherCode(getCellValueAsString(row.getCell(teacherCodeIdx)));
-                userData.setTeacherBio(getCellValueAsString(row.getCell(teacherBioIdx)));
-                userData.setAdminCode(getCellValueAsString(row.getCell(adminCodeIdx)));
-                
+
+                userData.setRoleName(getCellValueAsString(getCellSafe(row, roleNameIdx)));
+                userData.setStudentCode(getCellValueAsString(getCellSafe(row, studentCodeIdx)));
+                userData.setTeacherCode(getCellValueAsString(getCellSafe(row, teacherCodeIdx)));
+                userData.setTeacherBio(getCellValueAsString(getCellSafe(row, teacherBioIdx)));
+                userData.setAdminCode(getCellValueAsString(getCellSafe(row, adminCodeIdx)));
+
                 users.add(userData);
             }
-            
+
         } catch (IOException e) {
             throw new ExcelProcessingException("Failed to parse Excel file", e);
         }
-        
+
         return users;
     }
-    
+
     public static byte[] exportUsersToExcel(List<User> users) {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Users");
-            
+
             // Create header
             Row headerRow = sheet.createRow(0);
             CellStyle headerStyle = createHeaderStyle(workbook);
-            
+
             String[] headers = {
-                COL_EMAIL, COL_FIRST_NAME, COL_LAST_NAME, COL_PHONE, 
-                COL_SPECIALIZATION_ID, "Role Name", COL_STUDENT_CODE, 
-                COL_TEACHER_CODE, COL_TEACHER_BIO, COL_ADMIN_CODE, "Created At"
+                    COL_EMAIL, COL_FIRST_NAME, COL_LAST_NAME, COL_PHONE,
+                    COL_SPECIALIZATION_ID, COL_ROLE_NAME, COL_STUDENT_CODE,
+                    COL_TEACHER_CODE, COL_TEACHER_BIO, COL_ADMIN_CODE
             };
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
@@ -159,7 +143,7 @@ public class ExcelUtil {
                 cell.setCellStyle(headerStyle);
                 sheet.setColumnWidth(i, 4000);
             }
-            
+
             // Fill data
             int rowNum = 1;
             for (User user : users) {
@@ -168,24 +152,36 @@ public class ExcelUtil {
                 row.createCell(1).setCellValue(user.getFirstName() != null ? user.getFirstName() : "");
                 row.createCell(2).setCellValue(user.getLastName() != null ? user.getLastName() : "");
                 row.createCell(3).setCellValue(user.getPhone() != null ? user.getPhone() : "");
-                row.createCell(4).setCellValue(user.getSpecializationId() != null ? user.getSpecializationId().toString() : "");
+                row.createCell(4)
+                        .setCellValue(user.getSpecializationId() != null ? user.getSpecializationId().toString() : "");
                 row.createCell(5).setCellValue(user.getRole() != null ? user.getRole().getName() : "");
-                row.createCell(6).setCellValue(user.getStudent() != null && user.getStudent().getStudentCode() != null ? user.getStudent().getStudentCode() : "");
-                row.createCell(7).setCellValue(user.getTeacher() != null && user.getTeacher().getTeacherCode() != null ? user.getTeacher().getTeacherCode() : "");
-                row.createCell(8).setCellValue(user.getTeacher() != null && user.getTeacher().getBio() != null ? user.getTeacher().getBio() : "");
-                row.createCell(9).setCellValue(user.getAdmin() != null && user.getAdmin().getAdminCode() != null ? user.getAdmin().getAdminCode() : "");
-                row.createCell(10).setCellValue(user.getCreatedAt() != null ? user.getCreatedAt().toString() : "");
+                row.createCell(6)
+                        .setCellValue(user.getStudent() != null && user.getStudent().getStudentCode() != null
+                                ? user.getStudent().getStudentCode()
+                                : "");
+                row.createCell(7)
+                        .setCellValue(user.getTeacher() != null && user.getTeacher().getTeacherCode() != null
+                                ? user.getTeacher().getTeacherCode()
+                                : "");
+                row.createCell(8)
+                        .setCellValue(user.getTeacher() != null && user.getTeacher().getBio() != null
+                                ? user.getTeacher().getBio()
+                                : "");
+                row.createCell(9)
+                        .setCellValue(user.getAdmin() != null && user.getAdmin().getAdminCode() != null
+                                ? user.getAdmin().getAdminCode()
+                                : "");
             }
-            
+
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             workbook.write(outputStream);
             return outputStream.toByteArray();
-            
+
         } catch (IOException e) {
             throw new ExcelProcessingException("Failed to export users to Excel", e);
         }
     }
-    
+
     private static CellStyle createHeaderStyle(Workbook workbook) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
@@ -195,12 +191,12 @@ public class ExcelUtil {
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         return style;
     }
-    
+
     private static String getCellValueAsString(Cell cell) {
         if (cell == null) {
             return null;
         }
-        
+
         return switch (cell.getCellType()) {
             case STRING -> cell.getStringCellValue().trim();
             case NUMERIC -> {
@@ -221,8 +217,11 @@ public class ExcelUtil {
             default -> null;
         };
     }
-    
+
     private static boolean isRowEmpty(Row row) {
+        if (row.getFirstCellNum() < 0) {
+            return true;
+        }
         for (int c = row.getFirstCellNum(); c < row.getLastCellNum(); c++) {
             Cell cell = row.getCell(c);
             if (cell != null && cell.getCellType() != CellType.BLANK) {
@@ -231,8 +230,16 @@ public class ExcelUtil {
         }
         return true;
     }
-    
+
+    private static Cell getCellSafe(Row row, int idx) {
+        if (row == null || idx < 0)
+            return null;
+        return row.getCell(idx);
+    }
+
+    @Data
     public static class UserImportData {
+        // Getters and setters
         private int rowNumber;
         private String email;
         private String firstName;
@@ -244,39 +251,5 @@ public class ExcelUtil {
         private String teacherCode;
         private String teacherBio;
         private String adminCode;
-        
-        // Getters and setters
-        public int getRowNumber() { return rowNumber; }
-        public void setRowNumber(int rowNumber) { this.rowNumber = rowNumber; }
-        
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        
-        public String getFirstName() { return firstName; }
-        public void setFirstName(String firstName) { this.firstName = firstName; }
-        
-        public String getLastName() { return lastName; }
-        public void setLastName(String lastName) { this.lastName = lastName; }
-        
-        public String getPhone() { return phone; }
-        public void setPhone(String phone) { this.phone = phone; }
-        
-        public Integer getSpecializationId() { return specializationId; }
-        public void setSpecializationId(Integer specializationId) { this.specializationId = specializationId; }
-        
-        public String getRoleName() { return roleName; }
-        public void setRoleName(String roleName) { this.roleName = roleName; }
-        
-        public String getStudentCode() { return studentCode; }
-        public void setStudentCode(String studentCode) { this.studentCode = studentCode; }
-        
-        public String getTeacherCode() { return teacherCode; }
-        public void setTeacherCode(String teacherCode) { this.teacherCode = teacherCode; }
-        
-        public String getTeacherBio() { return teacherBio; }
-        public void setTeacherBio(String teacherBio) { this.teacherBio = teacherBio; }
-        
-        public String getAdminCode() { return adminCode; }
-        public void setAdminCode(String adminCode) { this.adminCode = adminCode; }
     }
 }
