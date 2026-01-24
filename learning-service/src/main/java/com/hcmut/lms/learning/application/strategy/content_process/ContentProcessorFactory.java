@@ -1,4 +1,4 @@
-package com.hcmut.lms.learning.application.strategy;
+package com.hcmut.lms.learning.application.strategy.content_process;
 
 import com.hcmut.lms.learning.domain.entity.lectureKnowledge.ContentType;
 import lombok.RequiredArgsConstructor;

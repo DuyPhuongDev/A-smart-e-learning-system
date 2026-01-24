@@ -17,7 +17,7 @@ import java.util.UUID;
  * REST Controller for document processing operations
  */
 @RestController
-@RequestMapping("/api/v1/document-processing")
+@RequestMapping("${prefix-api:}/document-processing")
 @RequiredArgsConstructor
 @Slf4j
 public class DocumentProcessingController {

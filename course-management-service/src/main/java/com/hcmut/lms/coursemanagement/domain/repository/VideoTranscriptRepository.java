@@ -24,6 +24,11 @@ public interface VideoTranscriptRepository extends JpaRepository<VideoTranscript
     boolean existsByVideoLectureId(UUID videoLectureId);
 
     /**
+     * Delete all transcripts for a video lecture
+     */
+    void deleteByVideoLectureId(UUID videoLectureId);
+
+    /**
      * Get all transcripts for a video lecture, ordered by segment index
      */
     @Query("SELECT vt FROM VideoTranscript vt WHERE vt.videoLecture.id = :videoLectureId ORDER BY vt.segmentIndex ASC")

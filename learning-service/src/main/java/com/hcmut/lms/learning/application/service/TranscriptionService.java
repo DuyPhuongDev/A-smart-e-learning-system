@@ -1,43 +1,65 @@
 package com.hcmut.lms.learning.application.service;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
  * Service for transcribing audio to text using AssemblyAI
+ * Uses file upload approach for transcription
  */
 public interface TranscriptionService {
 
     /**
-     * Transcribe audio from URL to text
+     * Transcribe audio file to text
+     * Uploads the file to AssemblyAI and returns the transcript
      *
-     * @param audioUrl URL of the audio/video file
+     * @param audioFile The audio file to transcribe
      * @return Transcribed text
      */
-    String transcribe(String audioUrl);
+    String transcribe(File audioFile);
 
     /**
-     * Transcribe audio with language specification
+     * Transcribe audio file to text
      *
-     * @param audioUrl URL of the audio/video file
+     * @param audioFilePath Path to the audio file
+     * @return Transcribed text
+     */
+    String transcribe(Path audioFilePath);
+
+    /**
+     * Transcribe audio file with language specification
+     *
+     * @param audioFile The audio file to transcribe
      * @param languageCode Language code (e.g., "en", "vi")
      * @return Transcribed text
      */
-    String transcribe(String audioUrl, String languageCode);
+    String transcribe(File audioFile, String languageCode);
 
     /**
      * Get transcription with timestamps
      *
-     * @param audioUrl URL of the audio/video file
+     * @param audioFile The audio file to transcribe
      * @return Transcription result with timing information
      */
-    TranscriptionResult transcribeWithTimestamps(String audioUrl);
+    TranscriptionResult transcribeWithTimestamps(File audioFile);
+
+    /**
+     * Get transcription with timestamps
+     *
+     * @param audioFilePath Path to the audio file
+     * @return Transcription result with timing information
+     */
+    TranscriptionResult transcribeWithTimestamps(Path audioFilePath);
 
     /**
      * Result object containing transcription with timestamps
      */
     record TranscriptionResult(
             String fullText,
-            List<Utterance> utterances
+            List<Utterance> utterances,
+            Integer audioDurationSeconds,
+            Integer wordCount
     ) {
         public record Utterance(
                 String text,

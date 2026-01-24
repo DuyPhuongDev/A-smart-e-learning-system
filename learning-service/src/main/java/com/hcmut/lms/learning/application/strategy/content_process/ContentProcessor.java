@@ -1,4 +1,4 @@
-package com.hcmut.lms.learning.application.strategy;
+package com.hcmut.lms.learning.application.strategy.content_process;
 
 import com.hcmut.lms.learning.application.dto.internal.ExtractedContent;
 import com.hcmut.lms.learning.application.dto.internal.ProcessingContext;

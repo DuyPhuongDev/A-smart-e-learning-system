@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/lecture-knowledge")
+@RequestMapping("${prefix-api:}/lecture-knowledge")
 @RequiredArgsConstructor
 public class LectureKnowledgeController {
 

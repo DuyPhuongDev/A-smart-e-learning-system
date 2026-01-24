@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -57,6 +59,51 @@ public class VideoTranscriptServiceImpl implements VideoTranscriptService {
         VideoTranscript saved = videoTranscriptRepository.save(transcript);
         log.info("Transcript created successfully with id: {}", saved.getId());
         return videoTranscriptMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public List<VideoTranscriptResponse> createTranscripts(List<VideoTranscriptRequest> requests) {
+        if (requests == null || requests.isEmpty()) {
+            return List.of();
+        }
+
+        UUID videoLectureId = requests.getFirst().getVideoLectureId();
+        log.info("Creating {} transcript segments for video lecture: {}", requests.size(), videoLectureId);
+
+        VideoLecture videoLecture = videoLectureRepository.findById(videoLectureId)
+                .orElseThrow(() -> new RuntimeException("Video lecture not found with id: " + videoLectureId));
+
+        // Delete existing transcripts for this video lecture (replace with new segments)
+        if (videoTranscriptRepository.existsByVideoLectureId(videoLectureId)) {
+            log.info("Deleting existing transcripts for video lecture: {}", videoLectureId);
+            videoTranscriptRepository.deleteByVideoLectureId(videoLectureId);
+        }
+
+        List<VideoTranscript> transcripts = new ArrayList<>();
+        for (VideoTranscriptRequest request : requests) {
+            VideoTranscript transcript = VideoTranscript.builder()
+                    .id(UUID.randomUUID())
+                    .videoLecture(videoLecture)
+                    .transcriptText(request.getTranscriptText())
+                    .languageCode(request.getLanguageCode() != null ? request.getLanguageCode() : "auto")
+                    .audioDuration(request.getAudioDuration())
+                    .wordCount(request.getWordCount())
+                    .startTimeSeconds(request.getStartTimeSeconds() != null ? request.getStartTimeSeconds() : 0)
+                    .endTimeSeconds(request.getEndTimeSeconds())
+                    .segmentIndex(request.getSegmentIndex())
+                    .build();
+            transcripts.add(transcript);
+        }
+
+        List<VideoTranscript> saved = videoTranscriptRepository.saveAll(transcripts);
+        log.info("{} transcript segments created successfully for video lecture: {}", saved.size(), videoLectureId);
+
+        List<VideoTranscriptResponse> responses = new ArrayList<>();
+        for (VideoTranscript t : saved) {
+            responses.add(videoTranscriptMapper.toResponse(t));
+        }
+        return responses;
     }
 
     @Override

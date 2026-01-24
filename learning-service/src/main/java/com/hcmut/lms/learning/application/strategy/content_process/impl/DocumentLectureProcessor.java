@@ -1,10 +1,10 @@
-package com.hcmut.lms.learning.application.strategy.impl;
+package com.hcmut.lms.learning.application.strategy.content_process.impl;
 
 import com.hcmut.lms.learning.application.dto.internal.ExtractedContent;
 import com.hcmut.lms.learning.application.dto.internal.ProcessingContext;
 import com.hcmut.lms.learning.application.service.DocumentParsingService;
-import com.hcmut.lms.learning.application.strategy.ContentProcessingException;
-import com.hcmut.lms.learning.application.strategy.ContentProcessor;
+import com.hcmut.lms.learning.application.strategy.content_process.ContentProcessingException;
+import com.hcmut.lms.learning.application.strategy.content_process.ContentProcessor;
 import com.hcmut.lms.learning.domain.entity.lectureKnowledge.ContentType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

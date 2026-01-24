@@ -1,25 +1,36 @@
 package com.hcmut.lms.learning.application.service;
 
+import com.hcmut.lms.learning.application.util.AutoDeletingTempFile;
+
+import java.nio.file.Path;
+
 /**
- * Service for extracting audio from video sources (YouTube, S3)
+ * Service for extracting audio from video files using FFmpeg
  */
 public interface AudioExtractionService {
 
     /**
-     * Get audio URL from video URL
-     * For YouTube: returns the original URL (AssemblyAI handles extraction)
-     * For S3: returns direct URL or extracts audio file
+     * Extract audio from a video file using FFmpeg
      *
-     * @param videoUrl The video URL
-     * @return Audio URL that can be used for transcription
+     * @param videoFilePath Path to the video file
+     * @return AutoDeletingTempFile containing the extracted audio (MP3 format, auto-cleanup on close)
      */
-    String getAudioUrl(String videoUrl);
+    AutoDeletingTempFile extractAudio(Path videoFilePath);
 
     /**
-     * Check if the video source is supported
+     * Extract audio with custom output format
      *
-     * @param videoUrl The video URL
+     * @param videoFilePath Path to the video file
+     * @param outputFormat Output format (e.g., "mp3", "wav", "m4a")
+     * @return AutoDeletingTempFile containing the extracted audio (auto-cleanup on close)
+     */
+    AutoDeletingTempFile extractAudio(Path videoFilePath, String outputFormat);
+
+    /**
+     * Check if the video file is supported for audio extraction
+     *
+     * @param videoFilePath Path to the video file
      * @return true if supported
      */
-    boolean isSupported(String videoUrl);
+    boolean isSupported(Path videoFilePath);
 }

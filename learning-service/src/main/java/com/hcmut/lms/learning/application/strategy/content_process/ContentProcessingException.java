@@ -1,4 +1,4 @@
-package com.hcmut.lms.learning.application.strategy;
+package com.hcmut.lms.learning.application.strategy.content_process;
 
 /**
  * Custom exception for content processing errors

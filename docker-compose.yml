@@ -205,6 +205,8 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - YTDLP_PATH=/usr/bin/yt-dlp
     depends_on:
       postgres:
         condition: service_healthy

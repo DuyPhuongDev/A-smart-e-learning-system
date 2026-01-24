@@ -1,11 +1,14 @@
 package com.hcmut.lms.learning.config;
 
-import com.assemblyai.api.AssemblyAI;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.Duration;
 
 @Data
 @Slf4j
@@ -13,27 +16,28 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "assemblyai")
 public class AssemblyAiConfig {
 
-    // 1. Khai báo biến cấu hình
+    // Khai báo biến cấu hình
     private String apiKey;
 
-    // 2. Tạo Bean Client
+    /**
+     * RestTemplate bean configured for AssemblyAI API calls
+     * With extended timeouts for file upload and transcription polling
+     */
     @Bean
-    public AssemblyAI assemblyAiClient() {
+    public RestTemplate restTemplate(RestTemplateBuilder builder) {
         if (apiKey == null || apiKey.isBlank()) {
             log.warn("AssemblyAI API Key is missing. Speech-to-text features may fail.");
         }
 
-        log.info("Initializing AssemblyAI Client...");
+        log.info("Initializing RestTemplate for AssemblyAI API...");
 
-        // Build Client sử dụng Builder Pattern
-        AssemblyAI client = AssemblyAI.builder()
-                .apiKey(apiKey)
+        RestTemplate restTemplate = builder
+                .connectTimeout(Duration.ofSeconds(30))
+                .readTimeout(Duration.ofMinutes(10)) // Extended for large file uploads
                 .build();
 
-        // Test kết nối không khả dụng trực tiếp như Qdrant,
-        // nhưng client object được tạo ra rất nhẹ.
-        log.info("Successfully initialized AssemblyAI Client.");
+        log.info("Successfully initialized RestTemplate for AssemblyAI.");
 
-        return client;
+        return restTemplate;
     }
 }
