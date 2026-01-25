@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-    
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final StudentRepository studentRepository;
@@ -32,21 +32,21 @@ public class UserServiceImpl implements UserService {
     private final AdminRepository adminRepository;
     private final UserMapper userMapper;
     private final AuthServiceClient authServiceClient;
-    
+
     @Override
     @Transactional
     public UserResponse create(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("User", "email", request.getEmail());
         }
-        
+
         Role role = roleRepository.findById(request.getRoleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "id", request.getRoleId()));
-        
+
         User user = userMapper.toEntity(request);
         user.setRole(role);
         user = userRepository.save(user);
-        
+
         // Create user type specific records
         if (request.getStudentCode() != null) {
             if (studentRepository.existsByStudentCode(request.getStudentCode())) {
@@ -58,7 +58,7 @@ public class UserServiceImpl implements UserService {
                     .build();
             studentRepository.save(student);
         }
-        
+
         if (request.getTeacherCode() != null) {
             if (teacherRepository.existsByTeacherCode(request.getTeacherCode())) {
                 throw new DuplicateResourceException("Teacher", "teacherCode", request.getTeacherCode());
@@ -70,7 +70,7 @@ public class UserServiceImpl implements UserService {
                     .build();
             teacherRepository.save(teacher);
         }
-        
+
         if (request.getAdminCode() != null) {
             if (adminRepository.existsByAdminCode(request.getAdminCode())) {
                 throw new DuplicateResourceException("Admin", "adminCode", request.getAdminCode());
@@ -81,10 +81,10 @@ public class UserServiceImpl implements UserService {
                     .build();
             adminRepository.save(admin);
         }
-        
+
         return userMapper.toResponse(user);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public UserResponse getById(UUID id) {
@@ -92,7 +92,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
         return userMapper.toResponse(user);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public UserResponse getByEmail(String email) {
@@ -100,7 +100,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email", email));
         return userMapper.toResponse(user);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public List<UserResponse> getAll() {
@@ -108,46 +108,46 @@ public class UserServiceImpl implements UserService {
                 .map(userMapper::toResponse)
                 .collect(Collectors.toList());
     }
-    
+
     @Override
     @Transactional
     public UserResponse update(UUID id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
-        
+
         String oldEmail = user.getEmail();
         boolean emailChanged = false;
-        
+
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new DuplicateResourceException("User", "email", request.getEmail());
             }
             emailChanged = true;
         }
-        
+
         if (request.getRoleId() != null) {
             Role role = roleRepository.findById(request.getRoleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Role", "id", request.getRoleId()));
             user.setRole(role);
         }
-        
+
         userMapper.updateEntity(request, user);
         user = userRepository.save(user);
-        
+
         // Sync email to authentication service if email changed
         if (emailChanged) {
             try {
-                AuthServiceClient.UpdateEmailRequest updateEmailRequest = 
-                    new AuthServiceClient.UpdateEmailRequest(user.getId(), oldEmail, request.getEmail());
+                AuthServiceClient.UpdateEmailRequest updateEmailRequest = new AuthServiceClient.UpdateEmailRequest(
+                        user.getId(), oldEmail, request.getEmail());
                 authServiceClient.updateUserEmail(updateEmailRequest);
                 log.info("Email synced to authentication service for user: {}", user.getId());
             } catch (Exception e) {
-                log.warn("Failed to sync email to authentication service for user {}: {}", 
+                log.warn("Failed to sync email to authentication service for user {}: {}",
                         user.getId(), e.getMessage());
                 // Continue even if sync fails - can be retried later
             }
         }
-        
+
         // Update user type specific records
         if (request.getStudentCode() != null) {
             Student student = user.getStudent();
@@ -162,7 +162,7 @@ public class UserServiceImpl implements UserService {
                 studentRepository.save(student);
             }
         }
-        
+
         if (request.getTeacherCode() != null) {
             Teacher teacher = user.getTeacher();
             if (teacher == null) {
@@ -180,7 +180,7 @@ public class UserServiceImpl implements UserService {
                 teacherRepository.save(teacher);
             }
         }
-        
+
         if (request.getAdminCode() != null) {
             Admin admin = user.getAdmin();
             if (admin == null) {
@@ -194,10 +194,10 @@ public class UserServiceImpl implements UserService {
                 adminRepository.save(admin);
             }
         }
-        
+
         return userMapper.toResponse(user);
     }
-    
+
     @Override
     @Transactional
     public void delete(UUID id) {
@@ -205,13 +205,22 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
         userRepository.delete(user);
     }
-    
+
+    @Override
+    @Transactional
+    public void deleteMultiple(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        userRepository.deleteAllByIdInBatch(ids);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public UserRoleResponse getUserRole(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-        
+
         return UserRoleResponse.builder()
                 .userId(user.getId())
                 .roleId(user.getRole().getId())

@@ -10,12 +10,24 @@ import java.util.UUID;
 
 public interface UserService {
     UserResponse create(CreateUserRequest request);
+
     UserResponse getById(UUID id);
+
     UserResponse getByEmail(String email);
+
     List<UserResponse> getAll();
+
     UserResponse update(UUID id, UpdateUserRequest request);
+
     void delete(UUID id);
-    
+
+    /**
+     * Delete multiple users by their IDs
+     * 
+     * @param ids List of user IDs to delete
+     */
+    void deleteMultiple(List<UUID> ids);
+
     /**
      * Get user's role information
      * Used by authentication-service during login
