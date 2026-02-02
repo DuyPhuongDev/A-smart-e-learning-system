@@ -2,8 +2,10 @@ package com.hcmut.lms.coursemanagement.application.service;
 
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
+import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.ClassStatusResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
 
 import java.util.List;
@@ -18,5 +20,23 @@ public interface ClassSectionService {
     void deleteClassSection(UUID id);
     ClassSectionResponse assignTeacherToClassSection(UUID id, UUID teacherId);
     CourseMenuResponse getCourseMenu(UUID classSectionId);
+
+    ClassStatusResponse getClassStatus(UUID id);
+    
+    /**
+     * Get class section info by batch IDs with optional filters
+     * Used internally by learning-service for enrolled classes
+     */
+    List<ClassSectionResponse> getClassSectionsByIds(BatchClassLookupRequest request);
+    
+    /**
+     * Increment current students count when a student enrolls
+     */
+    void incrementCurrentStudents(UUID classId);
+    
+    /**
+     * Decrement current students count when a student unenrolls
+     */
+    void decrementCurrentStudents(UUID classId);
 }
 

@@ -7,6 +7,7 @@ import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.springframework.context.annotation.Configuration;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,12 @@ public class ClassSection extends BaseEntity {
     
     @Column(name = "teacher_id")
     private UUID teacherId;
+
+    @Column(name = "max_student")
+    private Integer maxStudents;
+
+    @Column(name = "current_student")
+    private Integer currentStudents;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_id")

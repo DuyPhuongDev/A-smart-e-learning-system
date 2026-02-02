@@ -25,6 +25,7 @@ public interface ClassSectionMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "code",  ignore = true)
+    @Mapping(target = "maxStudents", ignore = true)
     ClassSection toEntity(ClassSectionRequest dto);
     
     @Mapping(target = "subjectId", source = "subject.id")
