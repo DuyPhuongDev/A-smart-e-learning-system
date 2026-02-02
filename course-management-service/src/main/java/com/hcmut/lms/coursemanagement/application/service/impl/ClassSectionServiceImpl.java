@@ -2,14 +2,11 @@ package com.hcmut.lms.coursemanagement.application.service.impl;
 
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
+import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
-import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
-import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuChapterDTO;
-import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuLectureDTO;
-import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.*;
 import com.hcmut.lms.coursemanagement.application.mapper.ClassSectionMapper;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
-import com.hcmut.lms.coursemanagement.client.UserManagementClient;
 import com.hcmut.lms.coursemanagement.client.UserServiceClient;
 import com.hcmut.lms.coursemanagement.client.dto.UserResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
@@ -27,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -97,6 +93,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         }
 
         classSection.setStatus(ClassStatus.UP_COMING);
+        Integer maxStudents = request.getMaxStudents() != null ? request.getMaxStudents() : -1;
+        classSection.setMaxStudents(maxStudents);
         
         ClassSection savedClassSection = classSectionRepository.save(classSection);
         
@@ -270,5 +268,73 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         return response;
     }
 
+    @Override
+    public ClassStatusResponse getClassStatus(UUID id) {
+        ClassSection classSection = classSectionRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + id));
+
+        return ClassStatusResponse.builder()
+                .id(id)
+                .exist(true)
+                .status(classSection.getStatus().toString())
+                .isOfficial(classSection.getIsOfficial())
+                .maxStudents(classSection.getMaxStudents())
+                .currentStudents(classSection.getCurrentStudents())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSectionResponse> getClassSectionsByIds(BatchClassLookupRequest request) {
+        log.info("Getting class sections by batch IDs: {}", request.getClassIds().size());
+        
+        List<ClassSection> classSections;
+        
+        // If filters are provided, use filter query
+        if (request.getSemesterCode() != null || request.getSearchTerm() != null) {
+            String semesterCode = request.getSemesterCode() != null && request.getSemesterCode().isBlank() 
+                    ? null : request.getSemesterCode();
+            String searchTerm = request.getSearchTerm() != null && request.getSearchTerm().isBlank() 
+                    ? null : request.getSearchTerm();
+            
+            classSections = classSectionRepository.findByIdInWithFilters(
+                    request.getClassIds(), semesterCode, searchTerm);
+        } else {
+            classSections = classSectionRepository.findByIdIn(request.getClassIds());
+        }
+        
+        return classSections.stream()
+                .map(classSectionMapper::toResponseDTO)
+                .map(this::enrichWithTeacherName)
+                .toList();
+    }
+
+    @Override
+    public void incrementCurrentStudents(UUID classId) {
+        log.info("Incrementing current students for class: {}", classId);
+        
+        ClassSection classSection = classSectionRepository.findById(classId)
+                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+        
+        int currentStudents = classSection.getCurrentStudents() != null ? classSection.getCurrentStudents() : 0;
+        classSection.setCurrentStudents(currentStudents + 1);
+        
+        classSectionRepository.save(classSection);
+        log.info("Current students incremented to {} for class: {}", classSection.getCurrentStudents(), classId);
+    }
+
+    @Override
+    public void decrementCurrentStudents(UUID classId) {
+        log.info("Decrementing current students for class: {}", classId);
+        
+        ClassSection classSection = classSectionRepository.findById(classId)
+                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+        
+        int currentStudents = classSection.getCurrentStudents() != null ? classSection.getCurrentStudents() : 0;
+        if (currentStudents > 0) {
+            classSection.setCurrentStudents(currentStudents - 1);
+            classSectionRepository.save(classSection);
+            log.info("Current students decremented to {} for class: {}", classSection.getCurrentStudents(), classId);
+        }
+    }
 }
 

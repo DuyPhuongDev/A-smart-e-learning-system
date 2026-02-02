@@ -32,5 +32,7 @@ public class ClassSectionRequest {
     private String thumbnail;
 
     private String introVideo;
+
+    private Integer maxStudents;
 }
 
