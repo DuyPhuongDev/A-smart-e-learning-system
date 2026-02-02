@@ -4,7 +4,7 @@ import com.hcmut.lms.coursemanagement.application.dto.request.VideoTranscriptReq
 import com.hcmut.lms.coursemanagement.application.dto.response.VideoTranscriptResponse;
 import com.hcmut.lms.coursemanagement.application.service.VideoTranscriptSegmentService;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.VideoTranscript;
-import com.hcmut.lms.coursemanagement.domain.repository.VideoTranscriptRepository;
+import com.hcmut.lms.coursemanagement.repository.VideoTranscriptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

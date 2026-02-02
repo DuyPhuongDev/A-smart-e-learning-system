@@ -16,6 +16,7 @@ COPY assessment-service/pom.xml assessment-service/
 COPY personalization-service/pom.xml personalization-service/
 COPY notification-service/pom.xml notification-service/
 COPY communication-service/pom.xml communication-service/
+COPY coaching-chatbot-service/pom.xml coaching-chatbot-service/
 
 # Copy source code
 COPY common/src common/src

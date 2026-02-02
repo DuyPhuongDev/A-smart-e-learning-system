@@ -41,7 +41,10 @@
         
         <!-- Assessment Service (Consolidated) -->
         <module>assessment-service</module>
-        
+
+        <!-- Coaching Chatbot Service -->
+        <module>coaching-chatbot-service</module>
+
         <!-- Student Personalization & Analytics Service (Consolidated) -->
         <module>personalization-service</module>
         

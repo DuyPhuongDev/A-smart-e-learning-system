@@ -1,0 +1,80 @@
+server:
+  port: 8092
+
+prefix-api: /api/coachingchatbot/v1
+
+spring:
+  application:
+    name: coaching-chatbot-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lms_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:lms_user}
+    password: ${DB_PASSWORD:lms_password}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    #    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: course_management
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 5000
+            readTimeout: 5000
+            loggerLevel: basic
+      circuitbreaker:
+        enabled: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+
+qdrant:
+  host: ${QDRANT_HOST:localhost}
+  port: 6334
+  api-key: ${QDRANT_API_KEY:lms_qdrant_vector_secret_key}
+  use-tls: false
+  collection-name: lecture_knowledge
+
+assemblyai:
+  api-key: ${ASSEMBLYAI_API_KEY:your-assemblyai-api-key}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:your-gemini-api-key}
+
+# Video Processing Configuration
+video-processing:
+  temp-dir: ${VIDEO_TEMP_DIR:/app/temp}
+  download-timeout-seconds: 300
+  ffmpeg-timeout-seconds: 600
+  ffmpeg-path: ${FFMPEG_PATH:D:/application/ffmpeg/ffmpeg-8.0.1-essentials_build/bin/ffmpeg.exe}
+  yt-dlp-path: ${YTDLP_PATH:C:\Users\Viet\AppData\Local\Programs\Python\Python312\Scripts\yt-dlp.exe}
+
+# Transcript Enrichment Configuration
+transcript-enrichment:
+  llm-delay-ms: 5000
+  max-retries: 3
+  segment-duration-seconds: 90
+  context-window-size: 5
+  max-summary-words: 100
+  questions-per-chunk: 4
+
+# Document Processing Configuration
+document-processing:
+  temp-dir: ${DOCUMENT_TEMP_DIR:/app/temp/documents}
+  download-timeout-seconds: 300
+  target-tokens-per-segment: 500
+  min-text-length-for-success: 50

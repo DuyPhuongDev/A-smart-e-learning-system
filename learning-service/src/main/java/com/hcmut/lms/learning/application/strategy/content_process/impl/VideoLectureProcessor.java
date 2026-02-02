@@ -8,7 +8,6 @@ import com.hcmut.lms.learning.application.service.VideoDownloadService;
 import com.hcmut.lms.learning.application.strategy.content_process.ContentProcessingException;
 import com.hcmut.lms.learning.application.strategy.content_process.ContentProcessor;
 import com.hcmut.lms.learning.application.util.AutoDeletingTempFile;
-import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.client.dto.VideoDownloadUrlResponse;
 import com.hcmut.lms.learning.client.dto.VideoTranscriptRequest;
 import com.hcmut.lms.learning.client.dto.VideoTranscriptResponse;

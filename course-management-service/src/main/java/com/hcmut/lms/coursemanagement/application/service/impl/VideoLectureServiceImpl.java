@@ -4,7 +4,7 @@ import com.hcmut.lms.coursemanagement.application.dto.response.VideoDownloadUrlR
 import com.hcmut.lms.coursemanagement.application.service.FileService;
 import com.hcmut.lms.coursemanagement.application.service.VideoLectureService;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.VideoLecture;
-import com.hcmut.lms.coursemanagement.domain.repository.VideoLectureRepository;
+import com.hcmut.lms.coursemanagement.repository.VideoLectureRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
