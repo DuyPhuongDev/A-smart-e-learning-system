@@ -25,36 +25,6 @@ import java.util.UUID;
 public interface CourseManagementClient {
 
     /**
-     * Get lecture by ID
-     * Used by learning-service to get lecture information
-     */
-    @GetMapping("/lectures/{lectureId}")
-    LectureResponse getLectureById(@PathVariable("lectureId") UUID lectureId);
-
-    /**
-     * Get all lectures by chapter ID
-     * Used by learning-service to get all lectures in a chapter
-     */
-    @GetMapping("/lectures/chapter/{chapterId}")
-    List<LectureResponse> getLecturesByChapterId(@PathVariable("chapterId") UUID chapterId);
-
-    /**
-     * Get chapter by ID
-     * Used by learning-service to get chapter information
-     */
-    @GetMapping("/chapters/{chapterId}")
-    ChapterResponse getChapterById(@PathVariable("chapterId") UUID chapterId);
-
-    /**
-     * Get download URL for a video lecture
-     * For S3 videos: returns pre-signed URL
-     * For YouTube videos: returns original URL
-     * Used by learning-service to get video download URL
-     */
-    @GetMapping("/video-lectures/{lectureId}/download-url")
-    VideoDownloadUrlResponse getVideoDownloadUrl(@PathVariable("lectureId") UUID lectureId);
-
-    /**
      * Create video transcript
      * Used by learning-service to create transcript after AI processing
      */
@@ -69,35 +39,9 @@ public interface CourseManagementClient {
     List<VideoTranscriptResponse> createVideoTranscripts(@RequestBody List<VideoTranscriptRequest> requests);
 
     /**
-     * Check if transcript exists for a video lecture
-     * Used by learning-service to check before processing
-     */
-    @GetMapping("/video-transcripts/video-lecture/{videoLectureId}/exists")
-    Boolean existsTranscript(@PathVariable("videoLectureId") UUID videoLectureId);
-
-    /**
      * Get all transcript segments for a video lecture, ordered by segment index
      * Used by learning-service to fetch transcripts for enrichment processing
      */
     @GetMapping("/video-transcripts/video-lecture/{videoLectureId}/segments")
     List<VideoTranscriptResponse> getTranscriptSegments(@PathVariable("videoLectureId") UUID videoLectureId);
-
-    // ==================== Document Lecture Endpoints ====================
-
-    /**
-     * Get download URL for a document lecture
-     * For S3 documents: returns pre-signed URL
-     * Used by learning-service to download document for processing
-     */
-    @GetMapping("/document-lectures/{lectureId}/download-url")
-    DocumentDownloadUrlResponse getDocumentDownloadUrl(@PathVariable("lectureId") UUID lectureId);
-
-    // ==================== Text Lecture Endpoints ====================
-
-    /**
-     * Get content for a text lecture
-     * Used by learning-service to get text content for processing
-     */
-    @GetMapping("/text-lectures/{lectureId}/content")
-    TextLectureContentResponse getTextLectureContent(@PathVariable("lectureId") UUID lectureId);
 }

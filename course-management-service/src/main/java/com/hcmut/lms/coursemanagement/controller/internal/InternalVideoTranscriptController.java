@@ -1,4 +1,4 @@
-package com.hcmut.lms.coursemanagement.controller;
+package com.hcmut.lms.coursemanagement.controller.internal;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.VideoTranscriptRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.VideoTranscriptResponse;
