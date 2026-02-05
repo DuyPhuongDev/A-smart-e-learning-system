@@ -1,9 +1,9 @@
--- Tạo schema learning
-CREATE SCHEMA IF NOT EXISTS learning AUTHORIZATION lms_user;
+-- Tạo schema coaching_chatbot
+CREATE SCHEMA IF NOT EXISTS coaching_chatbot AUTHORIZATION lms_user;
 
 -- 1. Bảng quản lý trạng thái kiến thức của bài giảng (1-1 với lectures)
 -- Bảng này đóng vai trò là "Cổng kiểm soát". Nếu bài giảng có trong bảng này với status = 'COMPLETED', nghĩa là nó đã sẵn sàng trong Qdrant.
-CREATE TABLE learning.lecture_knowledge (
+CREATE TABLE coaching_chatbot.lecture_knowledge (
     lecture_knowledge_id uuid NOT NULL, -- Dùng chính ID của lecture làm Primary Key để đảm bảo quan hệ 1-1
     sync_status varchar DEFAULT 'PENDING' NOT NULL,
     -- Các trạng thái:
@@ -24,7 +24,7 @@ CREATE TABLE learning.lecture_knowledge (
 
 -- 2. Bảng lưu các mảnh kiến thức chi tiết (Chunks)
 -- Bảng này lưu text đã cắt nhỏ và vị trí chính xác của nó trong bài giảng gốc.
-CREATE TABLE learning.lecture_knowledge_chunks (
+CREATE TABLE coaching_chatbot.lecture_knowledge_chunks (
     lecture_knowledge_chunks_id uuid NOT NULL,
     lecture_knowledge_id uuid NOT NULL, -- FK trỏ về lecture_knowledge (hoặc lectures đều được vì là 1-1)
 
@@ -47,12 +47,12 @@ CREATE TABLE learning.lecture_knowledge_chunks (
     created_at timestamptz DEFAULT now() NOT NULL,
 
     CONSTRAINT lecture_knowledge_chunks_pkey PRIMARY KEY (lecture_knowledge_chunks_id),
-    CONSTRAINT lecture_knowledge_chunks_lecture_id_fkey FOREIGN KEY (lecture_knowledge_id) REFERENCES learning.lecture_knowledge(lecture_knowledge_id) ON DELETE CASCADE
+    CONSTRAINT lecture_knowledge_chunks_lecture_id_fkey FOREIGN KEY (lecture_knowledge_id) REFERENCES coaching_chatbot.lecture_knowledge(lecture_knowledge_id) ON DELETE CASCADE
 );
 
 -- Index để truy vấn nhanh các chunk của 1 bài giảng
-CREATE INDEX idx_lecture_chunks_lecture_id ON learning.lecture_knowledge_chunks(lecture_knowledge_id);
+CREATE INDEX idx_lecture_chunks_lecture_id ON coaching_chatbot.lecture_knowledge_chunks(lecture_knowledge_id);
 
 -- Index để sắp xếp chunks theo thứ tự
-CREATE INDEX idx_lecture_chunks_order ON learning.lecture_knowledge_chunks(lecture_knowledge_id, chunk_index);
+CREATE INDEX idx_lecture_chunks_order ON coaching_chatbot.lecture_knowledge_chunks(lecture_knowledge_id, chunk_index);
 

@@ -24,6 +24,13 @@ public class RouteValidator {
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
             
+            // Fargate worker callbacks (no JWT - use API key or IP whitelist in production)
+            "/api/coaching-chatbot/v1/transcription-callback",
+            "/api/coaching-chatbot/v1/transcription-callback/health",
+
+            "/api/coaching-chatbot/v1/document-enrichment-callback",
+            "/api/coaching-chatbot/v1/document-enrichment-callback/health",
+
             // Health checks and actuator endpoints
             "/actuator",
             "/actuator/health",

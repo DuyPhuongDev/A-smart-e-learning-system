@@ -29,9 +29,6 @@ RUN --mount=type=cache,target=/root/.m2 \
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Install FFmpeg and yt-dlp for video processing
-RUN apk add --no-cache ffmpeg yt-dlp
-
 # Copy jar from build stage
 COPY --from=build /workspace/app/coaching-chatbot-service/target/*.jar app.jar
 

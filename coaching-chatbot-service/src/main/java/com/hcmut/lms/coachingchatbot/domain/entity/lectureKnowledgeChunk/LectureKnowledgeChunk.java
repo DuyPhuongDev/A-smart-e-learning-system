@@ -13,7 +13,7 @@ import java.util.UUID;
  * Stores chunked text and its exact position in the original lecture
  */
 @Entity
-@Table(name = "lecture_knowledge_chunks", schema = "learning")
+@Table(name = "lecture_knowledge_chunks", schema = "coaching_chatbot")
 @Getter
 @Setter
 @NoArgsConstructor

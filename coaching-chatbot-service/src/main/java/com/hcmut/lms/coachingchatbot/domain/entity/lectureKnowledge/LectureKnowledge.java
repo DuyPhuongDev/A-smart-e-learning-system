@@ -17,7 +17,7 @@ import java.util.UUID;
  * course-management)
  */
 @Entity
-@Table(name = "lecture_knowledge", schema = "learning")
+@Table(name = "lecture_knowledge", schema = "coaching_chatbot")
 @Getter
 @Setter
 @NoArgsConstructor

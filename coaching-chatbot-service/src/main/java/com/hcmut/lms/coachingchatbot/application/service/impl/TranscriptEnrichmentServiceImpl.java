@@ -3,6 +3,8 @@ package com.hcmut.lms.coachingchatbot.application.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hcmut.lms.coachingchatbot.application.service.EmbeddingService;
+import com.hcmut.lms.coachingchatbot.application.service.QdrantVectorStoreService;
 import com.hcmut.lms.coachingchatbot.application.service.TranscriptEnrichmentService;
 import com.hcmut.lms.coachingchatbot.client.CourseManagementClient;
 import com.hcmut.lms.coachingchatbot.client.GeminiClient;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of TranscriptEnrichmentService
@@ -42,6 +45,8 @@ public class TranscriptEnrichmentServiceImpl implements TranscriptEnrichmentServ
     private final LectureKnowledgeChunkRepository lectureKnowledgeChunkRepository;
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
+    private final EmbeddingService embeddingService;
+    private final QdrantVectorStoreService vectorStoreService;
 
     // Transcript Enrichment Configuration - read directly from application.yml
     @Value("${transcript-enrichment.llm-delay-ms:5000}")
@@ -62,6 +67,15 @@ public class TranscriptEnrichmentServiceImpl implements TranscriptEnrichmentServ
     @Value("${transcript-enrichment.questions-per-chunk:4}")
     private int questionsPerChunk;
 
+    @Value("${qdrant.collection-name:lecture_knowledge}")
+    private String collectionName;
+
+    @Value("${chatbot.retry-max-attempts:3}")
+    private int retryMaxAttempts;
+
+    @Value("${chatbot.retry-delay-ms:2000}")
+    private long retryDelayMs;
+
     @Getter
     private static final String embeddingModel = "gemini-text-embedding-004";
 
@@ -70,12 +84,16 @@ public class TranscriptEnrichmentServiceImpl implements TranscriptEnrichmentServ
             LectureKnowledgeRepository lectureKnowledgeRepository,
             LectureKnowledgeChunkRepository lectureKnowledgeChunkRepository,
             GeminiClient geminiClient,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            EmbeddingService embeddingService,
+            QdrantVectorStoreService vectorStoreService) {
         this.courseManagementClient = courseManagementClient;
         this.lectureKnowledgeRepository = lectureKnowledgeRepository;
         this.lectureKnowledgeChunkRepository = lectureKnowledgeChunkRepository;
         this.geminiClient = geminiClient;
         this.objectMapper = objectMapper;
+        this.embeddingService = embeddingService;
+        this.vectorStoreService = vectorStoreService;
     }
 
     private static final String ENRICHMENT_PROMPT = """
@@ -147,9 +165,13 @@ public class TranscriptEnrichmentServiceImpl implements TranscriptEnrichmentServ
             log.info("[Step 4/5] Enrichment complete: {} enriched, {} fallback", enrichedCount, fallbackCount);
 
             // Step 5: Save enriched chunks to database
-            log.info("[Step 5/5] Saving {} chunks to database...", enrichedChunks.size());
+            log.info("[Step 5/6] Saving {} chunks to database...", enrichedChunks.size());
             deleteExistingChunks(lectureKnowledge.getLectureKnowledgeId());
-            saveEnrichedChunks(lectureKnowledge, enrichedChunks);
+            List<LectureKnowledgeChunk> savedChunks = saveEnrichedChunks(lectureKnowledge, enrichedChunks);
+
+            // Step 6: Sync chunks to Qdrant (synchronous with retry)
+            log.info("[Step 6/6] Syncing {} chunks to Qdrant...", savedChunks.size());
+            syncChunksToQdrant(savedChunks, lectureKnowledge);
 
             // Update LectureKnowledge status
             lectureKnowledge.setSyncStatus(SyncStatus.COMPLETED);
@@ -518,7 +540,7 @@ public class TranscriptEnrichmentServiceImpl implements TranscriptEnrichmentServ
     /**
      * Save enriched chunks to database
      */
-    private void saveEnrichedChunks(LectureKnowledge lectureKnowledge, List<EnrichedChunk> enrichedChunks) {
+    private List<LectureKnowledgeChunk> saveEnrichedChunks(LectureKnowledge lectureKnowledge, List<EnrichedChunk> enrichedChunks) {
         List<LectureKnowledgeChunk> chunks = new ArrayList<>();
 
         for (EnrichedChunk enriched : enrichedChunks) {
@@ -536,8 +558,89 @@ public class TranscriptEnrichmentServiceImpl implements TranscriptEnrichmentServ
             chunks.add(chunk);
         }
 
-        lectureKnowledgeChunkRepository.saveAll(chunks);
-        log.info("Saved {} enriched chunks to database", chunks.size());
+        List<LectureKnowledgeChunk> savedChunks = lectureKnowledgeChunkRepository.saveAll(chunks);
+        log.info("Saved {} enriched chunks to database", savedChunks.size());
+        return savedChunks;
+    }
+
+    /**
+     * Sync chunks to Qdrant with retry mechanism
+     */
+    private void syncChunksToQdrant(List<LectureKnowledgeChunk> chunks, LectureKnowledge lectureKnowledge) {
+        log.info("Starting vector sync to Qdrant for {} chunks", chunks.size());
+
+        int attempt = 0;
+        Exception lastException = null;
+
+        while (attempt < retryMaxAttempts) {
+            attempt++;
+            try {
+                // Generate embeddings for all chunks
+                List<String> contents = chunks.stream()
+                        .map(LectureKnowledgeChunk::getChunkContent)
+                        .collect(Collectors.toList());
+
+                log.debug("Generating embeddings for {} chunks (attempt {}/{})",
+                        contents.size(), attempt, retryMaxAttempts);
+                List<List<Float>> embeddings = embeddingService.generateEmbeddings(contents);
+
+                // Build VectorPoints with metadata
+                List<QdrantVectorStoreService.VectorPoint> vectorPoints = new ArrayList<>();
+                for (int i = 0; i < chunks.size(); i++) {
+                    LectureKnowledgeChunk chunk = chunks.get(i);
+                    List<Float> embedding = embeddings.get(i);
+
+                    Map<String, Object> payload = new HashMap<>();
+                    payload.put("chunkId", chunk.getId().toString());
+                    payload.put("lectureKnowledgeId", lectureKnowledge.getLectureKnowledgeId().toString());
+                    payload.put("content", chunk.getChunkContent());
+                    payload.put("chunkIndex", chunk.getChunkIndex());
+                    payload.put("contentType", lectureKnowledge.getContentType());
+
+                    // Add video-specific metadata
+                    if (chunk.getStartTimeSeconds() != null) {
+                        payload.put("startTimeSeconds", chunk.getStartTimeSeconds());
+                    }
+                    if (chunk.getEndTimeSeconds() != null) {
+                        payload.put("endTimeSeconds", chunk.getEndTimeSeconds());
+                    }
+
+                    vectorPoints.add(new QdrantVectorStoreService.VectorPoint(
+                            chunk.getQdrantPointId(),
+                            embedding,
+                            payload
+                    ));
+                }
+
+                // Upsert to Qdrant
+                log.debug("Upserting {} vectors to Qdrant (attempt {}/{})",
+                        vectorPoints.size(), attempt, retryMaxAttempts);
+                vectorStoreService.upsertPoints(collectionName, vectorPoints);
+
+                log.info("Successfully synced {} chunks to Qdrant on attempt {}", chunks.size(), attempt);
+                return; // Success, exit retry loop
+
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("Qdrant sync attempt {}/{} failed: {}", attempt, retryMaxAttempts, e.getMessage());
+
+                if (attempt < retryMaxAttempts) {
+                    try {
+                        log.debug("Waiting {}ms before retry...", retryDelayMs);
+                        Thread.sleep(retryDelayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("Qdrant sync interrupted", ie);
+                    }
+                }
+            }
+        }
+
+        // All retries failed
+        String errorMsg = String.format("Failed to sync to Qdrant after %d attempts: %s",
+                retryMaxAttempts, lastException != null ? lastException.getMessage() : "Unknown error");
+        log.error(errorMsg, lastException);
+        throw new RuntimeException(errorMsg, lastException);
     }
 
     /**

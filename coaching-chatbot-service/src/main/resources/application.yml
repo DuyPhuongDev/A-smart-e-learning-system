@@ -1,7 +1,7 @@
 server:
   port: 8092
 
-prefix-api: /api/coachingchatbot/v1
+prefix-api: /api/coaching-chatbot/v1
 
 spring:
   application:
@@ -17,13 +17,25 @@ spring:
       connection-timeout: 30000
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     #    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        default_schema: course_management
+        default_schema: coaching_chatbot
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: coaching_chatbot
+    default-schema: coaching_chatbot
+    baseline-on-migrate: true
+    baseline-version: 0
+    table: flyway_schema_history
+    out-of-order: false
+    validate-on-migrate: true
+
   cloud:
     openfeign:
       client:
@@ -49,19 +61,8 @@ qdrant:
   use-tls: false
   collection-name: lecture_knowledge
 
-assemblyai:
-  api-key: ${ASSEMBLYAI_API_KEY:your-assemblyai-api-key}
-
 gemini:
   api-key: ${GEMINI_API_KEY:your-gemini-api-key}
-
-# Video Processing Configuration
-video-processing:
-  temp-dir: ${VIDEO_TEMP_DIR:/app/temp}
-  download-timeout-seconds: 300
-  ffmpeg-timeout-seconds: 600
-  ffmpeg-path: ${FFMPEG_PATH:D:/application/ffmpeg/ffmpeg-8.0.1-essentials_build/bin/ffmpeg.exe}
-  yt-dlp-path: ${YTDLP_PATH:C:\Users\Viet\AppData\Local\Programs\Python\Python312\Scripts\yt-dlp.exe}
 
 # Transcript Enrichment Configuration
 transcript-enrichment:
@@ -72,9 +73,12 @@ transcript-enrichment:
   max-summary-words: 100
   questions-per-chunk: 4
 
-# Document Processing Configuration
-document-processing:
-  temp-dir: ${DOCUMENT_TEMP_DIR:/app/temp/documents}
-  download-timeout-seconds: 300
-  target-tokens-per-segment: 500
-  min-text-length-for-success: 50
+
+# Chatbot Configuration
+chatbot:
+  max-context-messages: 6  # 3 Q&A pairs
+  max-knowledge-chunks: 5
+  retry-max-attempts: 3
+  retry-delay-ms: 2000
+  error-fallback-message-vi: "Xin lỗi, tôi không thể trả lời câu hỏi lúc này. Vui lòng thử lại sau."
+  error-fallback-message-en: "Sorry, I cannot answer your question right now. Please try again later."
