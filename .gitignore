@@ -89,5 +89,4 @@ logs/
 *.tmp
 *.temp
 class_diagram_promt.txt
-
-.env
+*.env
