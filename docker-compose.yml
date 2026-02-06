@@ -23,6 +23,27 @@ services:
       retries: 5
 
   # ========================================
+  # Qdrant - Vector Database for RAG Chatbot
+  # ========================================
+  qdrant-vector-db:
+    image: qdrant/qdrant:v1.16.3
+    container_name: lms-qdrant
+    environment:
+      QDRANT__SERVICE__API_KEY: lms_qdrant_vector_secret_key
+    ports:
+      - "6333:6333" # HTTP Port
+      - "6334:6334" # gRPC Port
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - lms-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail http://localhost:6333/readyz || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
   # Infrastructure Services
   # ========================================
   
@@ -261,9 +282,35 @@ services:
     networks:
       - lms-network
 
+  # Learning Service (Delivery + Tracking + Enrollment)
+  coaching-chatbot-service:
+    build:
+      context: .
+      dockerfile: coaching-chatbot-service/Dockerfile
+    container_name: coachingchatbot-service
+    ports:
+      - "8086:8092"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=lms_db
+      - DB_USER=lms_user
+      - DB_PASSWORD=lms_password
+      - FFMPEG_PATH=/usr/bin/ffmpeg
+      - YTDLP_PATH=/usr/bin/yt-dlp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    networks:
+      - lms-network
+
 networks:
   lms-network:
     driver: bridge
 
 volumes:
   postgres-data:
+  qdrant-data:

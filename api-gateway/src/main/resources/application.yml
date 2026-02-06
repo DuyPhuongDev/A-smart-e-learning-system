@@ -95,6 +95,18 @@ spring:
               uri: lb://analytics-reporting-service
               predicates:
                 - Path=/api/analytics/**
+
+            # Learning Service
+            - id: learning-service
+              uri: lb://learning-service
+              predicates:
+                - Path=/api/learning/**
+
+            # Coaching Chatbot Service (for Fargate worker callbacks)
+            - id: coaching-chatbot-service
+              uri: lb://coaching-chatbot-service
+              predicates:
+                - Path=/api/coaching-chatbot/**
   # Disable Redis auto-configuration (for development without Redis)
   autoconfigure:
     exclude:

@@ -464,14 +464,15 @@ CREATE TABLE course_management.video_lectures (
 -- DROP TABLE course_management.video_transcripts;
 
 CREATE TABLE course_management.video_transcripts (
-                                                     id uuid NOT NULL,
-                                                     video_lecture_id uuid NOT NULL,
-                                                     transcript_text text NULL,
-                                                     created_at timestamptz DEFAULT now() NOT NULL,
-                                                     updated_at timestamptz DEFAULT now() NOT NULL,
-                                                     CONSTRAINT video_transcripts_pkey PRIMARY KEY (id),
-                                                     CONSTRAINT video_transcripts_video_lecture_id_fkey FOREIGN KEY (video_lecture_id) REFERENCES course_management.video_lectures(lecture_id)
+    id uuid NOT NULL,
+    video_lecture_id uuid NOT NULL,
+    transcript_text text NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT video_transcripts_pkey PRIMARY KEY (id),
+    CONSTRAINT video_transcripts_video_lecture_id_fkey FOREIGN KEY (video_lecture_id) REFERENCES course_management.video_lectures(lecture_id) ON DELETE CASCADE
 );
+
 
 
 -- course_management.document_lectures definition
