@@ -8,11 +8,15 @@ import com.hcmut.lms.coachingchatbot.application.service.KnowledgeSearchService;
 import com.hcmut.lms.coachingchatbot.client.GeminiClient;
 import com.hcmut.lms.coachingchatbot.domain.entity.chatMessage.ChatMessage;
 import com.hcmut.lms.coachingchatbot.domain.entity.chatSession.ChatSession;
+import com.hcmut.lms.coachingchatbot.domain.entity.messageKnowledgeSource.MessageKnowledgeSource;
 import com.hcmut.lms.coachingchatbot.domain.repository.ChatMessageRepository;
 import com.hcmut.lms.coachingchatbot.domain.repository.ChatSessionRepository;
+import com.hcmut.lms.coachingchatbot.domain.repository.MessageKnowledgeSourceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +35,7 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
 
     private final ChatSessionRepository sessionRepository;
     private final ChatMessageRepository messageRepository;
+    private final MessageKnowledgeSourceRepository knowledgeSourceRepository;
     private final KnowledgeSearchService knowledgeSearchService;
     private final GeminiClient geminiClient;
     private final ChatMapper chatMapper;
@@ -117,8 +122,16 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             ChatMessage userMessage = chatMapper.toUserMessage(session, question);
             messageRepository.save(userMessage);
 
-            // Step 7: Save assistant answer (non-error)
+            // Step 7: Save assistant answer with knowledge sources
             ChatMessage assistantMessage = chatMapper.toAssistantMessage(session, answer, detectLanguage(question), false);
+
+            // Step 7.1: Create knowledge sources for this assistant message
+            List<MessageKnowledgeSource> knowledgeSources = chatMapper.toMessageKnowledgeSources(assistantMessage, searchResults);
+
+            // Step 7.2: Set bidirectional relationship
+            assistantMessage.getKnowledgeSources().addAll(knowledgeSources);
+
+            // Step 7.3: Save message (will cascade save knowledge sources)
             messageRepository.save(assistantMessage);
 
             // Step 8: Update session timestamp
@@ -162,12 +175,32 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ChatHistoryResponse getPaginatedChatHistory(UUID studentId, UUID lectureId, int page, int size) {
+        log.info("Fetching paginated chat history for student {} and lecture {}, page: {}, size: {}",
+                studentId, lectureId, page, size);
+
+        ChatSession session = sessionRepository.findByStudentIdAndLectureId(studentId, lectureId)
+                .orElseThrow(() -> new RuntimeException("Chat session not found"));
+
+        // Query with pagination (newest first for lazy loading older messages)
+        Page<ChatMessage> messagePage = messageRepository.findBySessionOrderByCreatedAtDesc(
+                session, PageRequest.of(page, size));
+
+        return chatMapper.toPaginatedChatHistoryResponse(session, messagePage);
+    }
+
+    @Override
     @Transactional
     public void deleteSession(UUID sessionId) {
         log.info("Deleting chat session: {}", sessionId);
 
         ChatSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Chat session not found"));
+
+        // Delete knowledge sources for all messages in the session
+        List<ChatMessage> messages = messageRepository.findBySessionOrderByCreatedAtAsc(session);
+        knowledgeSourceRepository.deleteByMessageIn(messages);
 
         messageRepository.deleteBySession(session);
         sessionRepository.delete(session);

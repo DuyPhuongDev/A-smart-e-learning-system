@@ -2,6 +2,7 @@ package com.hcmut.lms.coachingchatbot.client;
 
 import com.google.genai.Client;
 import com.google.genai.types.ContentEmbedding;
+import com.google.genai.types.EmbedContentConfig;
 import com.google.genai.types.EmbedContentResponse;
 import com.hcmut.lms.coachingchatbot.config.GeminiConfig;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,7 @@ import java.util.List;
 
 /**
  * Client for Google Gemini Embedding API
- * Uses google-genai library with text-embedding-004 model
+ * Uses google-genai library with gemini-embedding-001 model
  * Handles text embedding operations for vector store
  */
 @Component
@@ -22,7 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GeminiEmbeddingClient {
 
-    // Gemini text-embedding-004 produces 768-dimensional vectors
+    // Gemini embedding-001 produces 768-dimensional vectors
     public static final int EMBEDDING_DIMENSION = 768;
 
     private final GeminiConfig geminiConfig;
@@ -65,8 +66,12 @@ public class GeminiEmbeddingClient {
         log.debug("Generating embedding for text of {} characters", text.length());
 
         try {
+            EmbedContentConfig config = EmbedContentConfig.builder()
+                    .outputDimensionality(EMBEDDING_DIMENSION)
+                    .build();
+
             EmbedContentResponse response = client.models.embedContent(
-                    geminiConfig.getEmbeddingModelName(), text, null);
+                    geminiConfig.getEmbeddingModelName(), text, config);
 
             if (response == null) {
                 throw new RuntimeException("Empty embedding response from Gemini API");
@@ -137,7 +142,7 @@ public class GeminiEmbeddingClient {
     /**
      * Get the embedding dimension for the current model
      *
-     * @return Embedding dimension (768 for text-embedding-004)
+     * @return Embedding dimension (768 for gemini-embedding-001)
      */
     public int getEmbeddingDimension() {
         return EMBEDDING_DIMENSION;

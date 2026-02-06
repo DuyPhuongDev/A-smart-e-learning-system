@@ -59,6 +59,27 @@ public class CoachingChatbotController {
     }
 
     /**
+     * Get paginated chat history for a student and lecture (for lazy loading)
+     * GET /api/coaching-chatbot/v1/chat/history/paginated?studentId={studentId}&lectureId={lectureId}&page={page}&size={size}
+     *
+     * Returns messages in descending order (newest first) for lazy loading older messages.
+     * Page 0 contains the most recent messages.
+     */
+    @GetMapping("/history/paginated")
+    public ResponseEntity<ChatHistoryResponse> getPaginatedChatHistory(
+            @RequestParam UUID studentId,
+            @RequestParam UUID lectureId,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "10") int size) {
+
+        log.info("Fetching paginated chat history for student {} and lecture {}, page: {}, size: {}",
+                studentId, lectureId, page, size);
+
+        ChatHistoryResponse response = coachingChatbotService.getPaginatedChatHistory(studentId, lectureId, page, size);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Delete a chat session
      * DELETE /api/coaching-chatbot/v1/chat/session/{sessionId}
      */

@@ -27,9 +27,9 @@ public class GeminiConfig {
     private String modelName = "gemini-3-flash-preview";
 
     /**
-     * Model name for embeddings (default: text-embedding-004)
+     * Model name for embeddings (default: gemini-embedding-001 for 768-dim vectors)
      */
-    private String embeddingModelName = "text-embedding-004";
+    private String embeddingModelName = "models/gemini-embedding-001";
 
     /**
      * Temperature for text generation (0.0 - 1.0)

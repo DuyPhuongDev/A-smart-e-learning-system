@@ -24,7 +24,8 @@ public class ChatResponse {
     private String languageDetected;
 
     /**
-     * Represents a knowledge source used to answer the question
+     * Represents a knowledge source used to answer the question.
+     * Only stores chunkId and position info (no content for lightweight storage).
      */
     @Data
     @Builder
@@ -32,8 +33,6 @@ public class ChatResponse {
     @AllArgsConstructor
     public static class KnowledgeSource {
         private UUID chunkId;
-        private String content;
-        private Double relevanceScore;
         private Integer chunkIndex;
         private Integer pageNumber;
         private Integer startTimeSeconds;

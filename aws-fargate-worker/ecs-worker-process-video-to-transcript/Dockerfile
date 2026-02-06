@@ -34,7 +34,7 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install yt-dlp (latest version for YouTube support)
+# Install yt-dlp (latest versnion for YouTube support)
 RUN pip install --no-cache-dir --upgrade yt-dlp
 
 # Create temp directory for downloads
