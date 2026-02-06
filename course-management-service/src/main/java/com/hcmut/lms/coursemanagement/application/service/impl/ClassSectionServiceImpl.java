@@ -291,9 +291,9 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         
         // If filters are provided, use filter query
         if (request.getSemesterCode() != null || request.getSearchTerm() != null) {
-            String semesterCode = request.getSemesterCode() != null && request.getSemesterCode().isBlank() 
+            String semesterCode = request.getSemesterCode() != null && request.getSemesterCode().isBlank()
                     ? null : request.getSemesterCode();
-            String searchTerm = request.getSearchTerm() != null && request.getSearchTerm().isBlank() 
+            String searchTerm = request.getSearchTerm() != null && request.getSearchTerm().isBlank()
                     ? null : request.getSearchTerm();
             
             classSections = classSectionRepository.findByIdInWithFilters(
@@ -335,6 +335,20 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             classSectionRepository.save(classSection);
             log.info("Current students decremented to {} for class: {}", classSection.getCurrentStudents(), classId);
         }
+    }
+
+    @Override
+    public Integer countNumberLecturesByClassId(UUID classId) {
+        log.info("Counting number of lectures for class: {}", classId);
+        ClassSection classSection = classSectionRepository.findById(classId)
+                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+
+        int numLectures = 0;
+
+        for (Chapter chapter : classSection.getChapters()) {
+            numLectures += chapter.getLectures().size();
+        }
+        return numLectures;
     }
 }
 

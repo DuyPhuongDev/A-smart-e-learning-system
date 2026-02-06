@@ -41,60 +41,14 @@ spring:
               uri: lb://course-management-service
               predicates:
                 - Path=/api/courses/**
-                
-            # Assessment Management Service
-            - id: assessment-management-service
-              uri: lb://assessment-management-service
+            # Learning Service
+            - id: learning-service
+              uri: lb://learning-service
               predicates:
-                - Path=/api/assessments/**
+                - Path=/api/learning/**
                 
-            # Course Delivery Service
-            - id: course-delivery-service
-              uri: lb://course-delivery-service
-              predicates:
-                - Path=/api/delivery/**
-                
-            # Assessment Execution Service
-            - id: assessment-execution-service
-              uri: lb://assessment-execution-service
-              predicates:
-                - Path=/api/execution/**
-                
-            # Student Personalization Service
-            - id: student-personalization-service
-              uri: lb://student-personalization-service
-              predicates:
-                - Path=/api/personalization/**
-                
-            # Tracking Service
-            - id: tracking-service
-              uri: lb://tracking-service
-              predicates:
-                - Path=/api/tracking/**
-                
-            # Enrollment Service
-            - id: enrollment-service
-              uri: lb://enrollment-service
-              predicates:
-                - Path=/api/enrollment/**
-                
-            # Notification Service
-            - id: notification-service
-              uri: lb://notification-service
-              predicates:
-                - Path=/api/notifications/**
-                
-            # Communication Service
-            - id: communication-service
-              uri: lb://communication-service
-              predicates:
-                - Path=/api/communication/**
-                
-            # Analytics & Reporting Service
-            - id: analytics-reporting-service
-              uri: lb://analytics-reporting-service
-              predicates:
-                - Path=/api/analytics/**
+
+
   # Disable Redis auto-configuration (for development without Redis)
   autoconfigure:
     exclude:

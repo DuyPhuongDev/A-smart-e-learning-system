@@ -38,5 +38,7 @@ public interface ClassSectionService {
      * Decrement current students count when a student unenrolls
      */
     void decrementCurrentStudents(UUID classId);
+
+    Integer countNumberLecturesByClassId(UUID classId);
 }
 
