@@ -50,6 +50,9 @@ public abstract class Lecture extends BaseEntity {
     
     @Column(name = "is_downloadable")
     private Boolean isDownloadable;
+
+    @Column(name = "estimate_time_spent")
+    private Integer estimateTimeSpent;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chapter_id", nullable = false)

@@ -21,6 +21,8 @@ public abstract class BaseLectureRequest {
 
     private Integer orderIndex;
 
+    private Integer estimate_time_spent;
+
     @NotNull(message = "Lecture type is required")
     private LectureType lectureType;
 

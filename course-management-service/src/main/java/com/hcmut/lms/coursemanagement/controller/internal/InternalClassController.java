@@ -50,4 +50,9 @@ public class InternalClassController {
         classSectionService.decrementCurrentStudents(id);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/{id}/count-lecture")
+    public ResponseEntity<Integer> countNumberLecturesByClassId(@PathVariable UUID id){
+        return ResponseEntity.ok(classSectionService.countNumberLecturesByClassId(id));
+    }
 }
