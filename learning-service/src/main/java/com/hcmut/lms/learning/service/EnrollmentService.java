@@ -30,4 +30,6 @@ public interface EnrollmentService {
      * Check if student is already enrolled in a class
      */
     boolean isEnrolled(UUID studentId, UUID classId);
+
+    void updateProgress(UUID studentId, UUID classId);
 }

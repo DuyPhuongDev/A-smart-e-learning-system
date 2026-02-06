@@ -3,8 +3,10 @@ package com.hcmut.lms.learning.client;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.client.dto.LectureResponse;
 import com.hcmut.lms.learning.client.fallback.CourseManagementFallback;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,4 +41,10 @@ public interface CourseManagementClient {
      */
     @PostMapping("/class-sections/{id}/decrement-students")
     void decrementCurrentStudents(@PathVariable("id") UUID id);
+
+    @GetMapping("/class-sections/{id}/count-lecture")
+    Integer countNumberLecturesByClassId(@PathVariable UUID id);
+
+    @GetMapping("/lectures/{id}")
+    LectureResponse getLectureById(@PathVariable UUID id);
 }
