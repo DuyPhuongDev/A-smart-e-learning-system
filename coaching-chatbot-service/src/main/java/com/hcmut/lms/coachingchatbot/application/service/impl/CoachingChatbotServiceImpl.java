@@ -157,12 +157,12 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ChatHistoryResponse getChatHistory(UUID studentId, UUID lectureId, Integer limit) {
         log.info("Fetching chat history for student {} and lecture {}, limit: {}", studentId, lectureId, limit);
 
-        ChatSession session = sessionRepository.findByStudentIdAndLectureId(studentId, lectureId)
-                .orElseThrow(() -> new RuntimeException("Chat session not found"));
+        // Get existing session or create new one if not found
+        ChatSession session = getOrCreateSession(studentId, lectureId);
 
         List<ChatMessage> messages = messageRepository.findBySessionOrderByCreatedAtAsc(session);
 
@@ -175,13 +175,13 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public ChatHistoryResponse getPaginatedChatHistory(UUID studentId, UUID lectureId, int page, int size) {
         log.info("Fetching paginated chat history for student {} and lecture {}, page: {}, size: {}",
                 studentId, lectureId, page, size);
 
-        ChatSession session = sessionRepository.findByStudentIdAndLectureId(studentId, lectureId)
-                .orElseThrow(() -> new RuntimeException("Chat session not found"));
+        // Get existing session or create new one if not found
+        ChatSession session = getOrCreateSession(studentId, lectureId);
 
         // Query with pagination (newest first for lazy loading older messages)
         Page<ChatMessage> messagePage = messageRepository.findBySessionOrderByCreatedAtDesc(
