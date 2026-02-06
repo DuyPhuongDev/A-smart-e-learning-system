@@ -33,4 +33,9 @@ public interface UserService {
      * Used by authentication-service during login
      */
     UserRoleResponse getUserRole(UUID userId);
+
+    /**
+     * Get all users with TEACHER role
+     */
+    List<UserResponse> getAllTeachers();
 }

@@ -1,0 +1,33 @@
+package com.hcmut.lms.coursemanagement.application.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * DTO for class section import data from Excel file
+ * Each row represents one class section with its subject info
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ClassSectionImportData {
+    private int rowNumber;
+
+    // Subject info
+    private String subjectCode;
+    private String subjectName;
+    private Integer credits;
+
+    // Class section info
+    private String classCode;
+    private String sectionName;
+    private String semesterCode;
+    private String status;
+    private Integer maxStudents;
+    private Integer currentStudents;
+    private String teacherId;
+    private String teacherName;
+}

@@ -60,4 +60,17 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, UUID
                      "WHERE cs.semester.id = :semesterId AND cs.subject.id = :subjectId")
        List<ClassSection> findBySemesterIdAndSubjectId(@Param("semesterId") UUID semesterId,
                      @Param("subjectId") UUID subjectId);
+
+       /**
+        * Find all class sections with subject and semester for export
+        */
+       @Query("SELECT cs FROM ClassSection cs " +
+                     "LEFT JOIN FETCH cs.subject " +
+                     "LEFT JOIN FETCH cs.semester")
+       List<ClassSection> findAllWithSubjectAndSemester();
+
+       /**
+        * Check if class code exists
+        */
+       boolean existsByCode(String code);
 }

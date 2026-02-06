@@ -56,4 +56,9 @@ public class UserController {
     public void deleteMultiple(@RequestBody List<UUID> ids) {
         userService.deleteMultiple(ids);
     }
+
+    @GetMapping("/teachers")
+    public List<UserResponse> getAllTeachers() {
+        return userService.getAllTeachers();
+    }
 }

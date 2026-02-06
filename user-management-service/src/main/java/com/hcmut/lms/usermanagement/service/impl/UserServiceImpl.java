@@ -227,4 +227,12 @@ public class UserServiceImpl implements UserService {
                 .roleName(user.getRole().getName())
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getAllTeachers() {
+        return userRepository.findAllTeachersWithRole("TEACHER").stream()
+                .map(userMapper::toResponse)
+                .collect(Collectors.toList());
+    }
 }
