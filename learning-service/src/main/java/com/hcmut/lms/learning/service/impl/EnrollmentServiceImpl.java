@@ -157,6 +157,19 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         return enrollmentRepository.existsByStudentIdAndClassId(studentId, classId);
     }
 
+    @Override
+    @Transactional
+    public void updateProgress(UUID studentId, UUID classId) {
+        // get enrollment
+        Enrollment enrollment = enrollmentRepository.findByStudentIdAndClassId(studentId, classId)
+                .orElseThrow(() -> new EntityNotFoundException("Enrollment with class id: " + classId + " not found"));
+
+        // update percent when lecture done
+        enrollment.setProgressPercentage(enrollment.getProgressPercentage() + 1.0 /courseManagementClient.countNumberLecturesByClassId(classId));
+        if(enrollment.getProgressPercentage() >= 1) enrollment.setCompletionTime(LocalDateTime.now());
+        enrollmentRepository.save(enrollment);
+    }
+
     /**
      * Map enrollment and class info to card response
      */

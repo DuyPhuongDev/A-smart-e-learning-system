@@ -4,6 +4,7 @@ import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.client.dto.LectureResponse;
 import com.hcmut.lms.learning.exception.ServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,18 @@ public class CourseManagementFallback implements CourseManagementClient {
     @Override
     public void decrementCurrentStudents(UUID id) {
         log.error("CourseManagement service unavailable. Unable to decrement students for classId={}", id);
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
+    public Integer countNumberLecturesByClassId(UUID classId) {
+        log.error("CourseManagement service unavailable. Unable to get number of lectures by class ID");
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
+    public LectureResponse getLectureById(UUID id) {
+        log.error("CourseManagement service unavailable. Unable to get lecture by ID");
         throw new ServiceUnavailableException("Course management service is unavailable");
     }
 }
