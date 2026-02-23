@@ -13,15 +13,18 @@ import java.util.List;
 
 public class ExcelUtil {
 
-    // Column headers
+    // Column headers for import
     public static final String COL_SUBJECT_CODE = "Subject Code";
-    public static final String COL_SUBJECT_NAME = "Subject Name";
-    public static final String COL_CREDITS = "Credits";
     public static final String COL_CLASS_CODE = "Class Code";
     public static final String COL_SECTION_NAME = "Section Name";
-    public static final String COL_SEMESTER_CODE = "Semester Code";
     public static final String COL_STATUS = "Status";
     public static final String COL_MAX_STUDENTS = "Max Students";
+    public static final String COL_TEACHER_CODE = "Teacher Code";
+
+    // Additional column headers for export only
+    public static final String COL_SUBJECT_NAME = "Subject Name";
+    public static final String COL_CREDITS = "Credits";
+    public static final String COL_SEMESTER_CODE = "Semester Code";
     public static final String COL_CURRENT_STUDENTS = "Current Students";
     public static final String COL_TEACHER_ID = "Teacher ID";
     public static final String COL_TEACHER_NAME = "Teacher Name";
@@ -160,8 +163,9 @@ public class ExcelUtil {
     }
 
     /**
-     * Parse class sections from Excel file (export format)
-     * Each row is a class section with subject info
+     * Parse class sections from Excel file (import format - 6 columns)
+     * Columns: Subject Code, Class Code, Section Name, Status, Max Students,
+     * Teacher Code
      */
     public static List<ClassSectionImportData> parseClassSectionsFromExcel(
             org.springframework.web.multipart.MultipartFile file) {
@@ -180,38 +184,26 @@ public class ExcelUtil {
                 throw new RuntimeException("Excel file has no header row");
             }
 
-            // Map column indices
-            int subjectCodeCol = -1, subjectNameCol = -1, creditsCol = -1;
-            int classCodeCol = -1, sectionNameCol = -1, semesterCodeCol = -1;
-            int statusCol = -1, maxStudentsCol = -1, currentStudentsCol = -1;
-            int teacherIdCol = -1, teacherNameCol = -1;
+            // Map column indices for 6 import columns
+            int subjectCodeCol = -1, classCodeCol = -1, sectionNameCol = -1;
+            int statusCol = -1, maxStudentsCol = -1, teacherCodeCol = -1;
 
             for (int i = 0; i < headerRow.getLastCellNum(); i++) {
                 Cell cell = headerRow.getCell(i);
                 if (cell != null) {
                     String header = getCellValueAsString(cell).trim().toLowerCase();
-                    if (header.contains("subject code") || header.equals("mã môn")) {
+                    if (header.contains("subject code") || header.equals("mã môn") || header.equals("mã môn học")) {
                         subjectCodeCol = i;
-                    } else if (header.contains("subject name") || header.equals("tên môn")) {
-                        subjectNameCol = i;
-                    } else if (header.contains("credit") || header.contains("tín chỉ")) {
-                        creditsCol = i;
                     } else if (header.contains("class code") || header.equals("mã lớp")) {
                         classCodeCol = i;
                     } else if (header.contains("section name") || header.contains("tên lớp")) {
                         sectionNameCol = i;
-                    } else if (header.contains("semester code") || header.contains("mã học kỳ")) {
-                        semesterCodeCol = i;
                     } else if (header.contains("status") || header.contains("trạng thái")) {
                         statusCol = i;
                     } else if (header.contains("max student") || header.contains("sĩ số tối đa")) {
                         maxStudentsCol = i;
-                    } else if (header.contains("current student") || header.contains("sĩ số hiện tại")) {
-                        currentStudentsCol = i;
-                    } else if (header.contains("teacher id") || header.contains("mã giảng viên")) {
-                        teacherIdCol = i;
-                    } else if (header.contains("teacher name") || header.contains("tên giảng viên")) {
-                        teacherNameCol = i;
+                    } else if (header.contains("teacher code") || header.contains("mã giảng viên")) {
+                        teacherCodeCol = i;
                     }
                 }
             }
@@ -226,17 +218,11 @@ public class ExcelUtil {
                 ClassSectionImportData data = ClassSectionImportData.builder()
                         .rowNumber(i + 1)
                         .subjectCode(subjectCodeCol >= 0 ? getCellValueAsString(row.getCell(subjectCodeCol)) : null)
-                        .subjectName(subjectNameCol >= 0 ? getCellValueAsString(row.getCell(subjectNameCol)) : null)
-                        .credits(creditsCol >= 0 ? getCellValueAsInteger(row.getCell(creditsCol)) : null)
                         .classCode(classCodeCol >= 0 ? getCellValueAsString(row.getCell(classCodeCol)) : null)
                         .sectionName(sectionNameCol >= 0 ? getCellValueAsString(row.getCell(sectionNameCol)) : null)
-                        .semesterCode(semesterCodeCol >= 0 ? getCellValueAsString(row.getCell(semesterCodeCol)) : null)
                         .status(statusCol >= 0 ? getCellValueAsString(row.getCell(statusCol)) : null)
                         .maxStudents(maxStudentsCol >= 0 ? getCellValueAsInteger(row.getCell(maxStudentsCol)) : null)
-                        .currentStudents(
-                                currentStudentsCol >= 0 ? getCellValueAsInteger(row.getCell(currentStudentsCol)) : null)
-                        .teacherId(teacherIdCol >= 0 ? getCellValueAsString(row.getCell(teacherIdCol)) : null)
-                        .teacherName(teacherNameCol >= 0 ? getCellValueAsString(row.getCell(teacherNameCol)) : null)
+                        .teacherCode(teacherCodeCol >= 0 ? getCellValueAsString(row.getCell(teacherCodeCol)) : null)
                         .build();
 
                 classSections.add(data);

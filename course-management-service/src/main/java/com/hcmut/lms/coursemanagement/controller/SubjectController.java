@@ -1,15 +1,20 @@
 package com.hcmut.lms.coursemanagement.controller;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.common.helper.CurrentUser;
+import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.SubjectRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.SubjectResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.ImportResultResponse;
 import com.hcmut.lms.coursemanagement.application.service.SubjectService;
 import com.hcmut.lms.coursemanagement.application.service.ImportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -67,11 +72,13 @@ public class SubjectController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping(value = "/import", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<com.hcmut.lms.coursemanagement.application.dto.response.ImportResultResponse> importSubjects(
-            @RequestPart("file") org.springframework.web.multipart.MultipartFile file) {
-        com.hcmut.lms.coursemanagement.application.dto.response.ImportResultResponse result = importService
-                .importSubjectsFromExcel(file);
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResultResponse> importClassSections(
+            @CurrentUser CurrentUserInfo currentUser,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam UUID semesterId) {
+        ImportResultResponse result = importService
+                .importClassSectionsFromExcel(file, semesterId, currentUser.getId());
         return ResponseEntity.ok(result);
     }
 }

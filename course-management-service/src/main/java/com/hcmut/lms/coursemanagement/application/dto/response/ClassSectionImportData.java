@@ -16,18 +16,10 @@ import lombok.NoArgsConstructor;
 public class ClassSectionImportData {
     private int rowNumber;
 
-    // Subject info
     private String subjectCode;
-    private String subjectName;
-    private Integer credits;
-
-    // Class section info
     private String classCode;
     private String sectionName;
-    private String semesterCode;
     private String status;
     private Integer maxStudents;
-    private Integer currentStudents;
-    private String teacherId;
-    private String teacherName;
+    private String teacherCode;
 }

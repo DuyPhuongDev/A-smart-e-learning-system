@@ -3,6 +3,8 @@ package com.hcmut.lms.coursemanagement.application.service.impl;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionImportData;
 import com.hcmut.lms.coursemanagement.application.dto.response.ImportResultResponse;
 import com.hcmut.lms.coursemanagement.application.service.ImportService;
+import com.hcmut.lms.coursemanagement.client.UserServiceClient;
+import com.hcmut.lms.coursemanagement.client.dto.UserResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassStatus;
 import com.hcmut.lms.coursemanagement.domain.entity.semester.Semester;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,23 +30,40 @@ public class ImportServiceImpl implements ImportService {
     private final SubjectRepository subjectRepository;
     private final SemesterRepository semesterRepository;
     private final ClassSectionRepository classSectionRepository;
+    private final UserServiceClient userServiceClient;
 
     @Override
     @Transactional
-    public ImportResultResponse importSubjectsFromExcel(MultipartFile file) {
+    public ImportResultResponse importClassSectionsFromExcel(MultipartFile file, UUID semesterId, UUID currentUserId) {
         log.info("Importing class sections from Excel file: {}", file.getOriginalFilename());
 
-        // Parse Excel file - each row is a class section
+        // 1. Validate semester exists
+        Semester semester = semesterRepository.findById(semesterId)
+                .orElseThrow(() -> new RuntimeException("Học kỳ không tồn tại với ID: " + semesterId));
+
+        // 2. Parse Excel file
         List<ClassSectionImportData> importDataList = ExcelUtil.parseClassSectionsFromExcel(file);
 
         List<ImportResultResponse.ValidationError> errors = new ArrayList<>();
         List<ClassSection> validClassSections = new ArrayList<>();
 
-        // Cache for subjects and semesters to avoid repeated DB lookups
+        // 3. Cache subjects to avoid repeated DB lookups
         Map<String, Subject> subjectCache = new HashMap<>();
-        Map<String, Semester> semesterCache = new HashMap<>();
 
-        // Track class codes within file to detect duplicates
+        // 4. Fetch all teachers once and build a lookup map by teacher code
+        Map<String, UUID> teacherCodeToIdMap = new HashMap<>();
+        try {
+            List<UserResponse> teachers = userServiceClient.getAllTeachers();
+            for (UserResponse teacher : teachers) {
+                if (teacher.getTeacherCode() != null && !teacher.getTeacherCode().isEmpty()) {
+                    teacherCodeToIdMap.put(teacher.getTeacherCode().toUpperCase(), teacher.getId());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not fetch teachers list: {}", e.getMessage());
+        }
+
+        // 5. Track class codes within file to detect duplicates
         Set<String> classCodesInFile = new HashSet<>();
 
         for (ClassSectionImportData data : importDataList) {
@@ -62,15 +82,6 @@ public class ImportServiceImpl implements ImportService {
                         .row(data.getRowNumber())
                         .field("Subject Code")
                         .message("Thiếu mã môn học")
-                        .build());
-                continue;
-            }
-
-            if (data.getSemesterCode() == null || data.getSemesterCode().isEmpty()) {
-                errors.add(ImportResultResponse.ValidationError.builder()
-                        .row(data.getRowNumber())
-                        .field("Semester Code")
-                        .message("Thiếu mã học kỳ")
                         .build());
                 continue;
             }
@@ -96,39 +107,21 @@ public class ImportServiceImpl implements ImportService {
                 continue;
             }
 
-            // Get or create subject
+            // Get subject - must exist, do NOT auto-create
             Subject subject = subjectCache.get(data.getSubjectCode());
             if (subject == null) {
                 Optional<Subject> existingSubject = subjectRepository.findByCode(data.getSubjectCode());
                 if (existingSubject.isPresent()) {
                     subject = existingSubject.get();
+                    subjectCache.put(data.getSubjectCode(), subject);
                 } else {
-                    // Create new subject if it doesn't exist
-                    subject = Subject.builder()
-                            .code(data.getSubjectCode())
-                            .name(data.getSubjectName() != null ? data.getSubjectName() : data.getSubjectCode())
-                            .credits(data.getCredits())
-                            .build();
-                    subject = subjectRepository.save(subject);
-                    log.info("Created new subject: {}", data.getSubjectCode());
-                }
-                subjectCache.put(data.getSubjectCode(), subject);
-            }
-
-            // Get semester
-            Semester semester = semesterCache.get(data.getSemesterCode());
-            if (semester == null) {
-                Optional<Semester> existingSemester = semesterRepository.findBySemesterCode(data.getSemesterCode());
-                if (existingSemester.isEmpty()) {
                     errors.add(ImportResultResponse.ValidationError.builder()
                             .row(data.getRowNumber())
-                            .field("Semester Code")
-                            .message("Học kỳ không tồn tại: " + data.getSemesterCode())
+                            .field("Subject Code")
+                            .message("Môn học không tồn tại: " + data.getSubjectCode())
                             .build());
                     continue;
                 }
-                semester = existingSemester.get();
-                semesterCache.put(data.getSemesterCode(), semester);
             }
 
             // Parse status
@@ -141,14 +134,19 @@ public class ImportServiceImpl implements ImportService {
                 }
             }
 
-            // Parse teacherId
+            // Resolve teacher by teacher code
             UUID teacherId = null;
-            if (data.getTeacherId() != null && !data.getTeacherId().isEmpty()) {
-                try {
-                    teacherId = UUID.fromString(data.getTeacherId());
-                } catch (IllegalArgumentException e) {
-                    // Invalid UUID format, skip teacher assignment
-                    log.warn("Invalid teacher ID format at row {}: {}", data.getRowNumber(), data.getTeacherId());
+            if (data.getTeacherCode() != null && !data.getTeacherCode().isEmpty()) {
+                UUID resolvedId = teacherCodeToIdMap.get(data.getTeacherCode().toUpperCase());
+                if (resolvedId != null) {
+                    teacherId = resolvedId;
+                } else {
+                    errors.add(ImportResultResponse.ValidationError.builder()
+                            .row(data.getRowNumber())
+                            .field("Teacher Code")
+                            .message("Mã giảng viên không tồn tại: " + data.getTeacherCode())
+                            .build());
+                    continue;
                 }
             }
 
@@ -160,10 +158,10 @@ public class ImportServiceImpl implements ImportService {
                     .semester(semester)
                     .status(status)
                     .maxStudents(data.getMaxStudents() != null ? data.getMaxStudents() : 50)
-                    .currentStudents(data.getCurrentStudents() != null ? data.getCurrentStudents() : 0)
+                    .currentStudents(0)
                     .teacherId(teacherId)
                     .isOfficial(true)
-                    .createdBy(UUID.randomUUID()) // TODO: Get from security context
+                    .createdBy(currentUserId)
                     .build();
 
             validClassSections.add(classSection);
