@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -21,6 +22,14 @@ import java.util.UUID;
 public class InternalUserController {
 
     private final UserService userService;
+
+    /**
+     * Get all teachers - for service-to-service communication
+     */
+    @GetMapping("/teachers")
+    public List<UserResponse> getAllTeachers() {
+        return userService.getAllTeachers();
+    }
 
     /**
      * Get user's role by user ID
@@ -36,4 +45,3 @@ public class InternalUserController {
         return userService.getById(id);
     }
 }
-

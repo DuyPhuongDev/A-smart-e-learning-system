@@ -5,7 +5,7 @@ spring:
   application:
     name: user-management-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lms_db}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lms_db}?currentSchema=user_management
     driver-class-name: org.postgresql.Driver
     username: ${DB_USER:lms_user}
     password: ${DB_PASSWORD:lms_password}

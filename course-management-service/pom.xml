@@ -93,6 +93,13 @@
             <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
         </dependency>
 
+        <!-- Apache POI for Excel -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+
         <!-- Source: https://mvnrepository.com/artifact/software.amazon.awssdk/sqs -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>

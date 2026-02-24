@@ -6,8 +6,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
-
 
 @Component
 @Slf4j
@@ -25,8 +26,17 @@ public class UserServiceClient {
         log.warn(
                 "User service unavailable. teacherId={}, reason={}",
                 teacherId,
-                ex.getMessage()
-        );
+                ex.getMessage());
         return null;
+    }
+
+    @CircuitBreaker(name = "user-management-service", fallbackMethod = "getAllTeachersFallback")
+    public List<UserResponse> getAllTeachers() {
+        return userManagementClient.getAllTeachers();
+    }
+
+    public List<UserResponse> getAllTeachersFallback(Throwable ex) {
+        log.warn("User service unavailable for teachers lookup: {}", ex.getMessage());
+        return Collections.emptyList();
     }
 }
