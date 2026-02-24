@@ -67,6 +67,8 @@ public class ChatMapper {
                 .pageNumber(searchResult.pageNumber())
                 .startTimeSeconds(searchResult.startTimeSeconds())
                 .endTimeSeconds(searchResult.endTimeSeconds())
+                .formattedLocation(formatLocation(searchResult.startTimeSeconds(),
+                        searchResult.endTimeSeconds(), searchResult.pageNumber()))
                 .build();
     }
 
@@ -80,7 +82,54 @@ public class ChatMapper {
                 .pageNumber(entity.getPageNumber())
                 .startTimeSeconds(entity.getStartTimeSeconds())
                 .endTimeSeconds(entity.getEndTimeSeconds())
+                .formattedLocation(formatLocation(entity.getStartTimeSeconds(),
+                        entity.getEndTimeSeconds(), entity.getPageNumber()))
                 .build();
+    }
+
+    /**
+     * Format location string based on available metadata (video timestamp or page number)
+     * @param startTimeSeconds start time for video
+     * @param endTimeSeconds end time for video
+     * @param pageNumber page number for document
+     * @return formatted location string like "Video: 02:30-03:00" or "Trang: 5"
+     */
+    private String formatLocation(Integer startTimeSeconds, Integer endTimeSeconds, Integer pageNumber) {
+        // Video timestamp takes priority
+        if (startTimeSeconds != null && endTimeSeconds != null) {
+            String startFormatted = formatTimestamp(startTimeSeconds, endTimeSeconds);
+            String endFormatted = formatTimestamp(endTimeSeconds, endTimeSeconds);
+            return String.format("Video: %s-%s", startFormatted, endFormatted);
+        }
+
+        // Document page number
+        if (pageNumber != null) {
+            return String.format("Trang: %d", pageNumber);
+        }
+
+        return null;
+    }
+
+    /**
+     * Format seconds to mm:ss or hh:mm:ss based on duration
+     * @param seconds the time in seconds to format
+     * @param maxSeconds the maximum time to determine format (>= 3600 uses hh:mm:ss)
+     * @return formatted time string
+     */
+    private String formatTimestamp(Integer seconds, Integer maxSeconds) {
+        if (seconds == null) return "00:00";
+
+        int hrs = seconds / 3600;
+        int mins = (seconds % 3600) / 60;
+        int secs = seconds % 60;
+
+        // Use hh:mm:ss format if video is >= 1 hour
+        if (maxSeconds != null && maxSeconds >= 3600) {
+            return String.format("%02d:%02d:%02d", hrs, mins, secs);
+        }
+
+        // Use mm:ss format for shorter videos
+        return String.format("%02d:%02d", (seconds / 60), secs);
     }
 
     /**
