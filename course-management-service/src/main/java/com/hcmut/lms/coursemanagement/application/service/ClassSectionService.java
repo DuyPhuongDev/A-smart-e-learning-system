@@ -47,7 +47,6 @@ public interface ClassSectionService {
     void decrementCurrentStudents(UUID classId);
 
     Integer countNumberLecturesByClassId(UUID classId);
-}
 
     /**
      * Get class sections by semester ID and subject ID

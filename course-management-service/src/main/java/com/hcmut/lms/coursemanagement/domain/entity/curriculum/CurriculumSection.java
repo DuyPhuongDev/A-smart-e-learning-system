@@ -36,6 +36,9 @@ public class CurriculumSection extends BaseEntity {
     
     @Column(name = "description")
     private String description;
+
+    @Column(name = "priority_weight")
+    private Integer priorityWeight;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({

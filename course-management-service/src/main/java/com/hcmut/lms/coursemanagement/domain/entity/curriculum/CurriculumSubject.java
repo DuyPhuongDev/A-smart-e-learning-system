@@ -43,9 +43,6 @@ public class CurriculumSubject extends BaseEntity {
     @Column(name = "is_required")
     private Boolean isRequired;
     
-    @Column(name = "category_name")
-    private String categoryName;
-    
     @OneToMany(mappedBy = "curriculumSubject", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<SubjectPrerequisite> prerequisites = new ArrayList<>();
