@@ -37,5 +37,9 @@ public class ChatResponse {
         private Integer pageNumber;
         private Integer startTimeSeconds;
         private Integer endTimeSeconds;
+        /**
+         * Formatted location string for display (e.g., "Video: 02:30-03:00" or "Trang: 5")
+         */
+        private String formattedLocation;
     }
 }
