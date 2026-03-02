@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -166,7 +167,10 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         // update percent when lecture done
         enrollment.setProgressPercentage(enrollment.getProgressPercentage() + 1.0 /courseManagementClient.countNumberLecturesByClassId(classId));
-        if(enrollment.getProgressPercentage() >= 1) enrollment.setCompletionTime(LocalDateTime.now());
+        if(enrollment.getProgressPercentage() >= 1) {
+            enrollment.setProgressPercentage(1.0);
+            enrollment.setCompletionTime(LocalDateTime.now());
+        }
         enrollmentRepository.save(enrollment);
     }
 
