@@ -13,11 +13,13 @@ import com.hcmut.lms.coachingchatbot.domain.repository.LectureKnowledgeChunkRepo
 import com.hcmut.lms.coachingchatbot.domain.repository.LectureKnowledgeRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -65,8 +67,9 @@ public class DocumentEnrichmentCallbackServiceImpl implements DocumentEnrichment
     }
 
     @Override
+    @Async
     @Transactional
-    public DocumentEnrichmentCallbackResponse processEnrichmentCallback(DocumentEnrichmentCallbackRequest request) {
+    public CompletableFuture<DocumentEnrichmentCallbackResponse> processEnrichmentCallback(DocumentEnrichmentCallbackRequest request) {
         UUID lectureId = request.getLectureId();
         String contentType = request.getContentType();
         int chunkCount = request.getChunks() != null ? request.getChunks().size() : 0;
@@ -101,8 +104,10 @@ public class DocumentEnrichmentCallbackServiceImpl implements DocumentEnrichment
 
             log.info("Successfully processed {} chunks for lecture: {}", savedChunks.size(), lectureId);
 
-            return buildSuccessResponse(lectureId, contentType, savedChunks.size(),
-                    lectureKnowledge.getLectureKnowledgeId());
+            return CompletableFuture.completedFuture(
+                    buildSuccessResponse(lectureId, contentType, savedChunks.size(),
+                            lectureKnowledge.getLectureKnowledgeId())
+            );
 
         } catch (Exception e) {
             log.error("Failed to process document enrichment callback for lecture {}: {}", lectureId, e.getMessage(), e);
@@ -110,7 +115,9 @@ public class DocumentEnrichmentCallbackServiceImpl implements DocumentEnrichment
             // Update status to FAILED if LectureKnowledge exists
             updateStatusToFailed(lectureId, e.getMessage());
 
-            return buildFailureResponse(lectureId, contentType, e.getMessage());
+            return CompletableFuture.completedFuture(
+                    buildFailureResponse(lectureId, contentType, e.getMessage())
+            );
         }
     }
 

@@ -114,6 +114,10 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
                     lectureId, refinedQuery, maxKnowledgeChunks);
             log.info("Found {} relevant knowledge chunks", searchResults.size());
 
+            // Step 4.1: Deduplicate search results by page/timestamp to avoid redundant sources
+            searchResults = deduplicateSearchResults(searchResults);
+            log.debug("After deduplication: {} unique knowledge chunks", searchResults.size());
+
             // Step 5: Generate answer using LLM with context
             String answer = generateAnswer(question, contextMessages, searchResults);
             log.debug("Generated answer length: {} characters", answer.length());
@@ -301,6 +305,52 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             sb.append(result.content()).append("\n\n");
         }
         return sb.toString().trim();
+    }
+
+    /**
+     * Deduplicate search results to avoid redundant sources
+     * Removes duplicates based on page number or timestamp ranges
+     */
+    private List<KnowledgeSearchService.SearchResult> deduplicateSearchResults(
+            List<KnowledgeSearchService.SearchResult> searchResults) {
+
+        if (searchResults == null || searchResults.size() <= 1) {
+            return searchResults;
+        }
+
+        List<KnowledgeSearchService.SearchResult> deduplicated = new java.util.ArrayList<>();
+        java.util.Set<String> seenKeys = new java.util.HashSet<>();
+
+        for (KnowledgeSearchService.SearchResult result : searchResults) {
+            String key = buildDeduplicationKey(result);
+
+            if (!seenKeys.contains(key)) {
+                seenKeys.add(key);
+                deduplicated.add(result);
+            } else {
+                log.debug("Skipping duplicate source: {}", key);
+            }
+        }
+
+        return deduplicated;
+    }
+
+    /**
+     * Build deduplication key based on page number or timestamp
+     */
+    private String buildDeduplicationKey(KnowledgeSearchService.SearchResult result) {
+        // For document content: use page number
+        if (result.pageNumber() != null) {
+            return "page:" + result.pageNumber();
+        }
+
+        // For video/audio content: use timestamp range
+        if (result.startTimeSeconds() != null && result.endTimeSeconds() != null) {
+            return "time:" + result.startTimeSeconds() + "-" + result.endTimeSeconds();
+        }
+
+        // Fallback: use chunk ID (should be unique anyway)
+        return "chunk:" + result.chunkId();
     }
 
     /**

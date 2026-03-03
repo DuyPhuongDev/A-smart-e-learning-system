@@ -76,10 +76,20 @@ JSON Response format:
         self.delay_ms = Config.LLM_DELAY_MS
         self.max_retries = Config.LLM_MAX_RETRIES
 
-        # Initialize Gemini client (new SDK for Gemini 3)
-        self.client = genai.Client(api_key=self.api_key)
+        # Validate API key before initializing client
+        if not self.api_key or not self.api_key.strip():
+            raise ValueError(
+                "GEMINI_API_KEY is not set or is empty. "
+                "Please ensure the GEMINI_API_KEY environment variable is properly configured in AWS task definition."
+            )
 
-        logger.info(f"LLMEnricher initialized with model: {self.model_name}")
+        # Initialize Gemini client (new SDK for Gemini 2/3)
+        try:
+            self.client = genai.Client(api_key=self.api_key)
+            logger.info(f"LLMEnricher initialized successfully with model: {self.model_name}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Gemini client with error: {e}")
+            raise ValueError(f"Failed to initialize Gemini API client. Check your API key is valid: {e}")
 
     def enrich_chunk(
         self,
