@@ -4,6 +4,7 @@ import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
+import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionDatasetResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassStatusResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
@@ -52,4 +53,10 @@ public interface ClassSectionService {
      * Get class sections by semester ID and subject ID
      */
     List<ClassSectionResponse> getClassSectionsBySemesterAndSubject(UUID semesterId, UUID subjectId);
+
+    /**
+     * Batch fetch class section metadata enriched with subject credits and semester key.
+     * Used by learning-service for grade prediction dataset computation.
+     */
+    List<ClassSectionDatasetResponse> getClassSectionsForDataset(List<UUID> classIds);
 }

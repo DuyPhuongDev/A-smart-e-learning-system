@@ -70,6 +70,18 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, UUID
        List<ClassSection> findAllWithSubjectAndSemester();
 
        /**
+        * Find class sections by list of IDs with eager loading of subject, semester, academic year,
+        * and curriculumSubjects (needed for extracting curriculumSectionId for dataset computation).
+        */
+       @Query("SELECT DISTINCT cs FROM ClassSection cs " +
+                     "LEFT JOIN FETCH cs.subject s " +
+                     "LEFT JOIN FETCH s.curriculumSubjects " +
+                     "LEFT JOIN FETCH cs.semester sem " +
+                     "LEFT JOIN FETCH sem.academicYear " +
+                     "WHERE cs.id IN :ids")
+       List<ClassSection> findByIdInWithAcademicYear(@Param("ids") List<UUID> ids);
+
+       /**
         * Check if class code exists
         */
        boolean existsByCode(String code);
