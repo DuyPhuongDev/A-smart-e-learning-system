@@ -1,10 +1,13 @@
 package com.hcmut.lms.learning.client.fallback;
 
 import com.hcmut.lms.learning.client.CourseManagementClient;
+import com.hcmut.lms.learning.client.dto.BatchClassDatasetLookupRequest;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
 import com.hcmut.lms.learning.client.dto.LectureResponse;
+import com.hcmut.lms.learning.client.dto.SubjectPrerequisiteMapResponse;
 import com.hcmut.lms.learning.exception.ServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -49,5 +52,17 @@ public class CourseManagementFallback implements CourseManagementClient {
     public LectureResponse getLectureById(UUID id) {
         log.error("CourseManagement service unavailable. Unable to get lecture by ID");
         throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
+    public List<ClassSectionDatasetResponse> getClassSectionsForDataset(BatchClassDatasetLookupRequest request) {
+        log.error("CourseManagement service unavailable. Unable to fetch class sections for dataset computation.");
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
+    public List<SubjectPrerequisiteMapResponse> getPrerequisiteMapping() {
+        log.warn("CourseManagement service unavailable. Returning empty prerequisite mapping.");
+        return List.of();
     }
 }

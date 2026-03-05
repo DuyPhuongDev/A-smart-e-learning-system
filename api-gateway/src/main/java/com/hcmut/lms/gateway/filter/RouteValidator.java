@@ -31,6 +31,9 @@ public class RouteValidator {
             "/api/coaching-chatbot/v1/document-enrichment-callback",
             "/api/coaching-chatbot/v1/document-enrichment-callback/health",
 
+            "/api/learning/v1/training/callback",
+            "/api/learning/v1/training/callback/error",
+
             // Health checks and actuator endpoints
             "/actuator",
             "/actuator/health",
