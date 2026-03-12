@@ -9,6 +9,7 @@ import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
 import com.hcmut.lms.learning.service.EnrollmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,6 +54,22 @@ public class EnrollmentController {
                 currentUser.getId(), semesterCode, searchTerm, page, size));
     }
 
+    @PutMapping("/change-class/{id}")
+    public ResponseEntity<EnrollmentResponse> changeEnrolledClass(
+            @PathVariable UUID id,
+            @RequestBody EnrollmentRequest enrollmentRequest
+    ){
+        return ResponseEntity.ok(enrollmentService.changeClass(id, enrollmentRequest));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteEnrolledClass(@PathVariable UUID id) {
+        enrollmentService.unEnroll(id);
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
+                .build();
+    }
+
     /**
      * Get enrolled classes for a specific student (admin/teacher use)
      */
@@ -76,4 +93,5 @@ public class EnrollmentController {
             @PathVariable UUID classId) {
         return ResponseEntity.ok(enrollmentService.isEnrolled(currentUser.getId(), classId));
     }
+
 }

@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -18,5 +17,5 @@ public class LectureResponse {
     private UUID id;
     private Boolean isMandatory;
     private LectureType lectureType;
-    private Integer estimate_time_spent;
+    private Integer estimateTimeSpent;
 }

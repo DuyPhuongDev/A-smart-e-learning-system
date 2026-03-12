@@ -32,4 +32,8 @@ public interface EnrollmentService {
     boolean isEnrolled(UUID studentId, UUID classId);
 
     void updateProgress(UUID studentId, UUID classId);
+
+    EnrollmentResponse changeClass(UUID id, EnrollmentRequest enrollmentRequest);
+
+    void unEnroll(UUID id);
 }

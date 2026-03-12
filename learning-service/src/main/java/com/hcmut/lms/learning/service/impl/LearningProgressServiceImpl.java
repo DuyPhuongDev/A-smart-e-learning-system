@@ -165,7 +165,7 @@ public class LearningProgressServiceImpl implements LearningProgressService {
         LectureResponse lectureResponse = courseManagementClient.getLectureById(progress.getLectureId());
         return BigDecimal.valueOf(progress.getTotalTimeSpent())
                 .divide(
-                        BigDecimal.valueOf(lectureResponse.getEstimate_time_spent()),
+                        BigDecimal.valueOf(lectureResponse.getEstimateTimeSpent()),
                         2,
                         RoundingMode.HALF_UP
                 )
