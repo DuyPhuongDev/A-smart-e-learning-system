@@ -19,6 +19,7 @@ import com.hcmut.lms.coursemanagement.repository.ChapterRepository;
 import com.hcmut.lms.coursemanagement.repository.ClassSectionRepository;
 import com.hcmut.lms.coursemanagement.repository.SemesterRepository;
 import com.hcmut.lms.coursemanagement.repository.SubjectRepository;
+import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,13 +75,13 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         // Set isOfficial: false if subject and semester are provided (official class),
         // true otherwise (teacher's own class)
-        if (request.getSubjectId() != null && request.getSemesterId() != null) {
-            classSection.setIsOfficial(false);
-        } else {
-            classSection.setIsOfficial(true);
-        }
+        classSection.setIsOfficial(request.getSubjectId() == null || request.getSemesterId() == null);
 
         if (request.getCode() != null) {
+            // check code exist
+            if(classSectionRepository.existsByCode(request.getCode())) {
+                throw new EntityExistsException("Code already exists");
+            }
             classSection.setCode(request.getCode());
         } else {
             classSection.setCode(classCode.append("_").append(classSection.getSectionName().toUpperCase()).toString());
@@ -96,6 +97,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         classSection.setStatus(ClassStatus.UP_COMING);
         Integer maxStudents = request.getMaxStudents() != null ? request.getMaxStudents() : -1;
+        // set default current student is 0
+        classSection.setCurrentStudents(0);
         classSection.setMaxStudents(maxStudents);
 
         ClassSection savedClassSection = classSectionRepository.save(classSection);
