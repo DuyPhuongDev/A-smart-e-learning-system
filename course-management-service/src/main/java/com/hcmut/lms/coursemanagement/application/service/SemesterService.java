@@ -16,6 +16,7 @@ public interface SemesterService {
     List<SemesterResponse> getSemestersByAcademicYearId(UUID academicYearId);
     PageResponse<SemesterResponse> getSemestersByAcademicYearId(UUID academicYearId, int page, int size);
     void deleteSemester(UUID id);
+    SemesterResponse getCurrentSemester();
 }
 
 

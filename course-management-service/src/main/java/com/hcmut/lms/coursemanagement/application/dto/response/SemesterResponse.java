@@ -20,6 +20,7 @@ public class SemesterResponse {
     private String endDate;
     private UUID academicYearId;
     private String academicYearCode;
+    private Integer semKey;
     private String createdAt;
     private String updatedAt;
 }

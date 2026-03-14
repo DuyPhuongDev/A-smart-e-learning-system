@@ -6,10 +6,7 @@ import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -24,11 +21,6 @@ public class InternalClassSectionController {
 
     private final ClassSectionService classSectionService;
 
-    /**
-     * Batch fetch class section metadata enriched with subject credits and semester key.
-     * Used by learning-service to compute the grade prediction feature dataset.
-     * POST /api/courses/internal/class-sections/dataset/batch
-     */
     @PostMapping("/dataset/batch")
     public ResponseEntity<List<ClassSectionDatasetResponse>> getClassSectionsForDataset(
             @RequestBody @Valid BatchClassDatasetLookupRequest request) {

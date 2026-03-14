@@ -1,6 +1,7 @@
 package com.hcmut.lms.coachingchatbot.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,7 +42,7 @@ public class AsyncConfig implements AsyncConfigurer {
      */
     private static class CustomAsyncExceptionHandler implements AsyncUncaughtExceptionHandler {
         @Override
-        public void handleUncaughtException(Throwable ex, Method method, Object... params) {
+        public void handleUncaughtException(@NonNull Throwable ex, Method method, Object @NonNull ... params) {
             log.error("Async exception in method {}: {}", method.getName(), ex.getMessage(), ex);
         }
     }

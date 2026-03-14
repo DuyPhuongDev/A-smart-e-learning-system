@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -133,13 +134,22 @@ public class SemesterServiceImpl implements SemesterService {
     @Override
     public void deleteSemester(UUID id) {
         log.info("Deleting semester with id: {}", id);
-        
+
         if (!semesterRepository.existsById(id)) {
             throw new EntityNotFoundException("Semester not found with id: " + id);
         }
-        
+
         semesterRepository.deleteById(id);
         log.info("Semester deleted successfully with id: {}", id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SemesterResponse getCurrentSemester() {
+        log.info("Getting current semester");
+        Semester semester = semesterRepository.findCurrentSemester(LocalDate.now())
+                .orElseThrow(() -> new EntityNotFoundException("No active semester found for current date"));
+        return semesterMapper.toResponse(semester);
     }
 }
 
