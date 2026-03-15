@@ -258,25 +258,13 @@ public class TrainingJobServiceImpl implements TrainingJobService {
         StringWriter writer = new StringWriter();
 
         String[] headers = {
-                "student_id", "semester_id", "course_id",
-                "course_grade", "target_gap",
-                "sem_credits", "sem_credits_squared", "retake_flg",
-                "num_semesters_prior", "has_student_history",
+                "student_id", "semester_id", "subject_id",
+                "course_grade",
+                "sem_credits", "sem_credits_squared", "retake_no",
+                "num_semesters_prior",
                 "cumulative_grade_avg", "previous_sem_grade_avg",
-                "grade_trend", "grade_consistency", "historic_fail_ratio",
-                "sem_rank_percentile", "gpa_rank_percentile",
-                "student_a_plus_grade_rate", "student_a_grade_rate",
-                "student_b_plus_grade_rate", "student_b_grade_rate",
-                "student_c_plus_grade_rate", "student_c_grade_rate",
-                "student_d_plus_grade_rate", "student_d_grade_rate",
-                "course_hist_count", "course_hist_median_smooth", "course_hist_missing",
-                "rank_course_difficulty", "course_fail_rate",
-                "course_a_plus_grade_rate", "course_a_grade_rate",
-                "course_b_plus_grade_rate", "course_b_grade_rate",
-                "course_c_plus_grade_rate", "course_c_grade_rate",
-                "course_d_plus_grade_rate", "course_d_grade_rate",
-                "has_relative_course", "relative_avg_course_grade",
-                "relative_avg_course_grade_rank_percentile"
+                "subject_hist_median_smooth",
+                "relative_avg_course_grade"
         };
 
         try (CSVWriter csvWriter = new CSVWriter(writer)) {
@@ -295,45 +283,16 @@ public class TrainingJobServiceImpl implements TrainingJobService {
         return new String[]{
                 row.getStudentId().toString(),
                 row.getSemesterId().toString(),
-                row.getCourseId().toString(),
+                row.getSubjectId().toString(),
                 toString(row.getCourseGrade()),
-                toString(row.getTargetGap()),
                 toString(row.getSemCredits()),
                 toString(row.getSemCreditsSquared()),
-                toString(row.getRetakeFlg()),
+                toString(row.getRetakeNo()),
                 toString(row.getNumSemestersPrior()),
-                toString(row.getHasStudentHistory()),
                 toString(row.getCumulativeGradeAvg()),
                 toString(row.getPreviousSemGradeAvg()),
-                toString(row.getGradeTrend()),
-                toString(row.getGradeConsistency()),
-                toString(row.getHistoricFailRatio()),
-                toString(row.getSemRankPercentile()),
-                toString(row.getGpaRankPercentile()),
-                toString(row.getStudentAPlusGradeRate()),
-                toString(row.getStudentAGradeRate()),
-                toString(row.getStudentBPlusGradeRate()),
-                toString(row.getStudentBGradeRate()),
-                toString(row.getStudentCPlusGradeRate()),
-                toString(row.getStudentCGradeRate()),
-                toString(row.getStudentDPlusGradeRate()),
-                toString(row.getStudentDGradeRate()),
-                toString(row.getCourseHistCount()),
-                toString(row.getCourseHistMedianSmooth()),
-                toString(row.getCourseHistMissing()),
-                toString(row.getRankCourseDifficulty()),
-                toString(row.getCourseFailRate()),
-                toString(row.getCourseAPlusGradeRate()),
-                toString(row.getCourseAGradeRate()),
-                toString(row.getCourseBPlusGradeRate()),
-                toString(row.getCourseBGradeRate()),
-                toString(row.getCourseCPlusGradeRate()),
-                toString(row.getCourseCGradeRate()),
-                toString(row.getCourseDPlusGradeRate()),
-                toString(row.getCourseDGradeRate()),
-                toString(row.getHasRelativeCourse()),
-                toString(row.getRelativeAvgCourseGrade()),
-                toString(row.getRelativeAvgCourseGradeRankPercentile())
+                toString(row.getSubjectHistMedianSmooth()),
+                toString(row.getRelativeAvgCourseGrade())
         };
     }
 

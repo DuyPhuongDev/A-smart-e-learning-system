@@ -51,4 +51,24 @@ public class LearningExceptionHandler {
                 .message(e.getMessage())
                 .build();
     }
+
+    @ExceptionHandler(ModelNotAvailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleModelNotAvailableException(ModelNotAvailableException e) {
+        log.error("Model not available: {}", e.getMessage(), e);
+        return ErrorResponse.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message(e.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(PredictionFailedException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse handlePredictionFailedException(PredictionFailedException e) {
+        log.error("Prediction failed: {}", e.getMessage(), e);
+        return ErrorResponse.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message(e.getMessage())
+                .build();
+    }
 }

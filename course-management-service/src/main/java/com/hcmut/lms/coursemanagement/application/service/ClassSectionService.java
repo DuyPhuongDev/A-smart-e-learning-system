@@ -59,4 +59,10 @@ public interface ClassSectionService {
      * Used by learning-service for grade prediction dataset computation.
      */
     List<ClassSectionDatasetResponse> getClassSectionsForDataset(List<UUID> classIds);
+
+    /**
+     * Fetch class sections for a subject within a semKey window (exclusive upper bound targetSemKey).
+     * Used by learning-service to compute subject-level baselines.
+     */
+    List<ClassSectionDatasetResponse> getClassSectionsBySubjectWindow(UUID subjectId, Integer targetSemKey, Integer windowSpan);
 }

@@ -42,7 +42,7 @@ ALTER TABLE learning.grade_prediction_features_dataset
 -- 4. Add new unique constraint including version_id
 ALTER TABLE learning.grade_prediction_features_dataset
     ADD CONSTRAINT grade_prediction_features_dataset_unique
-        UNIQUE (student_id, semester_id, course_id, version_id);
+        UNIQUE (student_id, semester_id, subject_id, version_id);
 
 -- 5. Add FK from dataset rows to version table
 ALTER TABLE learning.grade_prediction_features_dataset

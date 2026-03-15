@@ -120,10 +120,10 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         }
         log.info("Enriched {} enrollments successfully", enriched.size());
 
-        // Phase 5: Pre-compute index structures
+        // Phase 5: Pre-compute index structures (reduced feature set)
         double globalMedian = computeGlobalMedian(enriched);
         double globalMeanGrade = enriched.stream()
-                .mapToDouble(EnrichedEnrollment::courseGrade4pt).average().orElse(2.0);
+                .mapToDouble(EnrichedEnrollment::courseGrade4pt).average().orElse(0.0);
 
         Map<UUID, List<EnrichedEnrollment>> byStudent = enriched.stream()
                 .collect(Collectors.groupingBy(EnrichedEnrollment::studentId));
@@ -132,25 +132,7 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         Map<UUID, List<EnrichedEnrollment>> byCourse = enriched.stream()
                 .collect(Collectors.groupingBy(EnrichedEnrollment::subjectId));
 
-        Map<UUID, List<EnrichedEnrollment>> byClass = enriched.stream()
-                .collect(Collectors.groupingBy(EnrichedEnrollment::classId));
-
         Map<String, Integer> semCreditMap = computeSemCreditsMap(enriched);
-
-        Set<Integer> uniqueSemKeys = enriched.stream()
-                .map(EnrichedEnrollment::semKey).collect(Collectors.toSet());
-        Map<Integer, Map<UUID, Double>> difficultyRankBySemKey =
-                computeCourseDifficultyRanksBySemKey(byCourse, uniqueSemKeys);
-
-        // Pre-compute student avgs for ranking
-        Map<String, Double> prevSemAvgPerStudentSemester = new HashMap<>();
-        Map<String, Double> cumulAvgPerStudentSemester = new HashMap<>();
-        preComputeStudentAvgsForRanking(enriched, byStudent,
-                prevSemAvgPerStudentSemester, cumulAvgPerStudentSemester);
-
-        // Pre-compute cohort rankings per semesterId
-        Map<UUID, Map<UUID, double[]>> rankingMap = preComputeRankings(
-                enriched, prevSemAvgPerStudentSemester, cumulAvgPerStudentSemester);
 
         // Phase 6: Pre-load existing dataset records for this version to avoid N+1 queries
         Map<String, GradePredictionDataset> existingMap = loadExistingDatasetMapForVersion(version.getId());
@@ -161,35 +143,29 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
 
         for (EnrichedEnrollment row : enriched) {
             try {
-                StudentHistory history = computeStudentHistory(row.studentId(), row.semKey(),
+                        StudentHistory history = computeStudentHistory(row.studentId(), row.semKey(),
                         byStudent.getOrDefault(row.studentId(), List.of()));
 
                 CourseBaseline baseline = computeCourseBaseline(row.subjectId(), row.semKey(),
-                        byCourse.getOrDefault(row.subjectId(), List.of()), globalMedian,
-                        difficultyRankBySemKey.getOrDefault(row.semKey(), Map.of()));
-
-                double[] rankings = rankingMap
-                        .getOrDefault(row.semesterId(), Map.of())
-                        .getOrDefault(row.studentId(), new double[]{0.5, 0.5});
+                        byCourse.getOrDefault(row.subjectId(), List.of()), globalMedian);
 
                 RelativeCourseResult relative = computeRelativeAvgCourseGrade(
-                        row, byStudent, byClass, prereqMap);
+                        row, byStudent, prereqMap);
 
                 int semCredits = semCreditMap.getOrDefault(
                         compositeKey(row.studentId(), row.semesterId()), 0);
 
-                rawRows.add(new RawFeatureRow(row, history, baseline, rankings, relative, semCredits));
+                rawRows.add(new RawFeatureRow(row, history, baseline, relative, semCredits));
             } catch (Exception e) {
-                log.warn("Feature computation failed for studentId={} courseId={} semesterId={}: [{}] {}",
+                log.warn("Feature computation failed for studentId={} subjectId={} semesterId={}: [{}] {}",
                         row.studentId(), row.subjectId(), row.semesterId(),
                         e.getClass().getSimpleName(), e.getMessage());
                 errorCount++;
             }
         }
 
-        // Phase 8: Imputation (4 steps, matching Python pipeline)
+        // Phase 8: Imputation (reduced)
         imputeStudentLevel(rawRows, globalMeanGrade);
-        imputeCourseLevel(rawRows);
         imputeFinalize(rawRows, globalMeanGrade);
 
         // Phase 9: Build entities and save (with versionId stamped on each row)
@@ -289,8 +265,6 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
                     meta.getCredits() != null ? meta.getCredits() : 0,
                     raw,
                     grade4,
-                    raw >= 9.5,
-                    grade4 < 1.0,
                     attemptIndex,
                     meta.getCurriculumSectionId()
             ));
@@ -320,7 +294,7 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
     private double computeGlobalMedian(List<EnrichedEnrollment> enriched) {
         List<Double> grades = enriched.stream()
                 .map(EnrichedEnrollment::courseGrade4pt).sorted().toList();
-        if (grades.isEmpty()) return 2.0;
+        if (grades.isEmpty()) return 0.0;
         return median(grades);
     }
 
@@ -331,108 +305,6 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
             map.merge(key, e.credits(), Integer::sum);
         }
         return map;
-    }
-
-    /**
-     * For each unique semKey, compute course difficulty ranks using ONLY prior semester data.
-     */
-    private Map<Integer, Map<UUID, Double>> computeCourseDifficultyRanksBySemKey(
-            Map<UUID, List<EnrichedEnrollment>> byCourse,
-            Set<Integer> uniqueSemKeys) {
-
-        Map<Integer, Map<UUID, Double>> result = new HashMap<>();
-        for (int sk : uniqueSemKeys) {
-            Map<UUID, Double> failRateMap = new HashMap<>();
-            for (Map.Entry<UUID, List<EnrichedEnrollment>> entry : byCourse.entrySet()) {
-                List<EnrichedEnrollment> priorRows = entry.getValue().stream()
-                        .filter(r -> r.semKey() < sk).toList();
-                if (priorRows.isEmpty()) continue;
-                long fails = priorRows.stream().filter(EnrichedEnrollment::isFail).count();
-                failRateMap.put(entry.getKey(), (double) fails / priorRows.size());
-            }
-            if (failRateMap.isEmpty()) {
-                result.put(sk, Map.of());
-                continue;
-            }
-            List<Double> failRates = failRateMap.values().stream().sorted().toList();
-            Map<UUID, Double> rankMap = new HashMap<>();
-            for (Map.Entry<UUID, Double> entry : failRateMap.entrySet()) {
-                rankMap.put(entry.getKey(), percentileRank(entry.getValue(), failRates));
-            }
-            result.put(sk, rankMap);
-        }
-        return result;
-    }
-
-    private void preComputeStudentAvgsForRanking(
-            List<EnrichedEnrollment> enriched,
-            Map<UUID, List<EnrichedEnrollment>> byStudent,
-            Map<String, Double> prevSemAvgOut,
-            Map<String, Double> cumulAvgOut) {
-
-        Set<String> processed = new HashSet<>();
-        for (EnrichedEnrollment row : enriched) {
-            String key = compositeKey(row.studentId(), row.semesterId());
-            if (processed.contains(key)) continue;
-            processed.add(key);
-
-            List<EnrichedEnrollment> studentRows = byStudent.getOrDefault(row.studentId(), List.of());
-            StudentHistory history = computeStudentHistory(row.studentId(), row.semKey(), studentRows);
-            prevSemAvgOut.put(key, history.previousSemGradeAvg());
-            cumulAvgOut.put(key, history.cumulativeGradeAvg());
-        }
-    }
-
-    /**
-     * Ranking within the same semester (all students in the same semesterId).
-     * sem_rank = 1 - percentile(previous_sem_grade_avg) → 0.0 = top
-     * gpa_rank = 1 - percentile(cumulative_gpa) → 0.0 = top
-     */
-    private Map<UUID, Map<UUID, double[]>> preComputeRankings(
-            List<EnrichedEnrollment> enriched,
-            Map<String, Double> prevSemAvgMap,
-            Map<String, Double> cumulAvgMap) {
-
-        Map<UUID, Set<UUID>> studentsBySemester = new HashMap<>();
-        for (EnrichedEnrollment row : enriched) {
-            studentsBySemester.computeIfAbsent(row.semesterId(), k -> new HashSet<>())
-                    .add(row.studentId());
-        }
-
-        Map<UUID, Map<UUID, double[]>> result = new HashMap<>();
-        for (Map.Entry<UUID, Set<UUID>> entry : studentsBySemester.entrySet()) {
-            UUID semesterId = entry.getKey();
-            Set<UUID> students = entry.getValue();
-
-            List<Double> cohortPrevAvgs = new ArrayList<>();
-            List<Double> cohortCumulAvgs = new ArrayList<>();
-            Map<UUID, Double> prevAvgForStudent = new HashMap<>();
-            Map<UUID, Double> cumulAvgForStudent = new HashMap<>();
-
-            for (UUID studentId : students) {
-                String key = compositeKey(studentId, semesterId);
-                Double prev = prevSemAvgMap.get(key);
-                Double cumul = cumulAvgMap.get(key);
-                prevAvgForStudent.put(studentId, prev);
-                cumulAvgForStudent.put(studentId, cumul);
-                if (prev != null) cohortPrevAvgs.add(prev);
-                if (cumul != null) cohortCumulAvgs.add(cumul);
-            }
-
-            Collections.sort(cohortPrevAvgs);
-            Collections.sort(cohortCumulAvgs);
-
-            Map<UUID, double[]> semRanks = new HashMap<>();
-            for (UUID studentId : students) {
-                Double prev = prevAvgForStudent.get(studentId);
-                Double cumul = cumulAvgForStudent.get(studentId);
-                double semRank = prev != null ? 1.0 - percentileRank(prev, cohortPrevAvgs) : 0.5;
-                double gpaRank = cumul != null ? 1.0 - percentileRank(cumul, cohortCumulAvgs) : 0.5;
-                semRanks.put(studentId, new double[]{semRank, gpaRank});
-            }
-            result.put(semesterId, semRanks);
-        }
-        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -469,48 +341,12 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         }
         Double prevSemAvg = prevSumC > 0 ? prevSumWG / prevSumC : null;
 
-        // gpa_trend = previous_sem_grade_avg - current_gpa (Python logic)
-        Double gradeTrend = (prevSemAvg != null && cumulativeAvg != null)
-                ? prevSemAvg - cumulativeAvg : null;
-
-        // Grade consistency: population std dev, requires >= 2 prior courses
-        Double gradeConsistency = null;
-        if (prior.size() >= 2) {
-            double mean = prior.stream().mapToDouble(EnrichedEnrollment::courseGrade4pt).average().orElse(0);
-            double meanSq = prior.stream().mapToDouble(r -> r.courseGrade4pt() * r.courseGrade4pt())
-                    .average().orElse(0);
-            double variance = meanSq - mean * mean;
-            gradeConsistency = Math.sqrt(Math.max(0.0, variance));
-        }
-
-        // Historic fail ratio (credit-weighted)
-        double failCredits = 0, totalCredits = 0;
-        for (EnrichedEnrollment r : prior) {
-            if (r.isFail()) failCredits += r.credits();
-            totalCredits += r.credits();
-        }
-        double historicFailRatio = totalCredits > 0 ? failCredits / totalCredits : 0.0;
-
-        // Grade distribution rates
-        int total = prior.size();
-        double aPlusRate = (double) prior.stream().filter(EnrichedEnrollment::isAPlusGrade).count() / total;
-        double aRate     = (double) prior.stream().filter(r -> r.courseGrade4pt() >= 4.0).count() / total;
-        double bPlusRate = (double) prior.stream().filter(r -> r.courseGrade4pt() >= 3.5).count() / total;
-        double bRate     = (double) prior.stream().filter(r -> r.courseGrade4pt() >= 3.0).count() / total;
-        double cPlusRate = (double) prior.stream().filter(r -> r.courseGrade4pt() >= 2.5).count() / total;
-        double cRate     = (double) prior.stream().filter(r -> r.courseGrade4pt() >= 2.0).count() / total;
-        double dPlusRate = (double) prior.stream().filter(r -> r.courseGrade4pt() >= 1.5).count() / total;
-        double dRate     = (double) prior.stream().filter(r -> r.courseGrade4pt() >= 1.0).count() / total;
-
-        return new StudentHistory(numSemestersPrior, cumulativeAvg, prevSemAvg, gradeTrend,
-                gradeConsistency, historicFailRatio,
-                aPlusRate, aRate, bPlusRate, bRate, cPlusRate, cRate, dPlusRate, dRate);
+        return new StudentHistory(numSemestersPrior, cumulativeAvg, prevSemAvg);
     }
 
     private CourseBaseline computeCourseBaseline(UUID subjectId, int currentSemKey,
                                                   List<EnrichedEnrollment> courseRows,
-                                                  double globalMedian,
-                                                  Map<UUID, Double> difficultyRankMap) {
+                                                  double globalMedian) {
         int windowLow = currentSemKey - WINDOW_SPAN_COURSE;
         List<EnrichedEnrollment> window = courseRows.stream()
                 .filter(r -> r.semKey() >= windowLow && r.semKey() < currentSemKey).toList();
@@ -521,38 +357,12 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         Double rawMedian = histMissing ? null
                 : median(window.stream().map(EnrichedEnrollment::courseGrade4pt).toList());
 
-        // Shrinkage: smooth toward globalMedian. If histMissing → just globalMedian
-        double histMedianSmooth;
-        if (histMissing) {
-            histMedianSmooth = globalMedian;
-        } else {
-            histMedianSmooth = (rawMedian * histCount + globalMedian * SHRINKAGE_K)
+        double histMedianSmooth = histMissing
+                ? 0.0
+                : (rawMedian * histCount + globalMedian * SHRINKAGE_K)
                     / (histCount + SHRINKAGE_K);
-        }
 
-        // Course-level rates (null if histMissing → will be imputed later in Step 3)
-        Double failRate = null, aPlusRate = null, aRate = null, bPlusRate = null, bRate = null;
-        Double cPlusRate = null, cRate = null, dPlusRate = null, dRate = null;
-
-        if (!histMissing) {
-            int n = window.size();
-            failRate  = (double) window.stream().filter(EnrichedEnrollment::isFail).count() / n;
-            aPlusRate = (double) window.stream().filter(EnrichedEnrollment::isAPlusGrade).count() / n;
-            aRate     = (double) window.stream().filter(r -> r.courseGrade4pt() >= 4.0).count() / n;
-            bPlusRate = (double) window.stream().filter(r -> r.courseGrade4pt() >= 3.5).count() / n;
-            bRate     = (double) window.stream().filter(r -> r.courseGrade4pt() >= 3.0).count() / n;
-            cPlusRate = (double) window.stream().filter(r -> r.courseGrade4pt() >= 2.5).count() / n;
-            cRate     = (double) window.stream().filter(r -> r.courseGrade4pt() >= 2.0).count() / n;
-            dPlusRate = (double) window.stream().filter(r -> r.courseGrade4pt() >= 1.5).count() / n;
-            dRate     = (double) window.stream().filter(r -> r.courseGrade4pt() >= 1.0).count() / n;
-        }
-
-        Double rankCourseDifficulty = difficultyRankMap.containsKey(subjectId)
-                ? difficultyRankMap.get(subjectId) : null;
-
-        return new CourseBaseline(histCount, histMedianSmooth, histMissing, failRate,
-                aPlusRate, aRate, bPlusRate, bRate, cPlusRate, cRate, dPlusRate, dRate,
-                rankCourseDifficulty);
+        return new CourseBaseline(histCount, histMedianSmooth, histMissing);
     }
 
     /**
@@ -567,7 +377,6 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
     private RelativeCourseResult computeRelativeAvgCourseGrade(
             EnrichedEnrollment row,
             Map<UUID, List<EnrichedEnrollment>> byStudent,
-            Map<UUID, List<EnrichedEnrollment>> byClass,
             Map<UUID, Set<UUID>> prereqMap) {
 
         List<EnrichedEnrollment> studentPrior = byStudent.getOrDefault(row.studentId(), List.of())
@@ -576,7 +385,7 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
                 .toList();
 
         if (studentPrior.isEmpty()) {
-            return new RelativeCourseResult(false, null, null);
+            return new RelativeCourseResult(false, null);
         }
 
         // Build UNION mask: same curriculumSectionId OR is prerequisite/recommended of current course
@@ -596,7 +405,7 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
                 .toList();
 
         if (relatedRows.isEmpty()) {
-            return new RelativeCourseResult(false, null, null);
+            return new RelativeCourseResult(false, null);
         }
 
         // Credit-weighted avg grade
@@ -608,20 +417,7 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         double relativeAvg = sumC > 0 ? sumWG / sumC : relatedRows.stream()
                 .mapToDouble(EnrichedEnrollment::courseGrade4pt).average().orElse(0.0);
 
-        // Rank percentile: average of class_rank_percentile for each related prior enrollment
-        List<Double> rankSamples = new ArrayList<>();
-        for (EnrichedEnrollment r : relatedRows) {
-            List<EnrichedEnrollment> classmates = byClass.getOrDefault(r.classId(), List.of());
-            List<Double> classGrades = classmates.stream()
-                    .map(EnrichedEnrollment::courseGrade4pt).sorted().toList();
-            if (!classGrades.isEmpty()) {
-                rankSamples.add(1.0 - percentileRank(r.courseGrade4pt(), classGrades));
-            }
-        }
-        Double relativeRankPercentile = rankSamples.isEmpty() ? null
-                : rankSamples.stream().mapToDouble(x -> x).average().orElse(0.5);
-
-        return new RelativeCourseResult(true, relativeAvg, relativeRankPercentile);
+        return new RelativeCourseResult(true, relativeAvg);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -630,151 +426,41 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Step 1: Student-level imputation.
-     * For rows without student history (num_semesters_prior == 0 or cumulative_gpa == null):
-     * <ul>
-     *   <li>current_gpa, previous_sem_grade_avg, grade_consistency → running mean from others</li>
-     *   <li>student_*_grade_rate (8 fields) → running mean from others</li>
-     *   <li>gpa_trend, historic_fail_ratio → 0.0</li>
-     *   <li>sem_rank_percentile, gpa_rank_percentile → 0.5</li>
-     * </ul>
+     * Step 1: Student-level imputation (reduced).
+     * Missing GPA fields default to 0.
      */
     private void imputeStudentLevel(List<RawFeatureRow> rows, double globalMeanGrade) {
-        // Sort by semKey for running-mean computation
         rows.sort(Comparator.comparingInt(r -> r.row.semKey()));
 
-        // Running accumulators for students WITH history
-        RunningMean rmGpa = new RunningMean();
-        RunningMean rmPrevSemAvg = new RunningMean();
-        RunningMean rmGradeConsistency = new RunningMean();
-        RunningMean[] rmStudentRates = new RunningMean[8];
-        for (int i = 0; i < 8; i++) rmStudentRates[i] = new RunningMean();
-
-        int currentSemKey = Integer.MIN_VALUE;
-        List<RawFeatureRow> pendingUpdate = new ArrayList<>();
-
         for (RawFeatureRow raw : rows) {
-            // When semKey changes, flush students with history into running means
-            if (raw.row.semKey() != currentSemKey) {
-                for (RawFeatureRow pending : pendingUpdate) {
-                    if (pending.history.numSemestersPrior() > 0
-                            && pending.history.cumulativeGradeAvg() != null) {
-                        rmGpa.add(pending.history.cumulativeGradeAvg());
-                        if (pending.history.previousSemGradeAvg() != null)
-                            rmPrevSemAvg.add(pending.history.previousSemGradeAvg());
-                        if (pending.history.gradeConsistency() != null)
-                            rmGradeConsistency.add(pending.history.gradeConsistency());
-                        double[] rates = pending.history.ratesArray();
-                        for (int i = 0; i < 8; i++) rmStudentRates[i].add(rates[i]);
-                    }
-                }
-                pendingUpdate.clear();
-                currentSemKey = raw.row.semKey();
-            }
-
             boolean needsImpute = raw.history.numSemestersPrior() <= 0
                     || raw.history.cumulativeGradeAvg() == null;
 
             if (needsImpute) {
-                raw.imputedCumulativeGradeAvg = orDefault(raw.history.cumulativeGradeAvg(),
-                        rmGpa.mean(globalMeanGrade));
-                raw.imputedPreviousSemGradeAvg = orDefault(raw.history.previousSemGradeAvg(),
-                        rmPrevSemAvg.mean(globalMeanGrade));
-                raw.imputedGradeConsistency = orDefault(raw.history.gradeConsistency(),
-                        rmGradeConsistency.mean(0.0));
-                raw.imputedGradeTrend = orDefault(raw.history.gradeTrend(), 0.0);
-                raw.imputedHistoricFailRatio = raw.history.historicFailRatio();
-                raw.imputedSemRankPercentile = 0.5;
-                raw.imputedGpaRankPercentile = 0.5;
-                raw.imputedStudentRates = new double[8];
-                for (int i = 0; i < 8; i++) {
-                    raw.imputedStudentRates[i] = rmStudentRates[i].mean(0.0);
-                }
+                raw.imputedCumulativeGradeAvg = 0.0;
+                raw.imputedPreviousSemGradeAvg = 0.0;
             } else {
-                raw.imputedCumulativeGradeAvg = raw.history.cumulativeGradeAvg();
-                raw.imputedPreviousSemGradeAvg = orDefault(raw.history.previousSemGradeAvg(),
-                        raw.history.cumulativeGradeAvg());
-                raw.imputedGradeConsistency = orDefault(raw.history.gradeConsistency(), 0.0);
-                raw.imputedGradeTrend = orDefault(raw.history.gradeTrend(), 0.0);
-                raw.imputedHistoricFailRatio = raw.history.historicFailRatio();
-                raw.imputedSemRankPercentile = raw.rankings[0];
-                raw.imputedGpaRankPercentile = raw.rankings[1];
-                raw.imputedStudentRates = raw.history.ratesArray();
-            }
-
-            pendingUpdate.add(raw);
-        }
-    }
-
-    /**
-     * Step 2+3: Course-level imputation.
-     * For rows where course_hist_missing = true:
-     * <ul>
-     *   <li>rank_course_difficulty → 0.5</li>
-     *   <li>course_fail_rate → mean from courses with history</li>
-     *   <li>course_*_grade_rate → mean from courses with history</li>
-     * </ul>
-     */
-    private void imputeCourseLevel(List<RawFeatureRow> rows) {
-        // Compute means from rows that have history
-        RunningMean[] courseRateMeans = new RunningMean[9]; // failRate + 8 grade rates
-        for (int i = 0; i < 9; i++) courseRateMeans[i] = new RunningMean();
-
-        for (RawFeatureRow raw : rows) {
-            if (!raw.baseline.histMissing()) {
-                if (raw.baseline.failRate() != null) courseRateMeans[0].add(raw.baseline.failRate());
-                Double[] rates = raw.baseline.ratesArray();
-                for (int i = 0; i < 8; i++) {
-                    if (rates[i] != null) courseRateMeans[i + 1].add(rates[i]);
-                }
-            }
-        }
-
-        for (RawFeatureRow raw : rows) {
-            if (raw.baseline.histMissing()) {
-                raw.imputedRankCourseDifficulty = 0.5;
-                raw.imputedCourseFailRate = courseRateMeans[0].mean(0.0);
-                raw.imputedCourseRates = new double[8];
-                for (int i = 0; i < 8; i++) {
-                    raw.imputedCourseRates[i] = courseRateMeans[i + 1].mean(0.0);
-                }
-            } else {
-                raw.imputedRankCourseDifficulty = orDefault(raw.baseline.rankCourseDifficulty(), 0.5);
-                raw.imputedCourseFailRate = orDefault(raw.baseline.failRate(), 0.0);
-                Double[] rates = raw.baseline.ratesArray();
-                raw.imputedCourseRates = new double[8];
-                for (int i = 0; i < 8; i++) {
-                    raw.imputedCourseRates[i] = orDefault(rates[i], 0.0);
-                }
+                raw.imputedCumulativeGradeAvg = orDefault(raw.history.cumulativeGradeAvg(), 0.0);
+                raw.imputedPreviousSemGradeAvg = orDefault(raw.history.previousSemGradeAvg(), 0.0);
             }
         }
     }
 
     /**
-     * Step 4: Finalize other features.
-     * <ul>
-     *   <li>relative_avg_course_grade: if !has_relative_course → fallback to current_gpa or globalMean</li>
-     *   <li>relative_avg_course_grade_rank_percentile: if !has_relative_course → 0.5</li>
-     *   <li>Ensure ALL fields are non-null</li>
-     * </ul>
+     * Step 2: Finalize other features (reduced).
+     * relative_avg_course_grade defaults to previous semester GPA or 0 when missing.
      */
     private void imputeFinalize(List<RawFeatureRow> rows, double globalMeanGrade) {
         for (RawFeatureRow raw : rows) {
             if (!raw.relative.hasRelative()) {
-                raw.imputedRelativeAvg = raw.imputedCumulativeGradeAvg != null
-                        ? raw.imputedCumulativeGradeAvg : globalMeanGrade;
-                raw.imputedRelativeRankPercentile = 0.5;
+                raw.imputedRelativeAvg = raw.imputedPreviousSemGradeAvg != null
+                        ? raw.imputedPreviousSemGradeAvg : 0.0;
             } else {
-                raw.imputedRelativeAvg = orDefault(raw.relative.relativeAvg(), globalMeanGrade);
-                raw.imputedRelativeRankPercentile = orDefault(raw.relative.relativeRankPercentile(), 0.5);
+                raw.imputedRelativeAvg = orDefault(raw.relative.relativeAvg(), 0.0);
             }
 
-            // Final safety net: ensure no nulls anywhere
-            raw.imputedCumulativeGradeAvg = orDefault(raw.imputedCumulativeGradeAvg, globalMeanGrade);
-            raw.imputedPreviousSemGradeAvg = orDefault(raw.imputedPreviousSemGradeAvg,
-                    raw.imputedCumulativeGradeAvg);
-            raw.imputedGradeConsistency = orDefault(raw.imputedGradeConsistency, 0.0);
-            raw.imputedGradeTrend = orDefault(raw.imputedGradeTrend, 0.0);
+            raw.imputedCumulativeGradeAvg = orDefault(raw.imputedCumulativeGradeAvg, 0.0);
+            raw.imputedPreviousSemGradeAvg = orDefault(raw.imputedPreviousSemGradeAvg, 0.0);
         }
     }
 
@@ -788,46 +474,17 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         return GradePredictionDataset.builder()
                 .studentId(row.studentId())
                 .semesterId(row.semesterId())
-                .courseId(row.subjectId())
+                .subjectId(row.subjectId())
                 .versionId(versionId)
                 .courseGrade(row.courseGrade4pt())
-                .targetGap(row.courseGrade4pt() - raw.baseline.histMedianSmooth())
                 .semCredits(raw.semCredits)
                 .semCreditsSquared(raw.semCredits * raw.semCredits)
-                .retakeFlg(row.attemptIndex() > 0)
+                .retakeNo(row.attemptIndex())
                 .numSemestersPrior(raw.history.numSemestersPrior())
-                .hasStudentHistory(raw.history.numSemestersPrior() > 0)
                 .cumulativeGradeAvg(raw.imputedCumulativeGradeAvg)
                 .previousSemGradeAvg(raw.imputedPreviousSemGradeAvg)
-                .gradeTrend(raw.imputedGradeTrend)
-                .gradeConsistency(raw.imputedGradeConsistency)
-                .historicFailRatio(raw.imputedHistoricFailRatio)
-                .semRankPercentile(raw.imputedSemRankPercentile)
-                .gpaRankPercentile(raw.imputedGpaRankPercentile)
-                .studentAPlusGradeRate(raw.imputedStudentRates[0])
-                .studentAGradeRate(raw.imputedStudentRates[1])
-                .studentBPlusGradeRate(raw.imputedStudentRates[2])
-                .studentBGradeRate(raw.imputedStudentRates[3])
-                .studentCPlusGradeRate(raw.imputedStudentRates[4])
-                .studentCGradeRate(raw.imputedStudentRates[5])
-                .studentDPlusGradeRate(raw.imputedStudentRates[6])
-                .studentDGradeRate(raw.imputedStudentRates[7])
-                .courseHistCount(raw.baseline.histCount())
-                .courseHistMedianSmooth(raw.baseline.histMedianSmooth())
-                .courseHistMissing(raw.baseline.histMissing())
-                .rankCourseDifficulty(raw.imputedRankCourseDifficulty)
-                .courseFailRate(raw.imputedCourseFailRate)
-                .courseAPlusGradeRate(raw.imputedCourseRates[0])
-                .courseAGradeRate(raw.imputedCourseRates[1])
-                .courseBPlusGradeRate(raw.imputedCourseRates[2])
-                .courseBGradeRate(raw.imputedCourseRates[3])
-                .courseCPlusGradeRate(raw.imputedCourseRates[4])
-                .courseCGradeRate(raw.imputedCourseRates[5])
-                .courseDPlusGradeRate(raw.imputedCourseRates[6])
-                .courseDGradeRate(raw.imputedCourseRates[7])
-                .hasRelativeCourse(raw.relative.hasRelative())
+                .subjectHistMedianSmooth(raw.baseline.histMedianSmooth())
                 .relativeAvgCourseGrade(raw.imputedRelativeAvg)
-                .relativeAvgCourseGradeRankPercentile(raw.imputedRelativeRankPercentile)
                 .build();
     }
 
@@ -835,7 +492,7 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         // ✅ FIXED: Use repository method with WHERE clause instead of loading all rows
         return datasetRepository.findByVersionId(versionId).stream()
                 .collect(Collectors.toMap(
-                        d -> d.getStudentId() + "|" + d.getSemesterId() + "|" + d.getCourseId(),
+                        d -> d.getStudentId() + "|" + d.getSemesterId() + "|" + d.getSubjectId(),
                         d -> d, (a, b) -> a));
     }
 
@@ -850,21 +507,6 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
     // ─────────────────────────────────────────────────────────────────────────
     // Utility methods
     // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * percentile_rank(value, sortedList) = count(x &lt; value) / (n - 1).
-     * Returns 0.5 for single-element or empty lists.
-     */
-    private double percentileRank(double value, List<Double> sortedList) {
-        if (sortedList.size() <= 1) return 0.5;
-        int lo = 0, hi = sortedList.size();
-        while (lo < hi) {
-            int mid = (lo + hi) >>> 1;
-            if (sortedList.get(mid) < value) lo = mid + 1;
-            else hi = mid;
-        }
-        return (double) lo / (sortedList.size() - 1);
-    }
 
     private double median(List<Double> values) {
         if (values.isEmpty()) return 0.0;
@@ -896,8 +538,6 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
             int credits,
             double finalGrade10pt,
             double courseGrade4pt,
-            boolean isAPlusGrade,
-            boolean isFail,
             int attemptIndex,
             UUID curriculumSectionId
     ) {}
@@ -905,55 +545,23 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
     private record StudentHistory(
             int numSemestersPrior,
             Double cumulativeGradeAvg,
-            Double previousSemGradeAvg,
-            Double gradeTrend,
-            Double gradeConsistency,
-            double historicFailRatio,
-            double studentAPlusRate,
-            double studentARate,
-            double studentBPlusRate,
-            double studentBRate,
-            double studentCPlusRate,
-            double studentCRate,
-            double studentDPlusRate,
-            double studentDRate
+            Double previousSemGradeAvg
     ) {
         static StudentHistory empty() {
-            return new StudentHistory(0, null, null, null, null, 0.0,
-                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-        }
-
-        double[] ratesArray() {
-            return new double[]{studentAPlusRate, studentARate, studentBPlusRate, studentBRate,
-                    studentCPlusRate, studentCRate, studentDPlusRate, studentDRate};
+            return new StudentHistory(0, null, null);
         }
     }
 
     private record CourseBaseline(
             int histCount,
             double histMedianSmooth,
-            boolean histMissing,
-            Double failRate,
-            Double aPlusRate,
-            Double aRate,
-            Double bPlusRate,
-            Double bRate,
-            Double cPlusRate,
-            Double cRate,
-            Double dPlusRate,
-            Double dRate,
-            Double rankCourseDifficulty
+            boolean histMissing
     ) {
-        Double[] ratesArray() {
-            return new Double[]{aPlusRate, aRate, bPlusRate, bRate,
-                    cPlusRate, cRate, dPlusRate, dRate};
-        }
     }
 
     private record RelativeCourseResult(
             boolean hasRelative,
-            Double relativeAvg,
-            Double relativeRankPercentile
+            Double relativeAvg
     ) {}
 
     /**
@@ -964,54 +572,23 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
         final EnrichedEnrollment row;
         final StudentHistory history;
         final CourseBaseline baseline;
-        final double[] rankings;
         final RelativeCourseResult relative;
         final int semCredits;
 
         // Imputed student-level (Step 1)
         Double imputedCumulativeGradeAvg;
         Double imputedPreviousSemGradeAvg;
-        Double imputedGradeConsistency;
-        Double imputedGradeTrend;
-        double imputedHistoricFailRatio;
-        double imputedSemRankPercentile;
-        double imputedGpaRankPercentile;
-        double[] imputedStudentRates;
-
-        // Imputed course-level (Steps 2+3)
-        double imputedRankCourseDifficulty;
-        double imputedCourseFailRate;
-        double[] imputedCourseRates;
 
         // Imputed relative (Step 4)
         double imputedRelativeAvg;
-        double imputedRelativeRankPercentile;
 
         RawFeatureRow(EnrichedEnrollment row, StudentHistory history, CourseBaseline baseline,
-                      double[] rankings, RelativeCourseResult relative, int semCredits) {
+                      RelativeCourseResult relative, int semCredits) {
             this.row = row;
             this.history = history;
             this.baseline = baseline;
-            this.rankings = rankings;
             this.relative = relative;
             this.semCredits = semCredits;
-        }
-    }
-
-    /**
-     * Simple online mean accumulator used for running-mean imputation.
-     */
-    private static class RunningMean {
-        private double sum = 0;
-        private int count = 0;
-
-        void add(double value) {
-            sum += value;
-            count++;
-        }
-
-        double mean(double fallback) {
-            return count > 0 ? sum / count : fallback;
         }
     }
 }

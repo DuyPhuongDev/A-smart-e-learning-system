@@ -25,6 +25,13 @@ CREATE TABLE IF NOT EXISTS learning.model_version (
     train_r2                float8      NULL,
     sample_count            int4        NULL,
 
+    -- Residual distribution snapshot - R = g_hat4 - g4 ~ N(mu_R, sigma_R^2)
+    -- Used for bias correction and uncertainty quantification in prediction
+    test_mu_error           float8      NULL,
+    test_sigma_error        float8      NULL,
+    train_mu_error          float8      NULL,
+    train_sigma_error       float8      NULL,
+
     description             text        NULL,
     created_at              timestamptz NOT NULL DEFAULT now(),
     updated_at              timestamptz NOT NULL DEFAULT now(),
@@ -75,6 +82,18 @@ COMMENT ON COLUMN learning.model_version.is_active
 
 COMMENT ON COLUMN learning.model_version.status
     IS 'INACTIVE: chưa kích hoạt, ACTIVE: đang dùng cho prediction, ARCHIVED: đã lưu trữ không dùng nữa';
+
+COMMENT ON COLUMN learning.model_version.test_mu_error
+    IS 'Mean of prediction residuals on test set (g_hat4 - g4), used for bias correction';
+
+COMMENT ON COLUMN learning.model_version.test_sigma_error
+    IS 'Std dev of prediction residuals on test set, used for uncertainty quantification';
+
+COMMENT ON COLUMN learning.model_version.train_mu_error
+    IS 'Mean of prediction residuals on train set';
+
+COMMENT ON COLUMN learning.model_version.train_sigma_error
+    IS 'Std dev of prediction residuals on train set';
 
 -- ============================================================
 -- Add description column to training_job table

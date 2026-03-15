@@ -17,14 +17,14 @@ public interface GradePredictionDatasetRepository extends JpaRepository<GradePre
     /**
      * Find an existing dataset row for upsert logic (within a specific version).
      */
-    Optional<GradePredictionDataset> findByStudentIdAndSemesterIdAndCourseIdAndVersionId(
-            UUID studentId, UUID semesterId, UUID courseId, UUID versionId);
+    Optional<GradePredictionDataset> findByStudentIdAndSemesterIdAndSubjectIdAndVersionId(
+            UUID studentId, UUID semesterId, UUID subjectId, UUID versionId);
 
     /**
      * Find an existing dataset row regardless of version (for migration / legacy upsert).
      */
-    Optional<GradePredictionDataset> findByStudentIdAndSemesterIdAndCourseId(
-            UUID studentId, UUID semesterId, UUID courseId);
+    Optional<GradePredictionDataset> findByStudentIdAndSemesterIdAndSubjectId(
+            UUID studentId, UUID semesterId, UUID subjectId);
 
     /** Count rows belonging to a specific version. */
     long countByVersionId(UUID versionId);
@@ -36,4 +36,6 @@ public interface GradePredictionDatasetRepository extends JpaRepository<GradePre
 
     /** Find all dataset rows for a specific version (for CSV export). */
     List<GradePredictionDataset> findByVersionId(UUID versionId);
+
+    Optional<GradePredictionDataset> findByStudentIdAndSubjectIdAndVersionId(UUID studentId, UUID subjectId, UUID versionId);
 }

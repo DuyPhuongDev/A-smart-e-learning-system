@@ -385,6 +385,20 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSectionDatasetResponse> getClassSectionsBySubjectWindow(UUID subjectId, Integer targetSemKey, Integer windowSpan) {
+        int span = windowSpan != null ? windowSpan : 30;
+        int windowLow = targetSemKey - span;
+        log.info("Fetching class sections for subject={} in semKey window [{} , {})", subjectId, windowLow, targetSemKey);
+
+        List<ClassSection> sections = classSectionRepository.findBySubjectIdWithAcademicYear(subjectId);
+        return sections.stream()
+                .map(this::toDatasetResponse)
+                .filter(r -> r.getSemKey() != null && r.getSemKey() >= windowLow && r.getSemKey() < targetSemKey)
+                .toList();
+    }
+
     private ClassSectionDatasetResponse toDatasetResponse(ClassSection cs) {
         String semesterCode = cs.getSemester() != null ? cs.getSemester().getSemesterCode() : null;
         String yearCode = (cs.getSemester() != null && cs.getSemester().getAcademicYear() != null)

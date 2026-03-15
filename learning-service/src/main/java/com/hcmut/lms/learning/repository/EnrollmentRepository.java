@@ -43,4 +43,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
      * Used for grade prediction dataset computation.
      */
     List<Enrollment> findByFinalGradeIsNotNull();
+
+    /**
+     * Find graded enrollments for a set of class IDs.
+     */
+    List<Enrollment> findByClassIdInAndFinalGradeIsNotNull(List<UUID> classIds);
 }

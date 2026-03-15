@@ -4,6 +4,7 @@ Trains Ridge regression model for 4-point scale grade prediction.
 Dataset is already in 4-point scale (0.0-4.0).
 """
 
+import json
 import logging
 import os
 from datetime import datetime, timezone
@@ -19,6 +20,8 @@ from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from skl2onnx import to_onnx
+from skl2onnx.common.data_types import FloatTensorType
 
 from .config import Config
 
@@ -49,7 +52,7 @@ def prepare_X_y(
         "id",
         "student_id",
         "semester_id",
-        "course_id",
+        "subject_id",
         "created_at",
         "version_id",  # Added from entity structure
     ]
@@ -76,6 +79,22 @@ def prepare_X_y(
     if non_numeric_cols:
         logger.warning(f"{prefix} Dropping non-numeric columns: {non_numeric_cols}")
         X = X.drop(columns=non_numeric_cols)
+
+    # Enforce column order for metadata and ONNX consistency (reduced feature set)
+    desired_cols = [
+        "sem_credits",
+        "sem_credits_squared",
+        "retake_no",
+        "num_semesters_prior",
+        "cumulative_grade_avg",
+        "previous_sem_grade_avg",
+        "subject_hist_median_smooth",
+        "relative_avg_course_grade",
+    ]
+    missing = [c for c in desired_cols if c not in X.columns]
+    if missing:
+        raise ValueError(f"Missing expected feature columns: {missing}")
+    X = X[desired_cols]
 
     return X, y
 
@@ -144,13 +163,13 @@ class ModelTrainer:
         X_train, y_train = prepare_X_y(
             df_train,
             target_col="course_grade",
-            leakage_cols=["target_gap"],
+            leakage_cols=[],
             prefix="[TRAIN]"
         )
         X_test, y_test = prepare_X_y(
             df_test,
             target_col="course_grade",
-            leakage_cols=["target_gap"],
+            leakage_cols=[],
             prefix="[TEST]"
         )
 
@@ -175,8 +194,8 @@ class ModelTrainer:
         # Get baseline and true grades (4-point scale)
         true_grade_train = df_train["course_grade"].astype(float).to_numpy()
         true_grade_test = df_test["course_grade"].astype(float).to_numpy()
-        baseline_train = df_train["course_hist_median_smooth"].astype(float).to_numpy()
-        baseline_test = df_test["course_hist_median_smooth"].astype(float).to_numpy()
+        baseline_train = df_train["subject_hist_median_smooth"].astype(float).to_numpy()
+        baseline_test = df_test["subject_hist_median_smooth"].astype(float).to_numpy()
 
         # Compute metrics on 4-point scale
         baseline_train_metrics = compute_metrics(true_grade_train, baseline_train)
@@ -209,6 +228,39 @@ class ModelTrainer:
         feature_cols = X_train.columns.tolist()
         return pipeline, feature_cols, metrics
 
+    def convert_to_onnx(self, model: Pipeline, feature_cols: List[str]) -> bytes:
+        """
+        Convert scikit-learn pipeline to ONNX format.
+
+        Parameters
+        ----------
+        model : Pipeline
+            Trained sklearn pipeline (SimpleImputer + StandardScaler + Ridge)
+        feature_cols : list
+            Feature column names (for documentation)
+
+        Returns
+        -------
+        bytes
+            ONNX model as bytes
+        """
+        n_features = len(feature_cols)
+
+        # Define input type: float32[batch_size, n_features]
+        initial_type = [('float_input', FloatTensorType([None, n_features]))]
+
+        logger.info(f"Converting model to ONNX with {n_features} features")
+
+        # Convert to ONNX
+        onnx_model = to_onnx(
+            model,
+            initial_types=initial_type,
+            target_opset=15,  # ONNX opset version compatible with ONNX Runtime Java 1.16.3
+        )
+
+        logger.info("Successfully converted model to ONNX format")
+        return onnx_model.SerializeToString()
+
     def save_and_upload_model(
         self,
         model: Pipeline,
@@ -218,7 +270,7 @@ class ModelTrainer:
         timestamp: str,
     ) -> Tuple[str, str]:
         """
-        Save model with metadata to local file, then upload to S3.
+        Save model in both .joblib and .onnx formats, upload to S3.
 
         Parameters
         ----------
@@ -236,9 +288,9 @@ class ModelTrainer:
         Returns
         -------
         tuple[str, str]
-            (S3 path, local file path) - local path for cleanup on error
+            (S3 path for .onnx, S3 path for .joblib)
         """
-        # Create payload
+        # Create payload for .joblib (backup/reference)
         payload = {
             "model": model,
             "feature_cols": feature_cols,
@@ -259,30 +311,72 @@ class ModelTrainer:
             },
         }
 
-        # Save to local temp file
-        local_filename = f"{model_name}_{timestamp.replace(':', '-')}.joblib"
-        local_path = os.path.join(self.temp_dir, local_filename)
+        base_filename = f"{model_name}_{timestamp.replace(':', '-')}"
 
-        logger.info(f"Saving model to {local_path}")
-        joblib.dump(payload, local_path)
+        # 1. Save .joblib (backup)
+        joblib_filename = f"{base_filename}.joblib"
+        joblib_local_path = os.path.join(self.temp_dir, joblib_filename)
+        logger.info(f"Saving .joblib to {joblib_local_path}")
+        joblib.dump(payload, joblib_local_path)
 
-        # Upload to S3
-        s3_key = f"{Config.S3_MODELS_PREFIX}{local_filename}"
-        s3_path = f"s3://{Config.S3_BUCKET}/{s3_key}"
+        # 2. Convert to ONNX
+        logger.info("Converting model to ONNX format...")
+        onnx_bytes = self.convert_to_onnx(model, feature_cols)
 
-        logger.info(f"Uploading model to {s3_path}")
+        # 3. Save ONNX
+        onnx_filename = f"{base_filename}.onnx"
+        onnx_local_path = os.path.join(self.temp_dir, onnx_filename)
+        logger.info(f"Saving .onnx to {onnx_local_path}")
+        with open(onnx_local_path, 'wb') as f:
+            f.write(onnx_bytes)
+
+        # 4. Save metadata JSON (for Java to read feature_cols and metrics)
+        metadata = {
+            "feature_cols": feature_cols,
+            "metrics": metrics,
+            "trained_at": payload["trained_at"],
+            "model_type": payload["model_type"],
+            "preprocessing": payload["preprocessing"],
+            "training_config": payload["training_config"],
+        }
+        metadata_filename = f"{base_filename}_metadata.json"
+        metadata_local_path = os.path.join(self.temp_dir, metadata_filename)
+        logger.info(f"Saving metadata to {metadata_local_path}")
+        with open(metadata_local_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+
+        # 5. Upload all files to S3
         try:
-            self.s3_client.upload_file(local_path, Config.S3_BUCKET, s3_key)
-            logger.info(f"Successfully uploaded model to S3")
+            # Upload .onnx (primary)
+            onnx_s3_key = f"{Config.S3_MODELS_PREFIX}{onnx_filename}"
+            onnx_s3_path = f"s3://{Config.S3_BUCKET}/{onnx_s3_key}"
+            logger.info(f"Uploading .onnx to {onnx_s3_path}")
+            self.s3_client.upload_file(onnx_local_path, Config.S3_BUCKET, onnx_s3_key)
 
-            # Cleanup local file after successful upload
-            os.remove(local_path)
-            logger.info(f"Cleaned up local model file: {local_path}")
+            # Upload .joblib (backup)
+            joblib_s3_key = f"{Config.S3_MODELS_PREFIX}{joblib_filename}"
+            joblib_s3_path = f"s3://{Config.S3_BUCKET}/{joblib_s3_key}"
+            logger.info(f"Uploading .joblib to {joblib_s3_path}")
+            self.s3_client.upload_file(joblib_local_path, Config.S3_BUCKET, joblib_s3_key)
 
-            return s3_path, None  # None indicates file was cleaned up
+            # Upload metadata
+            metadata_s3_key = f"{Config.S3_MODELS_PREFIX}{metadata_filename}"
+            logger.info(f"Uploading metadata to S3")
+            self.s3_client.upload_file(metadata_local_path, Config.S3_BUCKET, metadata_s3_key)
+
+            logger.info("Successfully uploaded all model files to S3")
+
+            # Cleanup local files
+            os.remove(onnx_local_path)
+            os.remove(joblib_local_path)
+            os.remove(metadata_local_path)
+            logger.info("Cleaned up local model files")
+
+            # Return ONNX path as primary (Java will use this)
+            return onnx_s3_path, joblib_s3_path
+
         except ClientError as e:
             logger.error(f"Failed to upload model to S3: {e}")
-            # Return local path for cleanup in finally block
             raise
         except Exception as e:
             logger.error(f"Unexpected error during model save/upload: {e}")

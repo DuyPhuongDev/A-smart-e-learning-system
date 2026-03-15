@@ -120,6 +120,23 @@ public class ModelVersion extends BaseEntity {
     @Column(name = "sample_count")
     private Integer sampleCount;
 
+    // ─── Residual distribution snapshot (V8) ────────────────────────────────
+    // R = g_hat4 - g4 ~ N(mu_R, sigma_R^2)
+    // g_tilde = g_hat4 + mu_R  (bias-corrected prediction)
+    // P(g4 >= t) = 1 - Phi((t - g_tilde) / sigma_R)
+
+    @Column(name = "test_mu_error")
+    private Double testMuError;
+
+    @Column(name = "test_sigma_error")
+    private Double testSigmaError;
+
+    @Column(name = "train_mu_error")
+    private Double trainMuError;
+
+    @Column(name = "train_sigma_error")
+    private Double trainSigmaError;
+
     /**
      * Mô tả tùy chọn cho version này
      */

@@ -82,6 +82,16 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, UUID
        List<ClassSection> findByIdInWithAcademicYear(@Param("ids") List<UUID> ids);
 
        /**
+        * Find class sections by subject with academic year for semKey computation.
+        */
+       @Query("SELECT DISTINCT cs FROM ClassSection cs " +
+                     "LEFT JOIN FETCH cs.subject s " +
+                     "LEFT JOIN FETCH cs.semester sem " +
+                     "LEFT JOIN FETCH sem.academicYear " +
+                     "WHERE s.id = :subjectId")
+       List<ClassSection> findBySubjectIdWithAcademicYear(@Param("subjectId") UUID subjectId);
+
+       /**
         * Check if class code exists
         */
        boolean existsByCode(String code);

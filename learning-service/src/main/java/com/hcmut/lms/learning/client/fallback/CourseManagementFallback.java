@@ -7,6 +7,7 @@ import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
 import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
 import com.hcmut.lms.learning.client.dto.LectureResponse;
+import com.hcmut.lms.learning.client.dto.SemesterResponse;
 import com.hcmut.lms.learning.client.dto.SubjectPrerequisiteMapResponse;
 import com.hcmut.lms.learning.exception.ServiceUnavailableException;
 import lombok.extern.slf4j.Slf4j;
@@ -61,8 +62,20 @@ public class CourseManagementFallback implements CourseManagementClient {
     }
 
     @Override
+    public List<ClassSectionDatasetResponse> getClassSectionsBySubjectWindow(com.hcmut.lms.learning.client.dto.SubjectWindowDatasetLookupRequest request) {
+        log.error("CourseManagement service unavailable. Unable to fetch class sections for subject window.");
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
     public List<SubjectPrerequisiteMapResponse> getPrerequisiteMapping() {
         log.warn("CourseManagement service unavailable. Returning empty prerequisite mapping.");
         return List.of();
+    }
+
+    @Override
+    public SemesterResponse getCurrentSemester() {
+        log.error("CourseManagement service unavailable. Unable to get current semester.");
+        throw new ServiceUnavailableException("Course management service is unavailable");
     }
 }

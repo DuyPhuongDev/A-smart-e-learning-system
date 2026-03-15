@@ -80,6 +80,14 @@ public class ModelVersionResponse {
      */
     private Integer sampleCount;
 
+    // ─── Residual distribution snapshot ─────────────────────────────────────
+    // R = g_hat4 - g4 ~ N(mu_R, sigma_R^2)
+
+    private Double testMuError;
+    private Double testSigmaError;
+    private Double trainMuError;
+    private Double trainSigmaError;
+
     private String description;
 
     private String createdAt;

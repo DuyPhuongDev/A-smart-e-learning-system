@@ -1,6 +1,7 @@
 package com.hcmut.lms.coursemanagement.controller.internal;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassDatasetLookupRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.SubjectWindowDatasetLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionDatasetResponse;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
 import jakarta.validation.Valid;
@@ -25,5 +26,12 @@ public class InternalClassSectionController {
     public ResponseEntity<List<ClassSectionDatasetResponse>> getClassSectionsForDataset(
             @RequestBody @Valid BatchClassDatasetLookupRequest request) {
         return ResponseEntity.ok(classSectionService.getClassSectionsForDataset(request.getClassIds()));
+    }
+
+    @PostMapping("/dataset/by-subject-window")
+    public ResponseEntity<List<ClassSectionDatasetResponse>> getClassSectionsBySubjectWindow(
+            @RequestBody @Valid SubjectWindowDatasetLookupRequest request) {
+        return ResponseEntity.ok(classSectionService.getClassSectionsBySubjectWindow(
+                request.getSubjectId(), request.getTargetSemKey(), request.getWindowSpan()));
     }
 }

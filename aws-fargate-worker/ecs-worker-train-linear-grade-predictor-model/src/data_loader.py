@@ -100,21 +100,49 @@ class DataLoader:
         df = pd.read_csv(csv_path)
         logger.info(f"Loaded {len(df)} rows from CSV")
 
-        # Validate required columns
-        required_cols = ["student_id", "course_grade", "course_hist_median_smooth"]
+        # Validate required columns (reduced feature set)
+        required_cols = [
+            "student_id",
+            "subject_id",
+            "semester_id",
+            "course_grade",
+            "sem_credits",
+            "sem_credits_squared",
+            "retake_no",
+            "num_semesters_prior",
+            "cumulative_grade_avg",
+            "previous_sem_grade_avg",
+            "subject_hist_median_smooth",
+            "relative_avg_course_grade",
+        ]
         for col in required_cols:
             if col not in df.columns:
                 raise ValueError(f"Required column '{col}' is missing from dataset")
 
         # Drop rows with null target or baseline
         mask_valid = (
-            df["course_grade"].notna() & 
-            df["course_hist_median_smooth"].notna()
+            df["course_grade"].notna() &
+            df["subject_hist_median_smooth"].notna()
         )
         df = df[mask_valid].reset_index(drop=True)
         logger.info(
             f"Rows after dropping NaN in target columns: {len(df)}"
         )
+
+        # Ensure feature columns are present and numeric-compatible
+        feature_cols = [
+            "sem_credits",
+            "sem_credits_squared",
+            "retake_no",
+            "num_semesters_prior",
+            "cumulative_grade_avg",
+            "previous_sem_grade_avg",
+            "subject_hist_median_smooth",
+            "relative_avg_course_grade",
+        ]
+        missing_feats = [c for c in feature_cols if c not in df.columns]
+        if missing_feats:
+            raise ValueError(f"Missing feature columns: {missing_feats}")
 
         if len(df) < 100:
             raise ValueError(

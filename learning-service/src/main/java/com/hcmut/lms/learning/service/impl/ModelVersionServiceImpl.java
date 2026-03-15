@@ -43,6 +43,8 @@ public class ModelVersionServiceImpl implements ModelVersionService {
         Double testMae   = null, testRmse  = null, testR2    = null;
         Double trainMae  = null, trainRmse = null, trainR2   = null;
         Integer sampleCount = null;
+        Double testMuError = null, testSigmaError = null;
+        Double trainMuError = null, trainSigmaError = null;
 
         if (callback.getMetrics() != null) {
             Map<String, Object> metrics = callback.getMetrics();
@@ -53,7 +55,11 @@ public class ModelVersionServiceImpl implements ModelVersionService {
             trainMae  = extractMetricDouble(metrics, "train", "model", "mae");
             trainRmse = extractMetricDouble(metrics, "train", "model", "rmse");
             trainR2   = extractMetricDouble(metrics, "train", "model", "r2");
-            sampleCount = extractMetricInt(metrics, "test", "error_distribution", "n");
+            sampleCount     = extractMetricInt(metrics,    "test",  "error_distribution", "n");
+            testMuError     = extractMetricDouble(metrics, "test",  "error_distribution", "mu_error");
+            testSigmaError  = extractMetricDouble(metrics, "test",  "error_distribution", "sigma_error");
+            trainMuError    = extractMetricDouble(metrics, "train", "error_distribution", "mu_error");
+            trainSigmaError = extractMetricDouble(metrics, "train", "error_distribution", "sigma_error");
         }
 
         ModelVersion modelVersion = ModelVersion.builder()
@@ -72,6 +78,10 @@ public class ModelVersionServiceImpl implements ModelVersionService {
                 .trainRmse(trainRmse)
                 .trainR2(trainR2)
                 .sampleCount(sampleCount)
+                .testMuError(testMuError)
+                .testSigmaError(testSigmaError)
+                .trainMuError(trainMuError)
+                .trainSigmaError(trainSigmaError)
                 .description(trainingJob.getDescription())
                 .build();
 

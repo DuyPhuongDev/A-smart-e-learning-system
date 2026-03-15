@@ -19,7 +19,6 @@ public class TrainingJobResponse {
     private UUID datasetVersionId;
     private String modelName;
     private String status;
-    private String ecsTaskArn;
     private String s3ModelPath;
     private String errorMessage;
     private String startedAt;
