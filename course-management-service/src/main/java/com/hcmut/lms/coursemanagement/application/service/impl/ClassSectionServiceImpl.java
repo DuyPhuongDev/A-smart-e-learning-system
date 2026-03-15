@@ -12,6 +12,7 @@ import com.hcmut.lms.coursemanagement.client.dto.UserResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassStatus;
+import com.hcmut.lms.coursemanagement.domain.entity.classSection.CourseLevel;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
 import com.hcmut.lms.coursemanagement.domain.entity.semester.Semester;
 import com.hcmut.lms.coursemanagement.domain.entity.subject.Subject;
@@ -61,6 +62,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                     .orElseThrow(
                             () -> new EntityNotFoundException("Subject not found with id: " + request.getSubjectId()));
             classSection.setSubject(subject);
+            classSection.setLevel(CourseLevel.valueOf(subject.getCategory().name()));
             classCode.append(subject.getCode());
         }
 

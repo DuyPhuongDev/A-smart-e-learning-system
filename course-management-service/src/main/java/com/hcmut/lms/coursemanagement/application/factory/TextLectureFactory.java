@@ -30,6 +30,7 @@ public class TextLectureFactory implements LectureFactory {
     private void setCommonProperties(Lecture lecture, BaseLectureRequest request) {
         lecture.setDescription(request.getDescription());
         lecture.setIsMandatory(request.getIsMandatory());
+        lecture.setEstimateTimeSpent(request.getEstimateTimeSpent());
         lecture.setAllowPreview(request.getAllowPreview());
         lecture.setIsDownloadable(request.getIsDownloadable());
         lecture.setOrderIndex(request.getOrderIndex());
