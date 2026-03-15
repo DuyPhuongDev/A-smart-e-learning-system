@@ -26,7 +26,7 @@ spring:
         default_schema: coaching_chatbot
 
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     schemas: coaching_chatbot
     default-schema: coaching_chatbot
@@ -78,6 +78,7 @@ transcript-enrichment:
 chatbot:
   max-context-messages: 6  # 3 Q&A pairs
   max-knowledge-chunks: 5
+  min-relevance-score: 0.6  # Threshold for filtering relevant chunks
   retry-max-attempts: 3
   retry-delay-ms: 2000
   error-fallback-message-vi: "Xin lỗi, tôi không thể trả lời câu hỏi lúc này. Vui lòng thử lại sau."

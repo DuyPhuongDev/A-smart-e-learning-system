@@ -46,6 +46,9 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
     @Value("${chatbot.max-knowledge-chunks:5}")
     private int maxKnowledgeChunks;
 
+    @Value("${chatbot.min-relevance-score:0.6}")
+    private float minRelevanceScore;
+
     @Value("${chatbot.error-fallback-message-vi:Xin lỗi, tôi không thể trả lời câu hỏi lúc này. Vui lòng thử lại sau.}")
     private String errorFallbackVi;
 
@@ -65,10 +68,11 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             You are a friendly AI coaching assistant helping students learn. Your task is to answer the student's question using the provided knowledge context.
             
             CRITICAL LANGUAGE INSTRUCTION:
+            - You MUST respond in ONLY Vietnamese or English
             - Detect the language of the STUDENT'S QUESTION below
-            - Your answer MUST be in the SAME LANGUAGE as the question
-            - If the question is in Vietnamese, answer in Vietnamese
-            - If the question is in English, answer in English
+            - If the question is in Vietnamese → answer in Vietnamese
+            - If the question is in English → answer in English
+            - If the question is in ANY OTHER LANGUAGE (e.g., Chinese, Japanese, French, etc.) → answer in Vietnamese (default)
             
             CONVERSATION HISTORY (for context):
             %s
@@ -76,18 +80,39 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             KNOWLEDGE CONTEXT (from lecture materials):
             %s
             
+            IS OFF-TOPIC FLAG: %s
+            
             STUDENT'S QUESTION:
             %s
             
-            INSTRUCTIONS:
-            1. Analyze the question carefully and understand what the student is asking
-            2. Use the knowledge context provided to formulate an accurate answer
-            3. If the conversation history is relevant, use it to provide continuity
-            4. Format your answer in clean Markdown with proper headings, lists, and code blocks if needed
-            5. Use a friendly, encouraging coaching tone
-            6. If the knowledge context doesn't contain enough information, acknowledge this and suggest what the student could explore
-            7. Keep the answer concise but complete (aim for 200-400 words)
-            8. REMEMBER: Match the language of your answer to the language of the question
+            QUESTION CLASSIFICATION & RESPONSE RULES:
+            
+            1. **OFF-TOPIC QUESTION** (IS OFF-TOPIC FLAG = true OR question unrelated to lecture content):
+               - Politely decline to answer
+               - Redirect the student back to the lecture topic
+               - Vietnamese: "Xin lỗi, câu hỏi này nằm ngoài phạm vi nội dung bài giảng. Tôi chỉ có thể hỗ trợ bạn về [tóm tắt chủ đề bài giảng]. Bạn có câu hỏi nào khác về nội dung bài học không?"
+               - English: "Sorry, this question is outside the scope of the lecture content. I can only assist you with [lecture topic summary]. Do you have any other questions about the lesson content?"
+            
+            2. **AMBIGUOUS QUESTION** (unclear intent, multiple possible meanings):
+               - Do NOT answer directly
+               - Provide 2-3 clarification options for the student to choose
+               - Vietnamese: "Câu hỏi của bạn có thể hiểu theo nhiều cách. Bạn muốn hỏi về:\\n1. [Option 1]\\n2. [Option 2]\\n3. [Option 3]\\nVui lòng chọn hoặc làm rõ thêm!"
+               - English: "Your question can be interpreted in multiple ways. Are you asking about:\\n1. [Option 1]\\n2. [Option 2]\\n3. [Option 3]\\nPlease select or clarify!"
+            
+            3. **FOCUSED QUESTION** (clear intent, answerable from knowledge context):
+               - Answer comprehensively using the knowledge context
+               - **MUST include inline citations** with the source location from each knowledge chunk
+               - Citation format for VIDEO: [📍 Video: MM:SS-MM:SS] or [📍 Video: HH:MM:SS-HH:MM:SS]
+               - Citation format for DOCUMENT: [📄 Trang: X] (Vietnamese) or [📄 Page: X] (English)
+               - Place citations at the end of relevant sentences or paragraphs
+               - Example: "Machine Learning là một nhánh của AI cho phép máy tính học từ dữ liệu [📍 Video: 02:30-03:15]."
+            
+            ADDITIONAL INSTRUCTIONS:
+            1. Format your answer in clean Markdown with proper headings, lists, and code blocks if needed
+            2. Use a friendly, encouraging coaching tone
+            3. Keep the answer concise but complete (aim for 200-400 words for focused questions)
+            4. If multiple knowledge chunks support the same point, you can combine citations: [📍 Video: 02:30-03:15, 05:00-05:30]
+            5. REMEMBER: Only respond in Vietnamese or English. Default to Vietnamese if unsure.
             
             Your answer in Markdown:""";
 
@@ -112,14 +137,29 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             // Step 4: Search for relevant knowledge chunks
             List<KnowledgeSearchService.SearchResult> searchResults = knowledgeSearchService.searchInLecture(
                     lectureId, refinedQuery, maxKnowledgeChunks);
-            log.info("Found {} relevant knowledge chunks", searchResults.size());
+            log.info("Found {} knowledge chunks from search", searchResults.size());
+
+            // Step 4.1: Filter chunks with relevance score >= threshold
+            List<KnowledgeSearchService.SearchResult> relevantResults = searchResults.stream()
+                    .filter(result -> result.score() >= minRelevanceScore)
+                    .toList();
+
+            // Determine if question is off-topic (no relevant chunks found)
+            boolean isOffTopic = relevantResults.isEmpty();
+            if (isOffTopic) {
+                log.warn("No chunks with score >= {} found. Marking as off-topic. Original scores: {}",
+                        minRelevanceScore,
+                        searchResults.stream().map(r -> String.format("%.3f", r.score())).toList());
+            } else {
+                log.info("Filtered to {} relevant chunks with score >= {}", relevantResults.size(), minRelevanceScore);
+            }
 
             // Step 4.1: Deduplicate search results by page/timestamp to avoid redundant sources
             searchResults = deduplicateSearchResults(searchResults);
             log.debug("After deduplication: {} unique knowledge chunks", searchResults.size());
 
             // Step 5: Generate answer using LLM with context
-            String answer = generateAnswer(question, contextMessages, searchResults);
+            String answer = generateAnswer(question, contextMessages, relevantResults, isOffTopic);
             log.debug("Generated answer length: {} characters", answer.length());
 
             // Step 6: Save user question
@@ -129,8 +169,8 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             // Step 7: Save assistant answer with knowledge sources
             ChatMessage assistantMessage = chatMapper.toAssistantMessage(session, answer, detectLanguage(question), false);
 
-            // Step 7.1: Create knowledge sources for this assistant message
-            List<MessageKnowledgeSource> knowledgeSources = chatMapper.toMessageKnowledgeSources(assistantMessage, searchResults);
+            // Step 7.1: Create knowledge sources for this assistant message (only relevant chunks)
+            List<MessageKnowledgeSource> knowledgeSources = chatMapper.toMessageKnowledgeSources(assistantMessage, relevantResults);
 
             // Step 7.2: Set bidirectional relationship
             assistantMessage.getKnowledgeSources().addAll(knowledgeSources);
@@ -149,7 +189,7 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             return ChatResponse.builder()
                     .sessionId(session.getSessionId())
                     .answer(answer)
-                    .sources(chatMapper.toKnowledgeSources(searchResults))
+                    .sources(chatMapper.toKnowledgeSources(relevantResults))
                     .processingTimeMs(processingTime)
                     .languageDetected(detectLanguage(question))
                     .build();
@@ -259,7 +299,7 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
      * Generate answer using LLM with conversation history and knowledge context
      */
     private String generateAnswer(String question, List<ChatMessage> contextMessages,
-            List<KnowledgeSearchService.SearchResult> searchResults) {
+            List<KnowledgeSearchService.SearchResult> searchResults, boolean isOffTopic) {
 
         // Build conversation history section
         String conversationHistory = buildConversationHistory(contextMessages);
@@ -267,8 +307,12 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
         // Build knowledge context section
         String knowledgeContext = buildKnowledgeContext(searchResults);
 
-        // Build final prompt
-        String prompt = String.format(ANSWER_GENERATION_PROMPT, conversationHistory, knowledgeContext, question);
+        // Build final prompt with isOffTopic flag
+        String prompt = String.format(ANSWER_GENERATION_PROMPT,
+                conversationHistory,
+                knowledgeContext,
+                isOffTopic ? "true" : "false",
+                question);
 
         // Generate answer
         return geminiClient.generateContent(prompt);
@@ -291,7 +335,7 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
     }
 
     /**
-     * Build knowledge context string from search results
+     * Build knowledge context string from search results with formatted location metadata
      */
     private String buildKnowledgeContext(List<KnowledgeSearchService.SearchResult> searchResults) {
         if (searchResults.isEmpty()) {
@@ -302,6 +346,13 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
         for (int i = 0; i < searchResults.size(); i++) {
             KnowledgeSearchService.SearchResult result = searchResults.get(i);
             sb.append(String.format("--- Knowledge Chunk %d (Relevance: %.2f) ---\n", i + 1, result.score()));
+
+            // Add location metadata for citation
+            String locationTag = buildLocationTag(result);
+            if (locationTag != null) {
+                sb.append(String.format("📍 Source Location: %s\n", locationTag));
+            }
+
             sb.append(result.content()).append("\n\n");
         }
         return sb.toString().trim();
@@ -354,14 +405,72 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
     }
 
     /**
-     * Simple language detection (Vietnamese vs English)
+     * Build location tag for a knowledge chunk (video timestamp or page number)
+     */
+    private String buildLocationTag(KnowledgeSearchService.SearchResult result) {
+        // Video timestamp
+        if (result.startTimeSeconds() != null && result.endTimeSeconds() != null) {
+            String startFormatted = formatTimestamp(result.startTimeSeconds(), result.endTimeSeconds());
+            String endFormatted = formatTimestamp(result.endTimeSeconds(), result.endTimeSeconds());
+            return String.format("Video: %s-%s", startFormatted, endFormatted);
+        }
+
+        // Document page number
+        if (result.pageNumber() != null) {
+            return String.format("Trang: %d", result.pageNumber());
+        }
+
+        return null;
+    }
+
+    /**
+     * Format seconds to mm:ss or hh:mm:ss based on video duration
+     * @param seconds the time in seconds to format
+     * @param maxSeconds the maximum time to determine format (>= 3600 uses hh:mm:ss)
+     * @return formatted time string
+     */
+    private String formatTimestamp(Integer seconds, Integer maxSeconds) {
+        if (seconds == null) return "00:00";
+
+        int hrs = seconds / 3600;
+        int mins = (seconds % 3600) / 60;
+        int secs = seconds % 60;
+
+        // Use hh:mm:ss format if video is >= 1 hour
+        if (maxSeconds != null && maxSeconds >= 3600) {
+            return String.format("%02d:%02d:%02d", hrs, mins, secs);
+        }
+
+        // Use mm:ss format for shorter videos
+        return String.format("%02d:%02d", (seconds / 60), secs);
+    }
+
+    /**
+     * Detect language of text - only supports Vietnamese and English
+     * Returns "vi" for Vietnamese, "en" for English
+     * Defaults to "vi" (Vietnamese) if language cannot be determined
      */
     private String detectLanguage(String text) {
-        // Check for Vietnamese-specific characters
-        if (text.matches(".*[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ].*")) {
+        if (text == null || text.isBlank()) {
+            return "vi"; // Default to Vietnamese
+        }
+
+        // Check for Vietnamese-specific characters (diacritics)
+        if (text.matches(".*[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ].*")) {
             return "vi";
         }
-        return "en";
+
+        // Check if text is primarily ASCII/Latin characters (likely English)
+        // Count ASCII letters vs non-ASCII characters
+        long asciiCount = text.chars().filter(c -> (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')).count();
+        long totalLetters = text.chars().filter(Character::isLetter).count();
+
+        if (totalLetters > 0 && (double) asciiCount / totalLetters >= 0.9) {
+            return "en"; // Predominantly English/ASCII
+        }
+
+        // Default to Vietnamese for any other language (Chinese, Japanese, Korean, etc.)
+        return "vi";
     }
 
     /**
