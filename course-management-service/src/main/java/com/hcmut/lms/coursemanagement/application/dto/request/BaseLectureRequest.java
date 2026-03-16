@@ -1,8 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.dto.request;
 
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.LectureType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,7 +19,7 @@ public abstract class BaseLectureRequest {
 
     private Integer orderIndex;
 
-    private Integer estimate_time_spent;
+    private Integer estimateTimeSpent;
 
     @NotNull(message = "Lecture type is required")
     private LectureType lectureType;

@@ -2,6 +2,7 @@ package com.hcmut.lms.coursemanagement.domain.entity.subject;
 
 import com.hcmut.lms.coursemanagement.domain.entity.BaseEntity;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
+import com.hcmut.lms.coursemanagement.domain.entity.classSection.CourseLevel;
 import com.hcmut.lms.coursemanagement.domain.entity.curriculum.CurriculumSubject;
 import jakarta.persistence.*;
 import lombok.*;
@@ -26,6 +27,13 @@ public class Subject extends BaseEntity {
     
     @Column(name = "name")
     private String name;
+
+    @Column(name = "en_name")
+    private String enName;
+
+    @Column(name = "category")
+    @Enumerated(EnumType.STRING)
+    private SubjectCategory category;
     
     @Column(name = "code")
     private String code;

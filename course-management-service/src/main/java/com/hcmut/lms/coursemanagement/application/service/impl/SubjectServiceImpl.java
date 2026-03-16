@@ -7,15 +7,19 @@ import com.hcmut.lms.coursemanagement.application.mapper.SubjectMapper;
 import com.hcmut.lms.coursemanagement.application.service.SubjectService;
 import com.hcmut.lms.coursemanagement.domain.entity.subject.Subject;
 import com.hcmut.lms.coursemanagement.repository.SubjectRepository;
+import jakarta.persistence.EntityExistsException;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -34,7 +38,7 @@ public class SubjectServiceImpl implements SubjectService {
         
         // Check if subject code already exists
         if (request.getCode() != null && subjectRepository.existsByCode(request.getCode())) {
-            throw new RuntimeException("Subject with code " + request.getCode() + " already exists");
+            throw new EntityExistsException("Subject with code " + request.getCode() + " already exists");
         }
         
         Subject subject = subjectMapper.toEntity(request);
@@ -54,7 +58,7 @@ public class SubjectServiceImpl implements SubjectService {
         // Check if new code conflicts with existing subjects
         if (request.getCode() != null && !request.getCode().equals(subject.getCode())) {
             if (subjectRepository.existsByCode(request.getCode())) {
-                throw new RuntimeException("Subject with code " + request.getCode() + " already exists");
+                throw new EntityExistsException("Subject with code " + request.getCode() + " already exists");
             }
         }
         
@@ -94,18 +98,37 @@ public class SubjectServiceImpl implements SubjectService {
         
         return subjectRepository.findAll().stream()
                 .map(subjectMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
     
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<SubjectResponse> getAllSubjects(int page, int size) {
-        log.info("Getting all subjects with pagination - page: {}, size: {}", page, size);
-        
+    public PageResponse<SubjectResponse> getAllSubjects(int page, int size, String keyword) {
+
+        log.info("Getting subjects - page: {}, size: {}, keyword: {}", page, size, keyword);
+
         Pageable pageable = PageRequest.of(page, size);
-        Page<Subject> subjectPage = subjectRepository.findAll(pageable);
-        
+
+        Page<Subject> subjectPage;
+
+        if (keyword == null || keyword.isBlank()) {
+
+            subjectPage = subjectRepository.findAll(pageable);
+
+        } else {
+
+            Optional<Subject> subject = subjectRepository.findByCode(keyword);
+
+            if (subject.isPresent()) {
+                subjectPage = new PageImpl<>(List.of(subject.get()), pageable, 1);
+            } else {
+                subjectPage = subjectRepository.findByNameContainingIgnoreCase(keyword, pageable);
+            }
+
+        }
+
         Page<SubjectResponse> responsePage = subjectPage.map(subjectMapper::toResponse);
+
         return PageResponse.fromPage(responsePage);
     }
     
@@ -114,7 +137,7 @@ public class SubjectServiceImpl implements SubjectService {
         log.info("Deleting subject with id: {}", id);
         
         if (!subjectRepository.existsById(id)) {
-            throw new RuntimeException("Subject not found with id: " + id);
+            throw new EntityNotFoundException("Subject not found with id: " + id);
         }
         
         subjectRepository.deleteById(id);

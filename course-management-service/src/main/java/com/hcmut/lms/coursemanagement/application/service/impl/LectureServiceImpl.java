@@ -35,8 +35,6 @@ public class LectureServiceImpl implements LectureService {
     private final LectureMapper lectureMapper;
     private final LectureMapperHelper lectureMapperHelper;
     private final LectureUpdateStrategyProvider strategyProvider;
-    private final FileService fileService;
-    private static final String DOCUMENT_FOLDER = "lecture/document";
     
     @Override
     public LectureResponse createLecture(BaseLectureRequest request) {

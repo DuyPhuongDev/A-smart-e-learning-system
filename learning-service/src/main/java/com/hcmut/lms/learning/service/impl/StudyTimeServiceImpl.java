@@ -77,14 +77,16 @@ public class StudyTimeServiceImpl implements StudyTimeService {
         log.info("Update progress for student {} in class {}", studentId, request.getClassId());
         progress.setCurrentPosition(request.getCurrentPosition());
         progress.setTotalTimeSpent(progress.getTotalTimeSpent()+request.getDurationSeconds());
-        progress.setProgressPercentage(learningProgressService.calcProgress(progress));
-        if(progress.getProgressPercentage().compareTo(BigDecimal.valueOf(100L)) == 0){
-            progress.setCompletedAt(Instant.now());
-            // update enrollment
-            enrollmentService.updateProgress(studentId, request.getClassId());
+
+        if(progress.getProgressPercentage() == null || progress.getProgressPercentage().compareTo(BigDecimal.valueOf(100L))<0){
+            progress.setProgressPercentage(learningProgressService.calcProgress(progress));
+            if(progress.getProgressPercentage().compareTo(BigDecimal.valueOf(100L)) == 0){
+                progress.setCompletedAt(Instant.now());
+            }
+
+            learningProgressRepository.save(progress);
         }
 
-        learningProgressRepository.save(progress);
 
         log.info("Study time recorded successfully: {} seconds for student {} in class {}",
                 request.getDurationSeconds(), studentId, request.getClassId());
@@ -118,16 +120,16 @@ public class StudyTimeServiceImpl implements StudyTimeService {
         return results.stream()
                 .map(result -> {
                     LocalDate date = ((java.sql.Date) result[0]).toLocalDate();
-                    Long totalSeconds = ((Number) result[1]).longValue();
+                    long totalSeconds = ((Number) result[1]).longValue();
                     Long sessionCount = ((Number) result[2]).longValue();
 
                     return StudyTimeSummaryResponse.builder()
                             .studentId(studentId)
                             .classId(classId)
                             .date(date)
-                            .totalSeconds(totalSeconds.intValue())
-                            .totalMinutes(totalSeconds.intValue() / 60)
-                            .totalHours(totalSeconds.intValue() / 3600)
+                            .totalSeconds((int) totalSeconds)
+                            .totalMinutes((int) totalSeconds / 60)
+                            .totalHours((int) totalSeconds / 3600)
                             .sessionCount(sessionCount)
                             .build();
                 })

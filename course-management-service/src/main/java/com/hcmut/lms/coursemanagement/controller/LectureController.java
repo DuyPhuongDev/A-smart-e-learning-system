@@ -37,11 +37,30 @@ public class LectureController {
         LectureResponse response = lectureService.createLecture(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<LectureResponse> updateLecture(
+
+    @PutMapping("/video/{id}")
+    public ResponseEntity<LectureResponse> updateVideoLecture(
             @PathVariable UUID id,
-            @Valid @RequestBody BaseLectureRequest request) {
+            @Valid @RequestBody VideoLectureRequest request
+    ){
+        LectureResponse response = lectureService.updateLecture(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/document/{id}")
+    public ResponseEntity<LectureResponse> updateDocumentLecture(
+            @PathVariable UUID id,
+            @Valid @RequestBody DocumentLectureRequest request
+    ){
+        LectureResponse response = lectureService.updateLecture(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/text/{id}")
+    public ResponseEntity<LectureResponse> updateTextLecture(
+            @PathVariable UUID id,
+            @Valid @RequestBody TextLectureRequest request
+    ){
         LectureResponse response = lectureService.updateLecture(id, request);
         return ResponseEntity.ok(response);
     }

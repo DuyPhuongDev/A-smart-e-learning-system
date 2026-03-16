@@ -1,9 +1,6 @@
-package com.hcmut.lms.coursemanagement.domain.entity.classSection;
+package com.hcmut.lms.coursemanagement.domain.entity.subject;
 
-public enum CourseLevel {
-    BEGINNER,
-    INTERMEDIATE,
-    ADVANCED,
+public enum SubjectCategory {
     GENERAL_EDUCATION,
     MAJOR_FOUNDATION,
     MAJOR_SPECIALIZATION,
