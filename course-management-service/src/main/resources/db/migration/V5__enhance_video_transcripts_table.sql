@@ -1,4 +1,4 @@
--- Migration: V5__Enhance_video_transcripts_table.sql
+-- Migration: V5__enhance_video_transcripts_table.sql
 -- Description: Add new columns to video_transcripts table for better transcript management
 -- Columns added:
 --   - language_code: Language of the transcript (e.g., 'en', 'vi')

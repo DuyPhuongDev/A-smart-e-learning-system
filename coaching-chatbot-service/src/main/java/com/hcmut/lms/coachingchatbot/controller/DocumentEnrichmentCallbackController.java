@@ -34,12 +34,19 @@ public class DocumentEnrichmentCallbackController {
                 request.getContentType(),
                 request.getChunks() != null ? request.getChunks().size() : 0);
 
-        DocumentEnrichmentCallbackResponse response = documentEnrichmentCallbackService.processEnrichmentCallback(request);
+        // Trigger async processing without waiting
+        documentEnrichmentCallbackService.processEnrichmentCallback(request);
 
-        if ("SUCCESS".equals(response.getStatus())) {
-            return ResponseEntity.ok(response);
-        }
-        return ResponseEntity.internalServerError().body(response);
+        // Return immediate acknowledgment
+        DocumentEnrichmentCallbackResponse response = DocumentEnrichmentCallbackResponse.builder()
+                .lectureId(request.getLectureId())
+                .status("ACCEPTED")
+                .message("Enrichment callback received and processing started")
+                .contentType(request.getContentType())
+                .chunksSaved(0)
+                .build();
+
+        return ResponseEntity.accepted().body(response);
     }
 
     /**

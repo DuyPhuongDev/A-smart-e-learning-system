@@ -37,4 +37,15 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
      * Count enrollments for a specific class
      */
     long countByClassId(UUID classId);
+
+    /**
+     * Find all enrollments that have a final grade assigned.
+     * Used for grade prediction dataset computation.
+     */
+    List<Enrollment> findByFinalGradeIsNotNull();
+
+    /**
+     * Find graded enrollments for a set of class IDs.
+     */
+    List<Enrollment> findByClassIdInAndFinalGradeIsNotNull(List<UUID> classIds);
 }

@@ -134,23 +134,22 @@ public class SemesterServiceImpl implements SemesterService {
     @Override
     public void deleteSemester(UUID id) {
         log.info("Deleting semester with id: {}", id);
-        
+
         if (!semesterRepository.existsById(id)) {
             throw new EntityNotFoundException("Semester not found with id: " + id);
         }
-        
+
         semesterRepository.deleteById(id);
         log.info("Semester deleted successfully with id: {}", id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public SemesterResponse getCurrentSemester() {
-        LocalDate currentDate = LocalDate.now();
-        Semester currentSemester = semesterRepository.findByStartDateLessThanEqualAndEndDateGreaterThanEqual(currentDate, currentDate)
-                .orElseThrow(() -> new EntityNotFoundException("Current semester not found with id: " + currentDate));
-
-        return semesterMapper.toResponse(currentSemester);
-
+        log.info("Getting current semester");
+        Semester semester = semesterRepository.findCurrentSemester(LocalDate.now())
+                .orElseThrow(() -> new EntityNotFoundException("No active semester found for current date"));
+        return semesterMapper.toResponse(semester);
     }
 }
 

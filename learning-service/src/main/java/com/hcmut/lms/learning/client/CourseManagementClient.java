@@ -1,16 +1,16 @@
 package com.hcmut.lms.learning.client;
 
+import com.hcmut.lms.learning.client.dto.BatchClassDatasetLookupRequest;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
 import com.hcmut.lms.learning.client.dto.LectureResponse;
+import com.hcmut.lms.learning.client.dto.SemesterResponse;
+import com.hcmut.lms.learning.client.dto.SubjectPrerequisiteMapResponse;
 import com.hcmut.lms.learning.client.fallback.CourseManagementFallback;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -47,4 +47,30 @@ public interface CourseManagementClient {
 
     @GetMapping("/lectures/{id}")
     LectureResponse getLectureById(@PathVariable UUID id);
+
+    /**
+     * Batch fetch class section metadata with credits and semester key for dataset computation.
+     * Calls: POST /api/courses/internal/class-sections/dataset/batch
+     */
+    @PostMapping("/class-sections/dataset/batch")
+    List<ClassSectionDatasetResponse> getClassSectionsForDataset(
+            @RequestBody BatchClassDatasetLookupRequest request);
+
+    @PostMapping("/class-sections/dataset/by-subject-window")
+    List<ClassSectionDatasetResponse> getClassSectionsBySubjectWindow(
+            @RequestBody com.hcmut.lms.learning.client.dto.SubjectWindowDatasetLookupRequest request);
+
+    /**
+     * Get prerequisite + recommendation mapping for all subjects.
+     * Calls: GET /api/courses/internal/subjects/prerequisite-mapping
+     */
+    @GetMapping("/subjects/prerequisite-mapping")
+    List<SubjectPrerequisiteMapResponse> getPrerequisiteMapping();
+
+    /**
+     * Get the currently active semester based on the current date.
+     * Calls: GET /api/courses/internal/semesters/current
+     */
+    @GetMapping("/semesters/current")
+    SemesterResponse getCurrentSemester();
 }

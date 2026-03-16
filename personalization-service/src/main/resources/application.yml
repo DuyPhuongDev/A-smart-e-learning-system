@@ -1,6 +1,8 @@
 server:
   port: 8087
 
+prefix-api: /api/personalization/v1
+
 spring:
   application:
     name: personalization-service
@@ -15,12 +17,38 @@ spring:
       connection-timeout: 30000
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        default_schema: personalization
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: personalization
+    default-schema: personalization
+    baseline-on-migrate: true
+    baseline-version: 0
+    table: flyway_schema_history
+    out-of-order: false
+    validate-on-migrate: true
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 5000
+            readTimeout: 5000
+            loggerLevel: basic
+      circuitbreaker:
+        enabled: true
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  embedding-model-name: ${GEMINI_EMBEDDING_MODEL:models/gemini-embedding-001}
 
 eureka:
   client:

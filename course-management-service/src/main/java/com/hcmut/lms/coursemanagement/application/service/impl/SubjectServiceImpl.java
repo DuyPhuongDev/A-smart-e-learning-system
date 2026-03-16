@@ -2,10 +2,13 @@ package com.hcmut.lms.coursemanagement.application.service.impl;
 
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.coursemanagement.application.dto.request.SubjectRequest;
+import com.hcmut.lms.coursemanagement.application.dto.response.SubjectPrerequisiteMapResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.SubjectResponse;
 import com.hcmut.lms.coursemanagement.application.mapper.SubjectMapper;
 import com.hcmut.lms.coursemanagement.application.service.SubjectService;
+import com.hcmut.lms.coursemanagement.domain.entity.curriculum.CurriculumSubject;
 import com.hcmut.lms.coursemanagement.domain.entity.subject.Subject;
+import com.hcmut.lms.coursemanagement.repository.CurriculumSubjectRepository;
 import com.hcmut.lms.coursemanagement.repository.SubjectRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,9 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 public class SubjectServiceImpl implements SubjectService {
     
     private final SubjectRepository subjectRepository;
+    private final CurriculumSubjectRepository curriculumSubjectRepository;
     private final SubjectMapper subjectMapper;
     
     @Override
@@ -142,6 +144,63 @@ public class SubjectServiceImpl implements SubjectService {
         
         subjectRepository.deleteById(id);
         log.info("Subject deleted successfully with id: {}", id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubjectPrerequisiteMapResponse> getPrerequisiteMapping() {
+        log.info("Loading prerequisite + recommendation mapping for all subjects");
+
+        // Load all CurriculumSubjects with subject eagerly fetched.
+        // Prerequisites and recommendations are loaded lazily within this transaction.
+        List<CurriculumSubject> allCS = curriculumSubjectRepository.findAllWithPrerequisitesAndRecommendations();
+
+        // Build mapping: subjectId → Set<relatedSubjectId>
+        Map<UUID, Set<UUID>> mapping = new HashMap<>();
+
+        for (CurriculumSubject cs : allCS) {
+            UUID subjectId = cs.getSubject() != null ? cs.getSubject().getId() : null;
+            if (subjectId == null) continue;
+
+            // Prerequisites: lazy-loaded within transaction
+            try {
+                if (cs.getPrerequisites() != null) {
+                    for (var prereq : cs.getPrerequisites()) {
+                        if (prereq.getPrerequisiteCurriculumSubject() != null
+                                && prereq.getPrerequisiteCurriculumSubject().getSubject() != null) {
+                            UUID relatedId = prereq.getPrerequisiteCurriculumSubject().getSubject().getId();
+                            mapping.computeIfAbsent(subjectId, k -> new HashSet<>()).add(relatedId);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not load prerequisites for subject {}: {}", subjectId, e.getMessage());
+            }
+
+            // Recommendations: lazy-loaded within transaction
+            try {
+                if (cs.getRecommendations() != null) {
+                    for (var rec : cs.getRecommendations()) {
+                        if (rec.getRecommendedCurriculumSubject() != null
+                                && rec.getRecommendedCurriculumSubject().getSubject() != null) {
+                            UUID relatedId = rec.getRecommendedCurriculumSubject().getSubject().getId();
+                            mapping.computeIfAbsent(subjectId, k -> new HashSet<>()).add(relatedId);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("Could not load recommendations for subject {}: {}", subjectId, e.getMessage());
+            }
+        }
+
+        log.info("Built prerequisite mapping for {} subjects", mapping.size());
+
+        return mapping.entrySet().stream()
+                .map(e -> SubjectPrerequisiteMapResponse.builder()
+                        .subjectId(e.getKey())
+                        .relatedSubjectIds(new ArrayList<>(e.getValue()))
+                        .build())
+                .toList();
     }
 }
 

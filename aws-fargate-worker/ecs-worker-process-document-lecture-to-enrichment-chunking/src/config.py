@@ -76,6 +76,7 @@ class Config:
         print(f"AWS_REGION: {cls.AWS_REGION}")
         print(f"SQS_QUEUE_URL: {cls.SQS_QUEUE_URL}")
         print(f"GOTENBERG_URL: {cls.GOTENBERG_URL}")
+        print(f"GEMINI_API_KEY: {'[SET]' if cls.GEMINI_API_KEY else '[NOT SET]'}")
         print(f"GEMINI_MODEL: {cls.GEMINI_MODEL}")
         print(f"CALLBACK_URL: {cls.CALLBACK_URL}")
         print(f"MAX_EMPTY_POLLS: {cls.MAX_EMPTY_POLLS}")

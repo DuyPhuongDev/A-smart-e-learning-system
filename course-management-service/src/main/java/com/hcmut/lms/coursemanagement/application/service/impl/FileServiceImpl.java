@@ -147,7 +147,7 @@ public class FileServiceImpl  implements FileService {
 
 
     private String generateFileKey(String originalFilename) {
-        return UUID.randomUUID().toString() + "-" + sanitizeFilename(originalFilename);
+        return UUID.randomUUID() + "-" + sanitizeFilename(originalFilename);
     }
 
     private String sanitizeFilename(String original) {

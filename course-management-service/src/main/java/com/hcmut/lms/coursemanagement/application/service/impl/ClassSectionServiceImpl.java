@@ -383,4 +383,88 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .filter(Lecture::getIsMandatory)
                 .count();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSectionDatasetResponse> getClassSectionsForDataset(List<UUID> classIds) {
+        log.info("Fetching class section dataset metadata for {} classIds", classIds.size());
+        List<ClassSection> sections = classSectionRepository.findByIdInWithAcademicYear(classIds);
+        return sections.stream()
+                .map(this::toDatasetResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ClassSectionDatasetResponse> getClassSectionsBySubjectWindow(UUID subjectId, Integer targetSemKey, Integer windowSpan) {
+        int span = windowSpan != null ? windowSpan : 30;
+        int windowLow = targetSemKey - span;
+        log.info("Fetching class sections for subject={} in semKey window [{} , {})", subjectId, windowLow, targetSemKey);
+
+        List<ClassSection> sections = classSectionRepository.findBySubjectIdWithAcademicYear(subjectId);
+        return sections.stream()
+                .map(this::toDatasetResponse)
+                .filter(r -> r.getSemKey() != null && r.getSemKey() >= windowLow && r.getSemKey() < targetSemKey)
+                .toList();
+    }
+
+    private ClassSectionDatasetResponse toDatasetResponse(ClassSection cs) {
+        String semesterCode = cs.getSemester() != null ? cs.getSemester().getSemesterCode() : null;
+        String yearCode = (cs.getSemester() != null && cs.getSemester().getAcademicYear() != null)
+                ? cs.getSemester().getAcademicYear().getYearCode() : null;
+
+        Integer semesterNumber = parseSemesterNumber(semesterCode);
+        Integer startYear = parseStartYear(yearCode);
+        Integer semKey = (startYear != null && semesterNumber != null)
+                ? startYear * 10 + semesterNumber : null;
+
+        // Extract curriculumSectionId from subject's first CurriculumSubject (if any)
+        UUID curriculumSectionId = null;
+        if (cs.getSubject() != null && cs.getSubject().getCurriculumSubjects() != null
+                && !cs.getSubject().getCurriculumSubjects().isEmpty()) {
+            curriculumSectionId = cs.getSubject().getCurriculumSubjects().get(0)
+                    .getId().getCurriculumSectionId();
+        }
+
+        return ClassSectionDatasetResponse.builder()
+                .classId(cs.getId())
+                .subjectId(cs.getSubject() != null ? cs.getSubject().getId() : null)
+                .subjectCode(cs.getSubject() != null ? cs.getSubject().getCode() : null)
+                .curriculumSectionId(curriculumSectionId)
+                .credits(cs.getSubject() != null ? cs.getSubject().getCredits() : null)
+                .semesterId(cs.getSemester() != null ? cs.getSemester().getId() : null)
+                .semesterCode(semesterCode)
+                .yearCode(yearCode)
+                .semesterNumber(semesterNumber)
+                .semKey(semKey)
+                .build();
+    }
+
+    /**
+     * Parse semester number from semesterCode, e.g. "HK1" -> 1, "HK2" -> 2.
+     */
+    private Integer parseSemesterNumber(String semesterCode) {
+        if (semesterCode == null || semesterCode.isBlank()) return null;
+        String digits = semesterCode.replaceAll("\\D", "");
+        if (digits.isEmpty()) return null;
+        try {
+            return Integer.parseInt(digits);
+        } catch (NumberFormatException e) {
+            log.warn("Cannot parse semesterNumber from: {}", semesterCode);
+            return null;
+        }
+    }
+
+    /**
+     * Parse start year from yearCode, e.g. "2023-2024" -> 2023.
+     */
+    private Integer parseStartYear(String yearCode) {
+        if (yearCode == null || yearCode.isBlank()) return null;
+        try {
+            return Integer.parseInt(yearCode.split("-")[0].trim());
+        } catch (Exception e) {
+            log.warn("Cannot parse startYear from: {}", yearCode);
+            return null;
+        }
+    }
 }

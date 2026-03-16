@@ -3,6 +3,8 @@ package com.hcmut.lms.coachingchatbot.application.service;
 import com.hcmut.lms.coachingchatbot.application.dto.request.DocumentEnrichmentCallbackRequest;
 import com.hcmut.lms.coachingchatbot.application.dto.response.DocumentEnrichmentCallbackResponse;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Service for handling document/text enrichment callbacks from AWS Fargate workers.
  *
@@ -14,10 +16,10 @@ import com.hcmut.lms.coachingchatbot.application.dto.response.DocumentEnrichment
 public interface DocumentEnrichmentCallbackService {
 
     /**
-     * Process document/text enrichment callback from Fargate worker
+     * Process document/text enrichment callback from Fargate worker asynchronously
      *
      * @param request Document enrichment callback request containing enriched chunks
-     * @return DocumentEnrichmentCallbackResponse with processing status
+     * @return CompletableFuture with DocumentEnrichmentCallbackResponse
      */
-    DocumentEnrichmentCallbackResponse processEnrichmentCallback(DocumentEnrichmentCallbackRequest request);
+    CompletableFuture<DocumentEnrichmentCallbackResponse> processEnrichmentCallback(DocumentEnrichmentCallbackRequest request);
 }

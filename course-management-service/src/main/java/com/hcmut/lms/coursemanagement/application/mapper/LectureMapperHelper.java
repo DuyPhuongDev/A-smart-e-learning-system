@@ -29,17 +29,14 @@ public class LectureMapperHelper {
                 .updatedAt(lecture.getUpdatedAt());
         
         // Thêm thông tin cụ thể theo loại lecture
-        if (lecture instanceof VideoLecture) {
-            VideoLecture videoLecture = (VideoLecture) lecture;
+        if (lecture instanceof VideoLecture videoLecture) {
             builder.videoUrl(videoLecture.getVideoUrl())
                    .duration(videoLecture.getDuration());
-        } else if (lecture instanceof DocumentLecture) {
-            DocumentLecture documentLecture = (DocumentLecture) lecture;
+        } else if (lecture instanceof DocumentLecture documentLecture) {
             builder.fileUrl(documentLecture.getFileUrl())
                    .numPages(documentLecture.getNumPages())
                    .fileFormat(documentLecture.getFileFormat());
-        } else if (lecture instanceof TextLecture) {
-            TextLecture textLecture = (TextLecture) lecture;
+        } else if (lecture instanceof TextLecture textLecture) {
             builder.content(textLecture.getContent())
                    .wordCount(textLecture.getWordCount())
                    .formatType(textLecture.getFormatType());
