@@ -30,4 +30,6 @@ public class FileController {
     public ResponseEntity<Map<String, String>> uploadUrl(@RequestParam String folderPath, @RequestParam String fileName) {
         return  ResponseEntity.ok(fileService.generateUploadUrl(folderPath, fileName));
     }
+
+
 }

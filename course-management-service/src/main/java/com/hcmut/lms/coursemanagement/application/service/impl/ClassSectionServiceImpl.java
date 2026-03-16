@@ -372,15 +372,15 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
     @Override
     public Integer countNumberLecturesByClassId(UUID classId) {
-        log.info("Counting number of lectures for class: {}", classId);
+        log.info("Counting number of mandatory lectures for class: {}", classId);
+
         ClassSection classSection = classSectionRepository.findById(classId)
-                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Class section not found with id: " + classId));
 
-        int numLectures = 0;
-
-        for (Chapter chapter : classSection.getChapters()) {
-            numLectures += chapter.getLectures().size();
-        }
-        return numLectures;
+        return (int) classSection.getChapters().stream()
+                .flatMap(chapter -> chapter.getLectures().stream())
+                .filter(Lecture::getIsMandatory)
+                .count();
     }
 }

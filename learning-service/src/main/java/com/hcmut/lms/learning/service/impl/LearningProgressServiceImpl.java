@@ -162,10 +162,11 @@ public class LearningProgressServiceImpl implements LearningProgressService {
 
     @Override
     public BigDecimal calcProgress(LearningProgress progress) {
+        // estimateTimeSpent is minute => convert seconds
         LectureResponse lectureResponse = courseManagementClient.getLectureById(progress.getLectureId());
         return BigDecimal.valueOf(progress.getTotalTimeSpent())
                 .divide(
-                        BigDecimal.valueOf(lectureResponse.getEstimateTimeSpent()),
+                        BigDecimal.valueOf(lectureResponse.getEstimateTimeSpent()*60),
                         2,
                         RoundingMode.HALF_UP
                 )
