@@ -55,15 +55,14 @@ public class SubjectController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllSubjects(
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        if (page != null && size != null) {
-            PageResponse<SubjectResponse> response = subjectService.getAllSubjects(page, size);
-            return ResponseEntity.ok(response);
-        }
-        List<SubjectResponse> response = subjectService.getAllSubjects();
+    public ResponseEntity<PageResponse<SubjectResponse>> getAllSubjects(
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer size,
+            @RequestParam(required = false, defaultValue = "") String search) {
+
+        PageResponse<SubjectResponse> response = subjectService.getAllSubjects(page, size, search);
         return ResponseEntity.ok(response);
+
     }
 
     @DeleteMapping("/{id}")

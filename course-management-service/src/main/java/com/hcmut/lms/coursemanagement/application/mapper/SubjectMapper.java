@@ -21,6 +21,7 @@ public interface SubjectMapper {
     
     @Mapping(target = "createdAt", expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null)")
     @Mapping(target = "updatedAt", expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : null)")
+    @Mapping(target = "category",  expression = "java(entity.getCategory().name())")
     SubjectResponse toResponse(Subject entity);
     
     @Mapping(target = "id", ignore = true)

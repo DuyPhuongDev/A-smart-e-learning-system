@@ -20,7 +20,7 @@ public class LectureMapperHelper {
                 .isMandatory(lecture.getIsMandatory())
                 .lectureType(lecture.getLectureType())
                 .completionRate(lecture.getCompletionRate())
-                .estimate_time_spent(lecture.getEstimateTimeSpent())
+                .estimateTimeSpent(lecture.getEstimateTimeSpent())
                 .viewCount(lecture.getViewCount())
                 .allowPreview(lecture.getAllowPreview())
                 .isDownloadable(lecture.getIsDownloadable())

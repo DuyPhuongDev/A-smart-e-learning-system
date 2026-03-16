@@ -40,16 +40,35 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, UUID
        /**
         * Find class sections by list of IDs with filters (semester and search term)
         */
-       @Query("SELECT cs FROM ClassSection cs " +
-                     "LEFT JOIN FETCH cs.subject s " +
-                     "LEFT JOIN FETCH cs.semester sem " +
-                     "WHERE cs.id IN :ids " +
-                     "AND (:semesterCode IS NULL OR sem.semesterCode = :semesterCode) " +
-                     "AND (:searchTerm IS NULL OR LOWER(cs.sectionName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
-                     "     OR LOWER(s.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
-       List<ClassSection> findByIdInWithFilters(@Param("ids") List<UUID> ids,
-                     @Param("semesterCode") String semesterCode,
-                     @Param("searchTerm") String searchTerm);
+//       @Query("SELECT cs FROM ClassSection cs " +
+//                     "LEFT JOIN FETCH cs.subject s " +
+//                     "LEFT JOIN FETCH cs.semester sem " +
+//                     "WHERE cs.id IN :ids " +
+//                     "AND (:semesterCode IS NULL OR sem.semesterCode = :semesterCode) " +
+//                     "AND (:searchTerm IS NULL OR LOWER(cs.sectionName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+//                     "     OR LOWER(s.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+//       List<ClassSection> findByIdInWithFilters(@Param("ids") List<UUID> ids,
+//                     @Param("semesterCode") String semesterCode,
+//                     @Param("searchTerm") String searchTerm);
+
+       @Query(value = """
+           SELECT cs.*
+           FROM course_management.class_sections cs
+           LEFT JOIN course_management.subjects s ON cs.subject_id = s.id
+           LEFT JOIN course_management.semesters sem ON cs.semester_id = sem.id
+           WHERE cs.id IN (:ids)
+           AND (:semesterCode IS NULL OR sem.semester_code = :semesterCode)
+           AND (
+               :searchTerm IS NULL
+               OR cs.section_name ILIKE CONCAT('%', :searchTerm, '%')
+               OR s.name ILIKE CONCAT('%', :searchTerm, '%')
+           )
+       """, nativeQuery = true)
+       List<ClassSection> findByIdInWithFilters(
+               @Param("ids") List<UUID> ids,
+               @Param("semesterCode") String semesterCode,
+               @Param("searchTerm") String searchTerm
+       );
 
        /**
         * Find class sections by semester ID and subject ID

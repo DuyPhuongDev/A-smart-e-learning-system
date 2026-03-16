@@ -29,7 +29,7 @@ public class LectureResponse {
     private UUID chapterId;
     private Instant createdAt;
     private Instant updatedAt;
-    private Integer estimate_time_spent;
+    private Integer estimateTimeSpent;
     
     // For video lectures
     private String videoUrl;

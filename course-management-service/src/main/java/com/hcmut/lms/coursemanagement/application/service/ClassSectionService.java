@@ -47,6 +47,9 @@ public interface ClassSectionService {
      */
     void decrementCurrentStudents(UUID classId);
 
+    /**
+     * Count number of mandatory lecture in class
+     */
     Integer countNumberLecturesByClassId(UUID classId);
 
     /**

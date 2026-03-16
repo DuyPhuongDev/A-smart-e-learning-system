@@ -1,7 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.mapper;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.BaseLectureRequest;
-import com.hcmut.lms.coursemanagement.application.dto.request.LectureRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.LectureResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
 import org.mapstruct.*;

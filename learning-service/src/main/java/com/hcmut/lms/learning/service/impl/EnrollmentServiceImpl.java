@@ -52,7 +52,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         }
 
         if (!classEnrollStatus.canEnroll()) {
-            throw new BusinessException("CLASS_NOT_OPEN");
+            throw new BusinessException("CAN_NOT_ENROL");
         }
 
         if (classEnrollStatus.isFull()) {
@@ -124,7 +124,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         List<Enrollment> filteredEnrollments = allEnrollments.stream()
                 .filter(e -> classInfoMap.containsKey(e.getClassId()))
                 .sorted(Comparator.comparing(Enrollment::getEnrolledAt).reversed())
-                .collect(Collectors.toList());
+                .toList();
         
         // Step 6: Apply pagination manually
         int totalElements = filteredEnrollments.size();
@@ -172,6 +172,61 @@ public class EnrollmentServiceImpl implements EnrollmentService {
             enrollment.setCompletionTime(LocalDateTime.now());
         }
         enrollmentRepository.save(enrollment);
+    }
+
+    @Override
+    @Transactional
+    public EnrollmentResponse changeClass(UUID id, EnrollmentRequest enrollmentRequest) {
+        Enrollment enrollment = enrollmentRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException("Enrollment with id " + id + " not found")
+        );
+        // Check if already enrolled
+        if (enrollmentRepository.existsByStudentIdAndClassId(enrollmentRequest.getStudentId(), enrollmentRequest.getClassId())) {
+            throw new BusinessException("ALREADY_ENROLLED");
+        }
+
+        // Check class validity
+        ClassEnrollStatus classEnrollStatus = courseManagementClient.getEnrollmentStatus(enrollmentRequest.getClassId());
+
+        if (!classEnrollStatus.exist()) {
+            throw new EntityNotFoundException("CLASS_NOT_FOUND");
+        }
+
+        if (!classEnrollStatus.canEnroll()) {
+            throw new BusinessException("CAN_NOT_ENROL");
+        }
+
+        if (classEnrollStatus.isFull()) {
+            throw new BusinessException("CLASS_FULL");
+        }
+
+        enrollment.setClassId(enrollmentRequest.getClassId());
+
+        Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+
+        // Update current students count in course-management-service
+        try {
+            courseManagementClient.decrementCurrentStudents(enrollment.getClassId());
+            courseManagementClient.incrementCurrentStudents(savedEnrollment.getClassId());
+        } catch (Exception e) {
+            log.warn("Failed to increment current students for class {}: {}", enrollmentRequest.getClassId(), e.getMessage());
+
+        }
+        return enrollmentMapper.toResponse(savedEnrollment);
+
+    }
+
+    @Override
+    @Transactional
+    public void unEnroll(UUID id) {
+        log.info("Unenrolling enrollment with id {}", id);
+        Enrollment enrollment = enrollmentRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException("Enrollment with id " + id + " not found")
+        );
+        enrollmentRepository.deleteById(id);
+
+        courseManagementClient.decrementCurrentStudents(enrollment.getClassId());
+
     }
 
     /**

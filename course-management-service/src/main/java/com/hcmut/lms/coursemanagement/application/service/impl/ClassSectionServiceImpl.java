@@ -12,6 +12,7 @@ import com.hcmut.lms.coursemanagement.client.dto.UserResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassStatus;
+import com.hcmut.lms.coursemanagement.domain.entity.classSection.CourseLevel;
 import com.hcmut.lms.coursemanagement.domain.entity.lecture.Lecture;
 import com.hcmut.lms.coursemanagement.domain.entity.semester.Semester;
 import com.hcmut.lms.coursemanagement.domain.entity.subject.Subject;
@@ -19,6 +20,7 @@ import com.hcmut.lms.coursemanagement.repository.ChapterRepository;
 import com.hcmut.lms.coursemanagement.repository.ClassSectionRepository;
 import com.hcmut.lms.coursemanagement.repository.SemesterRepository;
 import com.hcmut.lms.coursemanagement.repository.SubjectRepository;
+import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,6 +62,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                     .orElseThrow(
                             () -> new EntityNotFoundException("Subject not found with id: " + request.getSubjectId()));
             classSection.setSubject(subject);
+            classSection.setLevel(CourseLevel.valueOf(subject.getCategory().name()));
             classCode.append(subject.getCode());
         }
 
@@ -77,6 +80,10 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         classSection.setIsOfficial(request.getSubjectId() == null || request.getSemesterId() == null);
 
         if (request.getCode() != null) {
+            // check code exist
+            if(classSectionRepository.existsByCode(request.getCode())) {
+                throw new EntityExistsException("Code already exists");
+            }
             classSection.setCode(request.getCode());
         } else {
             classSection.setCode(classCode.append("_").append(classSection.getSectionName().toUpperCase()).toString());
@@ -92,6 +99,8 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
         classSection.setStatus(ClassStatus.UP_COMING);
         Integer maxStudents = request.getMaxStudents() != null ? request.getMaxStudents() : -1;
+        // set default current student is 0
+        classSection.setCurrentStudents(0);
         classSection.setMaxStudents(maxStudents);
 
         ClassSection savedClassSection = classSectionRepository.save(classSection);
@@ -363,16 +372,16 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
     @Override
     public Integer countNumberLecturesByClassId(UUID classId) {
-        log.info("Counting number of lectures for class: {}", classId);
+        log.info("Counting number of mandatory lectures for class: {}", classId);
+
         ClassSection classSection = classSectionRepository.findById(classId)
-                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Class section not found with id: " + classId));
 
-        int numLectures = 0;
-
-        for (Chapter chapter : classSection.getChapters()) {
-            numLectures += chapter.getLectures().size();
-        }
-        return numLectures;
+        return (int) classSection.getChapters().stream()
+                .flatMap(chapter -> chapter.getLectures().stream())
+                .filter(Lecture::getIsMandatory)
+                .count();
     }
 
     @Override

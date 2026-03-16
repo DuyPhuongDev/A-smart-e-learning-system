@@ -14,7 +14,7 @@ public interface SubjectService {
     SubjectResponse getSubjectById(UUID id);
     SubjectResponse getSubjectByCode(String code);
     List<SubjectResponse> getAllSubjects();
-    PageResponse<SubjectResponse> getAllSubjects(int page, int size);
+    PageResponse<SubjectResponse> getAllSubjects(int page, int size, String keyword);
     void deleteSubject(UUID id);
 
     /**
