@@ -28,9 +28,6 @@ public class Subject extends BaseEntity {
     @Column(name = "name")
     private String name;
 
-    @Column(name = "en_name")
-    private String enName;
-
     @Column(name = "category")
     @Enumerated(EnumType.STRING)
     private SubjectCategory category;
