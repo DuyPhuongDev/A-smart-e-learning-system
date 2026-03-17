@@ -47,6 +47,7 @@ public class RouteValidator {
      * Example: /api/public/** would match any path starting with /api/public/
      */
     private static final List<Pattern> PUBLIC_PATTERNS = List.of(
+            Pattern.compile("^/api/auth/(login|refresh-token|forgot-password|reset-password)/?$"),
             Pattern.compile("^/actuator.*"),
             Pattern.compile("^/swagger-ui.*"),
             Pattern.compile("^/v3/api-docs.*")
@@ -77,4 +78,3 @@ public class RouteValidator {
         return request -> !isPublicEndpoint(request);
     }
 }
-
