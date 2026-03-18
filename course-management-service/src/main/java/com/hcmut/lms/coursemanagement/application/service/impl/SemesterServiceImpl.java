@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -102,7 +103,7 @@ public class SemesterServiceImpl implements SemesterService {
     public PageResponse<SemesterResponse> getAllSemesters(int page, int size) {
         log.info("Getting all semesters with pagination - page: {}, size: {}", page, size);
         
-        Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("semesterCode").descending());
         Page<Semester> semesterPage = semesterRepository.findAll(pageable);
         
         Page<SemesterResponse> responsePage = semesterPage.map(semesterMapper::toResponse);
