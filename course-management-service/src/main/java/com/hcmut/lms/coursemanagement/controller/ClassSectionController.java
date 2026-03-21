@@ -75,7 +75,7 @@ public class ClassSectionController {
             @CurrentUser CurrentUserInfo currentUserInfo,
             @RequestParam(required = false, defaultValue = "0") Integer page,
             @RequestParam(required = false, defaultValue = "10") Integer size,
-            @RequestParam(required = false) String semester) {
+            @RequestParam(required = false, defaultValue = "") String semester) {
         PageResponse<ClassSectionResponse> response = classSectionService.getClassSectionsByTeacherId(
                 currentUserInfo.getId(), page, size, semester);
         return ResponseEntity.ok(response);
@@ -94,5 +94,11 @@ public class ClassSectionController {
         List<ClassSectionResponse> response = classSectionService.getClassSectionsBySemesterAndSubject(semesterId,
                 subjectId);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/open-class")
+    public ResponseEntity<Void> openClass(@PathVariable UUID id) {
+        classSectionService.openClass(id);
+        return ResponseEntity.noContent().build();
     }
 }

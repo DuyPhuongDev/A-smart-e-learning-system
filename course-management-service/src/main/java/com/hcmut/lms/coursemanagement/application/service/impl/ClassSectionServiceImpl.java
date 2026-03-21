@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -184,10 +185,9 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 "Getting class sections by teacher id: {} with pagination and filters - page: {}, size: {}, semester: {}",
                 teacherId, page, size, semester);
 
-        if (semester != null && semester.isBlank())
-            semester = null;
+        if (semester.isBlank()) semester = null;
         Page<ClassSection> classSectionPage = classSectionRepository.findByFilters(semester, teacherId,
-                PageRequest.of(page, size));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "semester.semesterCode")));
 
         Page<ClassSectionResponse> responsePage = classSectionPage.map(classSectionMapper::toResponseDTO)
                 .map(this::enrichWithTeacherName);
@@ -298,6 +298,15 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .maxStudents(classSection.getMaxStudents())
                 .currentStudents(classSection.getCurrentStudents())
                 .build();
+    }
+
+    @Override
+    public void openClass(UUID id) {
+        ClassSection originalClass = classSectionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + id));
+
+        originalClass.setStatus(ClassStatus.OPEN);
+        classSectionRepository.save(originalClass);
     }
 
     @Override

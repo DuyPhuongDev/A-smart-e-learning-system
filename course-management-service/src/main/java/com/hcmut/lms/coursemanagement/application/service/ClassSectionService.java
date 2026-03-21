@@ -31,6 +31,8 @@ public interface ClassSectionService {
 
     ClassStatusResponse getClassStatus(UUID id);
 
+    void openClass(UUID id);
+
     /**
      * Get class section info by batch IDs with optional filters
      * Used internally by learning-service for enrolled classes

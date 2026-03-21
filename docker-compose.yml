@@ -88,6 +88,7 @@ services:
       - "8080:8080"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-this-in-production-min-256-bits}
     depends_on:
       - eureka-server
     networks:
