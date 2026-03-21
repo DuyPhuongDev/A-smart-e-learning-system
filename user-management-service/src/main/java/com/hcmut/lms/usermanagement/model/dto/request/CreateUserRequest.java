@@ -23,7 +23,7 @@ public class CreateUserRequest {
     
     private String avatarUrl;
     
-    private Integer specializationId;
+    private UUID specializationId;
     
     @NotNull(message = "Role ID is required")
     private UUID roleId;

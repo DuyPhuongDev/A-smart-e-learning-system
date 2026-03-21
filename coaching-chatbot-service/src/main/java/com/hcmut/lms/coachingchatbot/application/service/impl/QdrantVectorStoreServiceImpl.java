@@ -32,30 +32,26 @@ public class QdrantVectorStoreServiceImpl implements QdrantVectorStoreService {
 
     @Override
     public void initializeCollection(String collectionName, int vectorDimension) {
-        log.info("Initializing collection: {} with dimension: {}", collectionName, vectorDimension);
-
         try {
-            // Check if collection exists
-            if (collectionExists(collectionName)) {
-                log.info("Collection {} already exists", collectionName);
-                return;
+            if (!collectionExists(collectionName)) {
+                qdrantClient.createCollectionAsync(collectionName,
+                        Collections.VectorParams.newBuilder()
+                                .setSize(vectorDimension)
+                                .setDistance(Collections.Distance.Cosine)
+                                .build()).get();
+
+                // Create Index immediately after creation
+                createKeywordIndex(collectionName);
+                log.info("Collection '{}' initialized with keyword index.", collectionName);
             }
-
-            // Create collection
-            qdrantClient.createCollectionAsync(
-                    collectionName,
-                    Collections.VectorParams.newBuilder()
-                            .setSize(vectorDimension)
-                            .setDistance(Collections.Distance.Cosine)
-                            .build())
-                    .get();
-
-            log.info("Collection {} created successfully", collectionName);
-
         } catch (Exception e) {
-            log.error("Failed to initialize collection: {}", e.getMessage(), e);
-            throw new RuntimeException("Collection initialization failed: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to initialize Qdrant: " + e.getMessage(), e);
         }
+    }
+
+    private void createKeywordIndex(String collectionName) throws Exception {
+        qdrantClient.createPayloadIndexAsync(collectionName, "lectureKnowledgeId",
+                Collections.PayloadSchemaType.Keyword, null, true, null, null).get();
     }
 
     @Override
