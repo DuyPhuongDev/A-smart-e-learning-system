@@ -14,7 +14,7 @@ public class UserResponse {
     private String lastName;
     private String phone;
     private LocalDateTime lastLogin;
-    private Integer specializationId;
+    private UUID specializationId;
     private UUID roleId;
     private String roleName;
     private LocalDateTime createdAt;

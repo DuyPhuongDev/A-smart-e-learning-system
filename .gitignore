@@ -77,6 +77,8 @@ application-local.yml
 application-dev.yml
 application-prod.yml
 
+**/application-dev.properties
+
 # H2 Database files
 *.db
 *.trace.db

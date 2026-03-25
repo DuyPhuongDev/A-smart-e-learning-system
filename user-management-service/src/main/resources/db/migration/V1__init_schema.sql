@@ -104,7 +104,7 @@ CREATE TABLE user_management.users (
 	last_name varchar NULL,
 	phone varchar NULL,
 	last_login timestamptz NULL,
-	specialization_id int4 NULL,
+	specialization_id uuid NULL,
 	role_id uuid NOT NULL,
 	created_at timestamptz DEFAULT now() NOT NULL,
 	updated_at timestamptz DEFAULT now() NOT NULL,
@@ -168,6 +168,7 @@ CREATE TABLE user_management.students (
 CREATE TABLE user_management.teachers (
 	user_id uuid NOT NULL,
 	teacher_code varchar NOT NULL,
+    subject_group_id uuid NOT NULL,
 	bio text NULL,
 	CONSTRAINT teachers_pkey PRIMARY KEY (user_id),
 	CONSTRAINT teachers_teacher_code_key UNIQUE (teacher_code),

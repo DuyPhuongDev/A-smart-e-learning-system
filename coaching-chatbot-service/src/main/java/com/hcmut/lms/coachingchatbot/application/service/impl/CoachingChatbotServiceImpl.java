@@ -104,6 +104,7 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
                - **MUST include inline citations** with the source location from each knowledge chunk
                - Citation format for VIDEO: [📍 Video: MM:SS-MM:SS] or [📍 Video: HH:MM:SS-HH:MM:SS]
                - Citation format for DOCUMENT: [📄 Trang: X] (Vietnamese) or [📄 Page: X] (English)
+               - Citation format for TEXT: NO need citation format for text lecture, but if you can determine the content in which section please simple note it at the end of the sentence in brackets, e.g. [📄 Section: X] or [📄 Mục: X]
                - Place citations at the end of relevant sentences or paragraphs
                - Example: "Machine Learning là một nhánh của AI cho phép máy tính học từ dữ liệu [📍 Video: 02:30-03:15]."
             

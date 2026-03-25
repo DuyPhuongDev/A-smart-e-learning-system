@@ -39,7 +39,7 @@ public class User {
     private LocalDateTime lastLogin;
 
     @Column(name = "specialization_id")
-    private Integer specializationId;
+    private UUID specializationId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)

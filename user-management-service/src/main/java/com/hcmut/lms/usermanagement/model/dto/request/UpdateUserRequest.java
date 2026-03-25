@@ -11,7 +11,7 @@ public class UpdateUserRequest {
     private String lastName;
     private String phone;
     private String avatarUrl;
-    private Integer specializationId;
+    private UUID specializationId;
     private UUID roleId;
     
     // For student

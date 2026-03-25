@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class ExcelUtil {
 
@@ -102,7 +103,7 @@ public class ExcelUtil {
                 String specIdStr = getCellValueAsString(getCellSafe(row, specializationIdIdx));
                 if (specIdStr != null && !specIdStr.isEmpty()) {
                     try {
-                        userData.setSpecializationId(Integer.parseInt(specIdStr));
+                        userData.setSpecializationId(UUID.fromString(specIdStr));
                     } catch (NumberFormatException e) {
                         // Ignore invalid specialization ID
                     }
@@ -245,7 +246,7 @@ public class ExcelUtil {
         private String firstName;
         private String lastName;
         private String phone;
-        private Integer specializationId;
+        private UUID specializationId;
         private String roleName;
         private String studentCode;
         private String teacherCode;

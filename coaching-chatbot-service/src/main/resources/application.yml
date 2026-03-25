@@ -26,7 +26,7 @@ spring:
         default_schema: coaching_chatbot
 
   flyway:
-    enabled: false
+    enabled: true
     locations: classpath:db/migration
     schemas: coaching_chatbot
     default-schema: coaching_chatbot
@@ -55,10 +55,10 @@ eureka:
     register-with-eureka: true
 
 qdrant:
-  host: ${QDRANT_HOST:localhost}
+  host: ${QDRANT_HOST:dd942115-b6e8-43ca-bb74-bdf4dc70ef4e.us-west-2-0.aws.cloud.qdrant.io}
   port: 6334
   api-key: ${QDRANT_API_KEY:lms_qdrant_vector_secret_key}
-  use-tls: false
+  use-tls: true
   collection-name: lecture_knowledge
 
 gemini:
@@ -78,7 +78,7 @@ transcript-enrichment:
 chatbot:
   max-context-messages: 6  # 3 Q&A pairs
   max-knowledge-chunks: 5
-  min-relevance-score: 0.6  # Threshold for filtering relevant chunks
+  min-relevance-score: 0.5  # Threshold for filtering relevant chunks
   retry-max-attempts: 3
   retry-delay-ms: 2000
   error-fallback-message-vi: "Xin lỗi, tôi không thể trả lời câu hỏi lúc này. Vui lòng thử lại sau."
