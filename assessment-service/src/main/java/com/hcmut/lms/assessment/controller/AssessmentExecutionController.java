@@ -1,45 +1,31 @@
 package com.hcmut.lms.assessment.controller;
 
+import com.hcmut.lms.assessment.dto.response.GradingResponse;
+import com.hcmut.lms.assessment.handler.dto.SubmissionDto;
+import com.hcmut.lms.assessment.service.AssessmentExecutionService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Controller for Assessment Execution operations
- * Handles quiz/assignment submissions and code execution
- * Merged from assessment-execution-service
- */
+import java.util.UUID;
+
 @RestController
-@RequestMapping("/api/execution")
+@RequestMapping("${prefix-api}/execution")
+@RequiredArgsConstructor
 public class AssessmentExecutionController {
 
-    @GetMapping("/quiz/{id}")
-    public String getQuiz(@PathVariable String id) {
-        // TODO: Implement get quiz logic
-        return "Get quiz - To be implemented";
-    }
+    private final AssessmentExecutionService executionService;
 
-    @PostMapping("/quiz/{id}/submit")
-    public String submitQuiz(@PathVariable String id) {
-        // TODO: Implement submit quiz logic
-        return "Submit quiz - To be implemented";
-    }
-
-    @PostMapping("/assignment/{id}/submit")
-    public String submitAssignment(@PathVariable String id) {
-        // TODO: Implement submit assignment logic
-        return "Submit assignment - To be implemented";
-    }
-
-    @PostMapping("/code/{id}/execute")
-    public String executeCode(@PathVariable String id) {
-        // TODO: Implement execute code logic
-        return "Execute code - To be implemented";
-    }
-
-    @GetMapping("/results/{id}")
-    public String getResults(@PathVariable String id) {
-        // TODO: Implement get results logic
-        return "Get results - To be implemented";
+    /**
+     * Submit an answer for a single question. Jackson deserializes the payload
+     * into the correct SubmissionDto subtype using the "questionType" discriminator.
+     *
+     * MCQ:    { "questionType":"MCQ",    "questionId":"...", "studentId":"...", "selectedOptionIds":["..."] }
+     * CODING: { "questionType":"CODING", "questionId":"...", "studentId":"...", "code":"...", "language":"python" }
+     * ESSAY:  { "questionType":"ESSAY",  "questionId":"...", "studentId":"...", "textContent":"..." }
+     */
+    @PostMapping("/questions/{questionId}/submit")
+    public GradingResponse submitAnswer(@PathVariable UUID questionId,
+                                        @RequestBody SubmissionDto submission) {
+        return executionService.submitAnswer(questionId, submission);
     }
 }
-
-
