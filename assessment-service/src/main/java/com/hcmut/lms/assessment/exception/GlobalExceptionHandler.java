@@ -70,4 +70,13 @@ public class GlobalExceptionHandler {
                         .message(ex.getMessage())
                         .build());
     }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.builder()
+                        .status(HttpStatus.FORBIDDEN.value())
+                        .message(ex.getMessage())
+                        .build());
+    }
 }

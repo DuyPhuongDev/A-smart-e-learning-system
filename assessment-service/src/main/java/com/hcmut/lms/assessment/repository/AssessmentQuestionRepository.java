@@ -14,4 +14,6 @@ public interface AssessmentQuestionRepository extends JpaRepository<AssessmentQu
     List<AssessmentQuestion> findByAssessmentIdOrderByIndex(@Param("assessmentId") UUID assessmentId);
 
     void deleteByAssessmentIdAndQuestionId(UUID assessmentId, UUID questionId);
+
+    boolean existsByAssessment_IdAndQuestion_Id(UUID assessmentId, UUID questionId);
 }
