@@ -1,9 +1,10 @@
 @echo off
-REM Script to start all microservices on Windows
+REM Script to start all microservices on Windows (Consolidated Architecture)
 REM Usage: start-all-services.bat
 
 echo =========================================
 echo Starting LMS Microservices
+echo Consolidated Architecture (7 Services)
 echo =========================================
 
 REM Create logs directory
@@ -28,7 +29,7 @@ echo Step 3: Starting API Gateway...
 start "API Gateway" cmd /c "cd api-gateway && ..\mvnw.cmd spring-boot:run > ..\logs\api-gateway.log 2>&1"
 timeout /t 10 /nobreak
 
-REM Step 4: Start Business Services
+REM Step 4: Start Business Services (Consolidated)
 echo.
 echo Step 4: Starting Business Services...
 
@@ -41,31 +42,19 @@ timeout /t 3 /nobreak
 start "Course Management Service" cmd /c "cd course-management-service && ..\mvnw.cmd spring-boot:run > ..\logs\course-management-service.log 2>&1"
 timeout /t 3 /nobreak
 
-start "Assessment Management Service" cmd /c "cd assessment-management-service && ..\mvnw.cmd spring-boot:run > ..\logs\assessment-management-service.log 2>&1"
+start "Assessment Service" cmd /c "cd assessment-service && ..\mvnw.cmd spring-boot:run > ..\logs\assessment-service.log 2>&1"
 timeout /t 3 /nobreak
 
-start "Assessment Execution Service" cmd /c "cd assessment-execution-service && ..\mvnw.cmd spring-boot:run > ..\logs\assessment-execution-service.log 2>&1"
+start "Learning Service" cmd /c "cd learning-service && ..\mvnw.cmd spring-boot:run > ..\logs\learning-service.log 2>&1"
 timeout /t 3 /nobreak
 
-start "Course Delivery Service" cmd /c "cd course-delivery-service && ..\mvnw.cmd spring-boot:run > ..\logs\course-delivery-service.log 2>&1"
-timeout /t 3 /nobreak
-
-start "Student Personalization Service" cmd /c "cd student-personalization-service && ..\mvnw.cmd spring-boot:run > ..\logs\student-personalization-service.log 2>&1"
-timeout /t 3 /nobreak
-
-start "Tracking Service" cmd /c "cd tracking-service && ..\mvnw.cmd spring-boot:run > ..\logs\tracking-service.log 2>&1"
-timeout /t 3 /nobreak
-
-start "Enrollment Service" cmd /c "cd enrollment-service && ..\mvnw.cmd spring-boot:run > ..\logs\enrollment-service.log 2>&1"
+start "Personalization Service" cmd /c "cd personalization-service && ..\mvnw.cmd spring-boot:run > ..\logs\personalization-service.log 2>&1"
 timeout /t 3 /nobreak
 
 start "Notification Service" cmd /c "cd notification-service && ..\mvnw.cmd spring-boot:run > ..\logs\notification-service.log 2>&1"
 timeout /t 3 /nobreak
 
 start "Communication Service" cmd /c "cd communication-service && ..\mvnw.cmd spring-boot:run > ..\logs\communication-service.log 2>&1"
-timeout /t 3 /nobreak
-
-start "Analytics Reporting Service" cmd /c "cd analytics-reporting-service && ..\mvnw.cmd spring-boot:run > ..\logs\analytics-reporting-service.log 2>&1"
 
 echo.
 echo =========================================
@@ -77,10 +66,20 @@ echo   - Eureka Dashboard: http://localhost:8761
 echo   - API Gateway: http://localhost:8080
 echo   - Config Server: http://localhost:8888
 echo.
+echo Business Services:
+echo   - Authentication: http://localhost:8081
+echo   - User Management: http://localhost:8082
+echo   - Course Management: http://localhost:8083
+echo   - Assessment: http://localhost:8084
+echo   - Learning: http://localhost:8086
+echo   - Personalization: http://localhost:8087
+echo   - Notification: http://localhost:8090
+echo   - Communication: http://localhost:8091
+echo.
+echo Database: Single PostgreSQL (localhost:5432/lms_db)
 echo Logs are available in .\logs\ directory
 echo.
 echo To stop all services, close all command windows
 echo =========================================
 
 pause
-

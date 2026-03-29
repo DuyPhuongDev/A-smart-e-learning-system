@@ -1,0 +1,12 @@
+# Default configuration for all services
+spring:
+  application:
+    config:
+      enabled: true
+
+# Common logging configuration
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+

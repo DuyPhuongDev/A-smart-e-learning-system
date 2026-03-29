@@ -5,17 +5,22 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:h2:mem:notificationdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: 
-  h2:
-    console:
-      enabled: true
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lms_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:lms_user}
+    password: ${DB_PASSWORD:lms_password}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
   mail:
     host: smtp.gmail.com
     port: 587

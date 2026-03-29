@@ -1,58 +1,64 @@
 package com.hcmut.lms.usermanagement.controller;
 
-import com.hcmut.lms.common.dto.ResponseDto;
+import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
+import com.hcmut.lms.usermanagement.service.UserService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    @GetMapping
-    public ResponseDto<String> getAllUsers() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get all users - To be implemented")
-                .build();
+    private final UserService userService;
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponse create(@Valid @RequestBody CreateUserRequest request) {
+        return userService.create(request);
     }
 
     @GetMapping("/{id}")
-    public ResponseDto<String> getUserById(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Get user by ID - To be implemented")
-                .build();
+    public UserResponse getById(@PathVariable UUID id) {
+        return userService.getById(id);
     }
 
-    @PostMapping
-    public ResponseDto<String> createUser() {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Create user - To be implemented")
-                .build();
+    @GetMapping("/email/{email}")
+    public UserResponse getByEmail(@PathVariable String email) {
+        return userService.getByEmail(email);
+    }
+
+    @GetMapping
+    public List<UserResponse> getAll() {
+        return userService.getAll();
     }
 
     @PutMapping("/{id}")
-    public ResponseDto<String> updateUser(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Update user - To be implemented")
-                .build();
+    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        return userService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseDto<String> deleteUser(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Delete user - To be implemented")
-                .build();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID id) {
+        userService.delete(id);
     }
 
-    @PostMapping("/{id}/roles")
-    public ResponseDto<String> assignRole(@PathVariable String id) {
-        return ResponseDto.<String>builder()
-                .success(true)
-                .message("Assign role - To be implemented")
-                .build();
+    @DeleteMapping("/batch")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMultiple(@RequestBody List<UUID> ids) {
+        userService.deleteMultiple(ids);
+    }
+
+    @GetMapping("/teachers")
+    public List<UserResponse> getAllTeachers() {
+        return userService.getAllTeachers();
     }
 }
-

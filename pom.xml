@@ -35,23 +35,22 @@
         
         <!-- Course Related Services -->
         <module>course-management-service</module>
-        <module>course-delivery-service</module>
-        <module>enrollment-service</module>
         
-        <!-- Assessment Services -->
-        <module>assessment-management-service</module>
-        <module>assessment-execution-service</module>
+        <!-- Learning Service (Consolidated: course-delivery + tracking + enrollment) -->
+        <module>learning-service</module>
         
-        <!-- Student Services -->
-        <module>student-personalization-service</module>
-        <module>tracking-service</module>
+        <!-- Assessment Service (Consolidated) -->
+        <module>assessment-service</module>
+
+        <!-- Coaching Chatbot Service -->
+        <module>coaching-chatbot-service</module>
+
+        <!-- Student Personalization & Analytics Service (Consolidated) -->
+        <module>personalization-service</module>
         
         <!-- Communication Services -->
         <module>notification-service</module>
         <module>communication-service</module>
-        
-        <!-- Analytics Service -->
-        <module>analytics-reporting-service</module>
     </modules>
 
     <properties>
@@ -60,6 +59,10 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <!-- SonarQube -->
+        <sonar-maven-plugin.version>5.2.0.4988</sonar-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -79,6 +82,18 @@
                 <artifactId>common</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            
+            <!-- Flyway Database Migration -->
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-core</artifactId>
+                <version>11.20.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-database-postgresql</artifactId>
+                <version>11.20.2</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -88,6 +103,34 @@
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+                
+                <!-- SonarQube Scanner Plugin -->
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>${sonar-maven-plugin.version}</version>
+                </plugin>
+                
+                <!-- JaCoCo Plugin for Code Coverage -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco-maven-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -107,4 +150,3 @@
     </repositories>
 
 </project>
-

@@ -1,0 +1,47 @@
+server:
+  port: 8084
+
+prefix-api: /api/assessment/v1
+
+spring:
+  application:
+    name: assessment-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:lms_db}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:lms_user}
+    password: ${DB_PASSWORD:lms_password}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: assessment_db
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+    schemas: assessment_db
+    default-schema: assessment_db
+    baseline-on-migrate: true
+    baseline-version: 0
+    table: flyway_schema_history
+    out-of-order: false
+    validate-on-migrate: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+

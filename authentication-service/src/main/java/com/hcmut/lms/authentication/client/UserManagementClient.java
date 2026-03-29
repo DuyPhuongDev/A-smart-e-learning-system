@@ -1,0 +1,41 @@
+package com.hcmut.lms.authentication.client;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.util.UUID;
+
+@FeignClient(name = "user-management-service", fallback = UserManagementClientFallback.class)
+public interface UserManagementClient {
+    
+    @GetMapping("/api/users/{id}")
+    Object getUserById(@PathVariable UUID id);
+    
+    @GetMapping("/api/users/email/{email}")
+    Object getUserByEmail(@PathVariable String email);
+    
+    /**
+     * Get user's role for including in JWT token during login
+     */
+    @GetMapping("/api/users/internal/{userId}/role")
+    UserRoleResponse getUserRole(@PathVariable UUID userId);
+    
+    /**
+     * Response DTO for user role
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    class UserRoleResponse {
+        private UUID userId;
+        private String roleName;
+        private UUID roleId;
+    }
+}
+

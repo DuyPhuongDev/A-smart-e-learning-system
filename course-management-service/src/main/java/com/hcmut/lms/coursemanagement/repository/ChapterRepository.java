@@ -1,0 +1,23 @@
+package com.hcmut.lms.coursemanagement.repository;
+
+import com.hcmut.lms.coursemanagement.domain.entity.chapter.Chapter;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface ChapterRepository extends JpaRepository<Chapter, UUID> {
+    List<Chapter> findByClassSectionIdOrderByOrderIndex(UUID classSectionId);
+    
+    @EntityGraph(attributePaths = {"lectures"})
+    @Query("SELECT DISTINCT c FROM Chapter c LEFT JOIN FETCH c.lectures WHERE c.classSection.id = :classSectionId ORDER BY c.orderIndex")
+    List<Chapter> findByClassSectionIdWithLectures(@Param("classSectionId") UUID classSectionId);
+
+}
+
