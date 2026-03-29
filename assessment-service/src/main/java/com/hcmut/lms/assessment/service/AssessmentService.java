@@ -1,5 +1,6 @@
 package com.hcmut.lms.assessment.service;
 
+import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
@@ -22,9 +23,11 @@ public interface AssessmentService {
 
     PageResponse<AssessmentResponse> listByClass(UUID classId, Pageable pageable);
 
-    void addQuestion(UUID assessmentId, AddQuestionRequest request);
+    void addQuestion(UUID assessmentId, List<AddQuestionRequest> request);
 
     void removeQuestion(UUID assessmentId, UUID questionId);
 
     List<QuestionResponse> getQuestions(UUID assessmentId);
+
+    void changeStatus(UUID id, AssessmentStatus status);
 }

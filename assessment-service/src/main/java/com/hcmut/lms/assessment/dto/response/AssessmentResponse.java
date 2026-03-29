@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -28,6 +29,7 @@ public class AssessmentResponse {
     private LocalDateTime closeTime;
     private boolean canReview;
     private boolean showCorrectAnswers;
+    private int numberQuestions;
     private Instant createdAt;
     private Instant updatedAt;
 }

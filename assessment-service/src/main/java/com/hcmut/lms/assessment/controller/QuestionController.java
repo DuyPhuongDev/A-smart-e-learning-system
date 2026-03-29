@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -70,7 +71,12 @@ public class QuestionController {
             @RequestParam(required = false) QuestionType questionType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return questionService.listQuestions(bankId, questionType,
-                PageRequest.of(page, size, Sort.by("createdAt").descending()));
+            return questionService.listQuestions(bankId, questionType,
+                    PageRequest.of(page, size, Sort.by("createdAt").descending()));
+    }
+
+    @GetMapping("/by-assessment/{id}")
+    public List<QuestionResponse> listQuestionsByAssessmentId(@PathVariable UUID id) {
+        return questionService.listQuestionsInAssessment(id);
     }
 }

@@ -1,6 +1,7 @@
 package com.hcmut.lms.assessment.domain.entity.question;
 
 import com.hcmut.lms.assessment.domain.entity.BaseEntity;
+import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentQuestion;
 import com.hcmut.lms.assessment.domain.entity.questionBank.QuestionBank;
 import jakarta.persistence.*;
 import lombok.*;
