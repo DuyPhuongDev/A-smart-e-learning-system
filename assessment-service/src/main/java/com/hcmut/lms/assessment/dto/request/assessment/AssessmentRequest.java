@@ -2,11 +2,15 @@ package com.hcmut.lms.assessment.dto.request.assessment;
 
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentType;
 import com.hcmut.lms.assessment.domain.entity.assessment.GradingRule;
+import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
+import com.hcmut.lms.assessment.dto.response.QuestionResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -40,4 +44,7 @@ public class AssessmentRequest {
     private boolean canReview;
 
     private boolean showCorrectAnswers;
+
+    @Valid
+    List<QuestionRequest> questions;
 }

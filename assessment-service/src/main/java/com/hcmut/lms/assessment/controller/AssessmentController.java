@@ -1,5 +1,6 @@
 package com.hcmut.lms.assessment.controller;
 
+import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
@@ -60,7 +61,7 @@ public class AssessmentController {
     @PostMapping("/{id}/questions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> addQuestion(@PathVariable UUID id,
-                                            @Valid @RequestBody AddQuestionRequest request) {
+                                            @Valid @RequestBody List<AddQuestionRequest> request) {
         assessmentService.addQuestion(id, request);
         return ResponseEntity.noContent().build();
     }
@@ -76,5 +77,11 @@ public class AssessmentController {
     @GetMapping("/{id}/questions")
     public List<QuestionResponse> getQuestions(@PathVariable UUID id) {
         return assessmentService.getQuestions(id);
+    }
+
+    @PutMapping("/{id}/publish")
+    public ResponseEntity<Void> publishAssessment(@PathVariable UUID id) {
+        assessmentService.changeStatus(id, AssessmentStatus.PUBLISHED);
+        return ResponseEntity.noContent().build();
     }
 }

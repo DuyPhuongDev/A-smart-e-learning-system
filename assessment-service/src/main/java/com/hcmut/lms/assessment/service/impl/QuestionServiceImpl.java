@@ -1,5 +1,6 @@
 package com.hcmut.lms.assessment.service.impl;
 
+import com.hcmut.lms.assessment.domain.entity.assessment.Assessment;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
 import com.hcmut.lms.assessment.domain.entity.questionBank.QuestionBank;
@@ -9,10 +10,12 @@ import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
 import com.hcmut.lms.assessment.exception.UnsupportedQuestionTypeException;
 import com.hcmut.lms.assessment.handler.QuestionHandler;
 import com.hcmut.lms.assessment.mapper.QuestionMapper;
+import com.hcmut.lms.assessment.repository.AssessmentRepository;
 import com.hcmut.lms.assessment.repository.QuestionBankRepository;
 import com.hcmut.lms.assessment.repository.QuestionRepository;
 import com.hcmut.lms.assessment.service.QuestionService;
 import com.hcmut.lms.common.dto.PageResponse;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,6 +35,7 @@ public class QuestionServiceImpl implements QuestionService {
     private final QuestionMapper questionMapper;
     private final QuestionBankRepository questionBankRepository;
     private final Map<QuestionType, QuestionHandler> handlerRegistry;
+    private final AssessmentRepository assessmentRepository;
 
     /**
      * Spring injects all QuestionHandler beans;
@@ -40,10 +44,13 @@ public class QuestionServiceImpl implements QuestionService {
     public QuestionServiceImpl(List<QuestionHandler> handlers,
                                QuestionRepository questionRepository,
                                QuestionBankRepository questionBankRepository,
-                               QuestionMapper questionMapper) {
+                               QuestionMapper questionMapper,
+                               AssessmentRepository assessmentRepository
+    ) {
         this.questionRepository = questionRepository;
         this.questionMapper = questionMapper;
         this.questionBankRepository = questionBankRepository;
+        this.assessmentRepository = assessmentRepository;
         this.handlerRegistry = handlers.stream()
                 .collect(Collectors.toMap(QuestionHandler::getSupportedType, Function.identity()));
     }
@@ -95,6 +102,12 @@ public class QuestionServiceImpl implements QuestionService {
             page = questionRepository.findAll(pageable);
         }
         return PageResponse.fromPage(page.map(questionMapper::toResponse));
+    }
+
+    @Override
+    public List<QuestionResponse> listQuestionsInAssessment(UUID assessmentId) {
+        List<Question> questions = questionRepository.findAllByAssessmentId(assessmentId);
+        return  questions.stream().map(questionMapper::toResponse).toList();
     }
 
     private QuestionHandler resolve(QuestionType type) {

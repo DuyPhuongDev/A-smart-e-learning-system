@@ -6,6 +6,7 @@ import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.common.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface QuestionService {
@@ -19,4 +20,6 @@ public interface QuestionService {
     void deleteQuestion(UUID id);
 
     PageResponse<QuestionResponse> listQuestions(UUID bankId, QuestionType questionType, Pageable pageable);
+
+    List<QuestionResponse> listQuestionsInAssessment(UUID assessmentId);
 }

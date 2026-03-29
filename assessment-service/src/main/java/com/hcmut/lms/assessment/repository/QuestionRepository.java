@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface QuestionRepository extends JpaRepository<Question, UUID> {
@@ -30,4 +31,11 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
             @Param("bankId") UUID bankId,
             @Param("questionType") QuestionType questionType,
             Pageable pageable);
+
+    @Query("""
+    SELECT aq.question FROM AssessmentQuestion aq 
+    WHERE aq.assessment.id = :assessmentId
+    ORDER BY aq.orderIndex ASC
+""")
+    List<Question> findAllByAssessmentId(@Param("assessmentId") UUID assessmentId);
 }

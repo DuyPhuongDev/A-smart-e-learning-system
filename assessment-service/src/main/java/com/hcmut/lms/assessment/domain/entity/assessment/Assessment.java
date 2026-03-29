@@ -1,6 +1,7 @@
 package com.hcmut.lms.assessment.domain.entity.assessment;
 
 import com.hcmut.lms.assessment.domain.entity.BaseEntity;
+import com.hcmut.lms.assessment.domain.entity.question.Question;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
