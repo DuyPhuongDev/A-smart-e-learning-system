@@ -248,7 +248,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         boolean hasPendingReview = false;
 
         for (AssessmentQuestion aq : assessmentQuestions) {
-            Question question = aq.getQuestion();
+            Question question = resolveConcreteQuestion(aq.getQuestion());
             maxScore = maxScore.add(defaultPoint(question));
             if (question instanceof CodingQuestion codingQuestion) {
                 validateCodingQuestionConfiguration(codingQuestion);
@@ -649,6 +649,8 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     }
 
     private GradingResponse gradeStoredSubmission(Question question, QuestionSubmission submission, UUID studentId) {
+        question = resolveConcreteQuestion(question);
+
         if (question.getQuestionType() == QuestionType.CODING) {
             CodingSubmission codingSubmission = resolveCodingSubmission(submission);
             return gradeCodingSubmission((CodingQuestion) question, codingSubmission);
@@ -790,6 +792,13 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             return null;
         }
         return (QuestionSubmission) Hibernate.unproxy(submission);
+    }
+
+    private Question resolveConcreteQuestion(Question question) {
+        if (question == null) {
+            return null;
+        }
+        return (Question) Hibernate.unproxy(question);
     }
 
     private McqSubmission resolveMcqSubmission(QuestionSubmission stored) {
