@@ -16,12 +16,16 @@ import com.hcmut.lms.assessment.dto.request.student.*;
 import com.hcmut.lms.assessment.dto.response.GradingResponse;
 import com.hcmut.lms.assessment.dto.response.student.*;
 import com.hcmut.lms.assessment.exception.BadRequestException;
+import com.hcmut.lms.assessment.exception.CodeJudgeUnavailableException;
 import com.hcmut.lms.assessment.exception.ForbiddenException;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
 import com.hcmut.lms.assessment.handler.dto.*;
 import com.hcmut.lms.assessment.repository.*;
 import com.hcmut.lms.assessment.service.AssessmentExecutionService;
 import com.hcmut.lms.assessment.service.StudentAssessmentService;
+import com.hcmut.lms.assessment.service.judge.CppJudgeService;
+import com.hcmut.lms.assessment.service.judge.dto.CodingJudgeEvaluation;
+import com.hcmut.lms.assessment.service.judge.dto.JudgeVerdict;
 import com.hcmut.lms.common.dto.PageResponse;
 import feign.FeignException;
 import feign.RetryableException;
@@ -35,6 +39,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -54,8 +59,10 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     private final McqSubmissionRepository mcqSubmissionRepository;
     private final EssaySubmissionRepository essaySubmissionRepository;
     private final CodingSubmissionRepository codingSubmissionRepository;
+    private final SubmissionTestCaseResultRepository submissionTestCaseResultRepository;
     private final LearningEnrollmentClient learningEnrollmentClient;
     private final AssessmentExecutionService assessmentExecutionService;
+    private final CppJudgeService cppJudgeService;
 
     @Override
     @Transactional(readOnly = true)
@@ -214,7 +221,12 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
 
     @Override
     public SubmitAttemptResponse submitAttempt(UUID attemptId, UUID studentId) {
-        AssessmentSubmission attempt = findOwnedAttempt(attemptId, studentId);
+        AssessmentSubmission attempt = assessmentSubmissionRepository
+                .findByIdForUpdate(attemptId)
+                .orElseThrow(() -> new ResourceNotFoundException("AssessmentSubmission", attemptId));
+        if (!attempt.getStudentId().equals(studentId)) {
+            throw new ForbiddenException("You are not allowed to access this attempt");
+        }
 
         if (attempt.getStatus() == AssessmentSubmissionStatus.SUBMITTED) {
             return buildSubmittedResponse(attempt);
@@ -238,15 +250,30 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         for (AssessmentQuestion aq : assessmentQuestions) {
             Question question = aq.getQuestion();
             maxScore = maxScore.add(defaultPoint(question));
+            if (question instanceof CodingQuestion codingQuestion) {
+                validateCodingQuestionConfiguration(codingQuestion);
+            }
 
             QuestionSubmission stored = submissionByQuestionId.get(question.getId());
             if (stored == null) {
-                QuestionSubmission unanswered = QuestionSubmission.builder()
-                        .assessmentSubmission(attempt)
-                        .question(question)
-                        .score(BigDecimal.ZERO)
-                        .status(QuestionSubmissionStatus.INCORRECT)
-                        .build();
+                QuestionSubmission unanswered;
+                if (question.getQuestionType() == QuestionType.CODING && question instanceof CodingQuestion codingQuestion) {
+                    unanswered = CodingSubmission.builder()
+                            .assessmentSubmission(attempt)
+                            .question(question)
+                            .score(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP))
+                            .status(QuestionSubmissionStatus.INCORRECT)
+                            .passedTestcases(0)
+                            .totalTestcases(codingQuestion.getTestCases() == null ? 0 : codingQuestion.getTestCases().size())
+                            .build();
+                } else {
+                    unanswered = QuestionSubmission.builder()
+                            .assessmentSubmission(attempt)
+                            .question(question)
+                            .score(BigDecimal.ZERO)
+                            .status(QuestionSubmissionStatus.INCORRECT)
+                            .build();
+                }
                 questionSubmissionRepository.save(unanswered);
 
                 questionResults.add(SubmitQuestionResultResponse.builder()
@@ -399,6 +426,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
 
     private Instant saveCodingAnswer(AssessmentSubmission attempt, Question question, SaveCodingAnswerRequest request) {
         removeIncompatibleSubmission(attempt.getId(), question.getId(), CodingSubmission.class);
+        validateSupportedCodingLanguageForSubmission(request.getCode(), request.getLanguage());
 
         CodingSubmission submission = codingSubmissionRepository
                 .findByAssessmentSubmission_IdAndQuestion_Id(attempt.getId(), question.getId())
@@ -525,12 +553,18 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 hasPendingReview = true;
             }
 
+            String detail = null;
+            if (question.getQuestionType() == QuestionType.CODING) {
+                CodingSubmission codingSubmission = resolveCodingSubmission(submission);
+                detail = summarizeCodingSubmissionDetail(codingSubmission);
+            }
+
             questionResults.add(SubmitQuestionResultResponse.builder()
                     .questionId(question.getId())
                     .earnedPoints(nonNull(submission.getScore()))
                     .maxPoints(defaultPoint(question))
                     .status(submission.getStatus())
-                    .detail(null)
+                    .detail(detail)
                     .build());
         }
 
@@ -615,6 +649,11 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     }
 
     private GradingResponse gradeStoredSubmission(Question question, QuestionSubmission submission, UUID studentId) {
+        if (question.getQuestionType() == QuestionType.CODING) {
+            CodingSubmission codingSubmission = resolveCodingSubmission(submission);
+            return gradeCodingSubmission((CodingQuestion) question, codingSubmission);
+        }
+
         if (question.getQuestionType() == QuestionType.ESSAY) {
             EssaySubmission essaySubmission = resolveEssaySubmission(submission);
             if (essaySubmission == null || !hasEssayContent(essaySubmission)) {
@@ -644,6 +683,53 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             log.warn("Auto grading failed for question {}. Fallback zero score. Cause: {}",
                     question.getId(), ex.getMessage(), ex);
             return zeroScoreResponse(question, "Unable to grade automatically at this time");
+        }
+    }
+
+    private GradingResponse gradeCodingSubmission(CodingQuestion question, CodingSubmission submission) {
+        validateCodingQuestionConfiguration(question);
+
+        if (submission == null || submission.getInputCode() == null || submission.getInputCode().isBlank()) {
+            persistCodingSummaryOnly(submission, question, 0);
+            return zeroScoreResponse(question, "Question is not answered");
+        }
+
+        if (!cppJudgeService.isSupportedLanguage(submission.getExecutionLanguage())) {
+            throw new BadRequestException(
+                    "Unsupported language. Supported: " + cppJudgeService.supportedLanguagesDescription()
+            );
+        }
+
+        try {
+            CodingJudgeEvaluation evaluation = cppJudgeService.evaluate(
+                    question,
+                    submission.getInputCode(),
+                    submission.getExecutionLanguage()
+            );
+            persistCodingJudgeResults(submission, evaluation);
+
+            BigDecimal maxPoints = defaultPoint(question);
+            BigDecimal earnedPoints = calculateCodingEarnedPoints(
+                    maxPoints,
+                    evaluation.getPassedCount(),
+                    evaluation.getTotalCount()
+            );
+
+            return GradingResponse.builder()
+                    .questionId(question.getId())
+                    .earnedPoints(earnedPoints)
+                    .maxPoints(maxPoints)
+                    .status(mapCodingGradingStatus(evaluation.getPassedCount(), evaluation.getTotalCount()))
+                    .detail(evaluation.getDetail())
+                    .build();
+        } catch (CodeJudgeUnavailableException ex) {
+            log.error("Coding judge infrastructure unavailable for question {} submission {}: {}",
+                    question.getId(), submission.getId(), ex.getMessage(), ex);
+            throw ex;
+        } catch (RuntimeException ex) {
+            log.error("Coding judge failed unexpectedly for question {} submission {}",
+                    question.getId(), submission.getId(), ex);
+            throw new CodeJudgeUnavailableException("Code judge is unavailable at this time", ex);
         }
     }
 
@@ -739,10 +825,128 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         return codingSubmissionRepository.findById(concrete.getId()).orElse(null);
     }
 
+    private void validateCodingQuestionConfiguration(CodingQuestion question) {
+        if (question.getTestCases() == null || question.getTestCases().isEmpty()) {
+            throw new BadRequestException("Coding question configuration is invalid: missing test cases");
+        }
+        if (question.getExecutionTimeLimit() <= 0) {
+            throw new BadRequestException("Coding question configuration is invalid: executionTimeLimit must be > 0");
+        }
+        if (question.getExecutionMemoryLimit() <= 0) {
+            throw new BadRequestException("Coding question configuration is invalid: executionMemoryLimit must be > 0");
+        }
+    }
+
+    private void validateSupportedCodingLanguageForSubmission(String code, String language) {
+        if (code == null || code.isBlank()) {
+            return;
+        }
+        if (!cppJudgeService.isSupportedLanguage(language)) {
+            throw new BadRequestException("Unsupported language. Supported: " + cppJudgeService.supportedLanguagesDescription());
+        }
+    }
+
+    private void persistCodingSummaryOnly(CodingSubmission submission, CodingQuestion question, int passedCount) {
+        if (submission == null) {
+            return;
+        }
+
+        int totalCount = question.getTestCases() == null ? 0 : question.getTestCases().size();
+        submission.setPassedTestcases(Math.max(0, passedCount));
+        submission.setTotalTestcases(totalCount);
+        codingSubmissionRepository.save(submission);
+        submissionTestCaseResultRepository.deleteByCodingSubmission_Id(submission.getId());
+    }
+
+    private void persistCodingJudgeResults(CodingSubmission submission, CodingJudgeEvaluation evaluation) {
+        submission.setPassedTestcases(evaluation.getPassedCount());
+        submission.setTotalTestcases(evaluation.getTotalCount());
+        codingSubmissionRepository.save(submission);
+
+        submissionTestCaseResultRepository.deleteByCodingSubmission_Id(submission.getId());
+
+        List<SubmissionTestCaseResult> detailResults = new ArrayList<>();
+        for (var testCaseResult : evaluation.getTestCaseResults()) {
+            detailResults.add(SubmissionTestCaseResult.builder()
+                    .codingSubmission(submission)
+                    .testCaseId(testCaseResult.getTestCaseId())
+                    .pass(testCaseResult.isPass())
+                    .verdict(testCaseResult.getVerdict().name())
+                    .detailError(trimDetailForStudent(testCaseResult.getError()))
+                    .output(trimDetailForStudent(testCaseResult.getOutput()))
+                    .executionTimeMs(testCaseResult.getExecutionTimeMs())
+                    .build());
+        }
+
+        if (!detailResults.isEmpty()) {
+            submissionTestCaseResultRepository.saveAll(detailResults);
+        }
+    }
+
+    private BigDecimal calculateCodingEarnedPoints(BigDecimal maxPoints, int passedCount, int totalCount) {
+        if (totalCount <= 0 || passedCount <= 0) {
+            return BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP);
+        }
+        return maxPoints.multiply(BigDecimal.valueOf(passedCount))
+                .divide(BigDecimal.valueOf(totalCount), 3, RoundingMode.HALF_UP);
+    }
+
+    private GradingStatus mapCodingGradingStatus(int passedCount, int totalCount) {
+        if (totalCount <= 0 || passedCount == 0) {
+            return GradingStatus.INCORRECT;
+        }
+        if (passedCount == totalCount) {
+            return GradingStatus.CORRECT;
+        }
+        return GradingStatus.PARTIAL;
+    }
+
+    private String summarizeCodingSubmissionDetail(CodingSubmission codingSubmission) {
+        if (codingSubmission == null) {
+            return null;
+        }
+        if (codingSubmission.getInputCode() == null || codingSubmission.getInputCode().isBlank()) {
+            return "Question is not answered";
+        }
+        if (!cppJudgeService.isSupportedLanguage(codingSubmission.getExecutionLanguage())) {
+            return "Unsupported language. Supported: " + cppJudgeService.supportedLanguagesDescription();
+        }
+
+        List<SubmissionTestCaseResult> testCaseResults = submissionTestCaseResultRepository
+                .findAllByCodingSubmission_Id(codingSubmission.getId());
+
+        Optional<SubmissionTestCaseResult> compileError = testCaseResults.stream()
+                .filter(result -> JudgeVerdict.CE.name().equals(result.getVerdict()))
+                .findFirst();
+
+        if (compileError.isPresent()) {
+            String error = compileError.get().getDetailError();
+            if (error != null && !error.isBlank()) {
+                return trimDetailForStudent(error);
+            }
+            return "Compile error";
+        }
+
+        int passed = codingSubmission.getPassedTestcases() == null ? 0 : codingSubmission.getPassedTestcases();
+        int total = codingSubmission.getTotalTestcases() == null ? 0 : codingSubmission.getTotalTestcases();
+        return "Passed " + passed + "/" + total + " testcases";
+    }
+
+    private String trimDetailForStudent(String detail) {
+        if (detail == null || detail.isBlank()) {
+            return null;
+        }
+        String normalized = detail.strip();
+        final int maxLength = 600;
+        return normalized.length() > maxLength
+                ? normalized.substring(0, maxLength) + "...(truncated)"
+                : normalized;
+    }
+
     private GradingResponse zeroScoreResponse(Question question, String detail) {
         return GradingResponse.builder()
                 .questionId(question.getId())
-                .earnedPoints(BigDecimal.ZERO)
+                .earnedPoints(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP))
                 .maxPoints(defaultPoint(question))
                 .status(GradingStatus.INCORRECT)
                 .detail(detail)
