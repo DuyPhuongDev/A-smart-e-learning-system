@@ -1008,7 +1008,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     }
 
     private void ensureAssessmentCanStart(Assessment assessment) {
-        if (assessment.getAssessmentStatus() != AssessmentStatus.OPEN) {
+        if (assessment.getAssessmentStatus() != AssessmentStatus.PUBLISHED) {
             throw new BadRequestException("Assessment is not open");
         }
 
@@ -1023,7 +1023,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     }
 
     private boolean isAssessmentOpenNow(Assessment assessment) {
-        if (assessment.getAssessmentStatus() != AssessmentStatus.OPEN) {
+        if (assessment.getAssessmentStatus() != AssessmentStatus.PUBLISHED) {
             return false;
         }
         LocalDateTime now = LocalDateTime.now();
