@@ -139,11 +139,12 @@ public class CppJudgeService {
     ) {
         int timeLimitMs = codingQuestion.getExecutionTimeLimit();
         int memoryLimitMb = codingQuestion.getExecutionMemoryLimit();
-        int timeoutSeconds = Math.max(2, (int) Math.ceil(timeLimitMs / 1000.0) + 2);
+        int processWaitTimeoutSeconds = Math.max(2, (int) Math.ceil(timeLimitMs / 1000.0) + 2);
         int memoryLimitKb = memoryLimitMb * 1024;
+        String timeoutDuration = formatTimeoutDuration(timeLimitMs);
 
         String runCmd = "ulimit -v " + memoryLimitKb + "; timeout --signal=KILL --kill-after=1s "
-                + timeLimitMs + "ms ./main";
+                + timeoutDuration + " ./main";
 
         ProcessExecution runExec;
         try {
@@ -151,7 +152,7 @@ public class CppJudgeService {
                     List.of("bash", "-lc", runCmd),
                     workDir,
                     testCase.getInput(),
-                    timeoutSeconds
+                    processWaitTimeoutSeconds
             );
         } catch (IOException ex) {
             throw new CodeJudgeUnavailableException("Code judge is unavailable: failed to execute compiled program", ex);
@@ -159,6 +160,9 @@ public class CppJudgeService {
 
         if (isCommandNotFound(runExec.stderr())) {
             throw new CodeJudgeUnavailableException("Code judge is unavailable: timeout runtime dependency is missing");
+        }
+        if (isTimeoutIntervalUnsupported(runExec.stderr())) {
+            throw new CodeJudgeUnavailableException("Code judge is unavailable: timeout command does not support configured interval");
         }
 
         JudgeVerdict verdict;
@@ -340,6 +344,19 @@ public class CppJudgeService {
             return false;
         }
         return stderr.toLowerCase(Locale.ROOT).contains("command not found");
+    }
+
+    private boolean isTimeoutIntervalUnsupported(String stderr) {
+        if (stderr == null) {
+            return false;
+        }
+        String normalized = stderr.toLowerCase(Locale.ROOT);
+        return normalized.contains("invalid time interval");
+    }
+
+    private String formatTimeoutDuration(int timeLimitMs) {
+        double seconds = Math.max(1, timeLimitMs) / 1000.0;
+        return String.format(Locale.ROOT, "%.3fs", seconds);
     }
 
     public boolean isSupportedLanguage(String language) {
