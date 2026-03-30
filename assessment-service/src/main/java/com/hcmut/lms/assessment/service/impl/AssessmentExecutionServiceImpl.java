@@ -11,6 +11,7 @@ import com.hcmut.lms.assessment.handler.dto.GradingResult;
 import com.hcmut.lms.assessment.handler.dto.SubmissionDto;
 import com.hcmut.lms.assessment.repository.QuestionRepository;
 import com.hcmut.lms.assessment.service.AssessmentExecutionService;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,10 +41,11 @@ public class AssessmentExecutionServiceImpl implements AssessmentExecutionServic
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true, noRollbackFor = RuntimeException.class)
     public GradingResponse submitAnswer(UUID questionId, SubmissionDto submission) {
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question", questionId));
+        question = (Question) Hibernate.unproxy(question);
 
         QuestionHandler handler = resolve(question.getQuestionType());
         handler.validate(question, submission);

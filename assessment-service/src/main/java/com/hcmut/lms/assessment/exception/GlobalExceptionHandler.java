@@ -70,4 +70,22 @@ public class GlobalExceptionHandler {
                         .message(ex.getMessage())
                         .build());
     }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.builder()
+                        .status(HttpStatus.FORBIDDEN.value())
+                        .message(ex.getMessage())
+                        .build());
+    }
+
+    @ExceptionHandler(CodeJudgeUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleCodeJudgeUnavailable(CodeJudgeUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ErrorResponse.builder()
+                        .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                        .message(ex.getMessage())
+                        .build());
+    }
 }
