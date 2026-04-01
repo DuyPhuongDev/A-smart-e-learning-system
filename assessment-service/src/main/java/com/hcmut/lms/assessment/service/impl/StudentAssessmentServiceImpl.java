@@ -163,7 +163,11 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         List<AttemptQuestionResponse> questions = assessmentQuestionRepository
                 .findByAssessmentIdOrderByIndex(assessment.getId())
                 .stream()
-                .map(aq -> toAttemptQuestionResponse(aq, submissionByQuestionId.get(aq.getQuestion().getId())))
+                .map(aq -> toAttemptQuestionResponse(
+                        aq,
+                        submissionByQuestionId.get(aq.getQuestion().getId()),
+                        attempt.getStatus() == AssessmentSubmissionStatus.SUBMITTED
+                ))
                 .toList();
 
         return AttemptDetailResponse.builder()
@@ -444,7 +448,11 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         return saved.getUpdatedAt();
     }
 
-    private AttemptQuestionResponse toAttemptQuestionResponse(AssessmentQuestion assessmentQuestion, QuestionSubmission submission) {
+    private AttemptQuestionResponse toAttemptQuestionResponse(
+            AssessmentQuestion assessmentQuestion,
+            QuestionSubmission submission,
+            boolean includeOptionExplanation
+    ) {
         Question question = (Question) Hibernate.unproxy(assessmentQuestion.getQuestion());
         QuestionSubmission concreteSubmission = resolveConcreteSubmission(submission);
 
@@ -466,6 +474,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                                 .id(option.getId())
                                 .content(option.getContent())
                                 .orderIndex(option.getOrderIndex())
+                                .explanation(includeOptionExplanation ? option.getExplanation() : null)
                                 .build())
                         .toList());
 
