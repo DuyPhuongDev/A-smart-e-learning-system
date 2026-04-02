@@ -5,7 +5,9 @@ import com.hcmut.lms.usermanagement.exception.DuplicateResourceException;
 import com.hcmut.lms.usermanagement.exception.ResourceNotFoundException;
 import com.hcmut.lms.usermanagement.mapper.UserMapper;
 import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.request.InternalResolveUsersRequest;
 import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.InternalUserSummaryResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserRoleResponse;
 import com.hcmut.lms.usermanagement.model.entity.*;
@@ -13,9 +15,13 @@ import com.hcmut.lms.usermanagement.repository.*;
 import com.hcmut.lms.usermanagement.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -234,5 +240,44 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAllTeachersWithRole("TEACHER").stream()
                 .map(userMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InternalUserSummaryResponse> resolveUsers(InternalResolveUsersRequest request) {
+        Specification<User> specification = (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            var roleJoin = root.join("role");
+
+            if (!CollectionUtils.isEmpty(request.getRoleNames())) {
+                List<String> normalizedRoleNames = request.getRoleNames().stream()
+                        .filter(StringUtils::hasText)
+                        .map(String::trim)
+                        .map(String::toUpperCase)
+                        .toList();
+                if (!normalizedRoleNames.isEmpty()) {
+                    predicates.add(cb.upper(roleJoin.get("name")).in(normalizedRoleNames));
+                }
+            }
+
+            if (!CollectionUtils.isEmpty(request.getSpecializationIds())) {
+                predicates.add(root.get("specializationId").in(request.getSpecializationIds()));
+            }
+
+            if (!CollectionUtils.isEmpty(request.getUserIds())) {
+                predicates.add(root.get("id").in(request.getUserIds()));
+            }
+
+            return cb.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+
+        return userRepository.findAll(specification).stream()
+                .map(user -> InternalUserSummaryResponse.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .roleName(user.getRole() != null ? user.getRole().getName() : null)
+                        .specializationId(user.getSpecializationId())
+                        .build())
+                .toList();
     }
 }

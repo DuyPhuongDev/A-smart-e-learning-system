@@ -19,6 +19,7 @@ import com.hcmut.lms.assessment.exception.BadRequestException;
 import com.hcmut.lms.assessment.exception.CodeJudgeUnavailableException;
 import com.hcmut.lms.assessment.exception.ForbiddenException;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
+import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
 import com.hcmut.lms.assessment.handler.dto.*;
 import com.hcmut.lms.assessment.repository.*;
 import com.hcmut.lms.assessment.service.AssessmentExecutionService;
@@ -63,6 +64,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     private final LearningEnrollmentClient learningEnrollmentClient;
     private final AssessmentExecutionService assessmentExecutionService;
     private final CppJudgeService cppJudgeService;
+    private final AssessmentEventPublisher assessmentEventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -318,6 +320,10 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         attempt.setTakenTime(computeTakenTimeInSeconds(attempt));
         attempt.setScore(totalScore);
         assessmentSubmissionRepository.save(attempt);
+
+        if (!hasPendingReview) {
+            assessmentEventPublisher.publishSubmissionGraded(attempt, "GRADED");
+        }
 
         return SubmitAttemptResponse.builder()
                 .attemptId(attempt.getId())

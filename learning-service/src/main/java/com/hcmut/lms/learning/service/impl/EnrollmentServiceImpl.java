@@ -5,6 +5,7 @@ import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
@@ -227,6 +228,66 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         courseManagementClient.decrementCurrentStudents(enrollment.getClassId());
 
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> getStudentIdsByClassId(UUID classId) {
+        return enrollmentRepository.findDistinctStudentIdsByClassId(classId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<InternalClassStudentIdsResponse> getStudentIdsByClassIds(List<UUID> classIds) {
+        if (classIds == null || classIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, List<UUID>> grouped = enrollmentRepository.findByClassIdIn(classIds).stream()
+                .collect(Collectors.groupingBy(
+                        Enrollment::getClassId,
+                        Collectors.mapping(Enrollment::getStudentId, Collectors.toCollection(LinkedHashSet::new))
+                ))
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> new ArrayList<>(entry.getValue())
+                ));
+
+        return classIds.stream()
+                .distinct()
+                .map(classId -> InternalClassStudentIdsResponse.builder()
+                        .classId(classId)
+                        .studentIds(grouped.getOrDefault(classId, List.of()))
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> getStudentIdsByCourseId(UUID courseId) {
+        // In this codebase, class metadata exposes subjectId. We treat courseId input as subjectId.
+        List<UUID> classIds = enrollmentRepository.findDistinctClassIds();
+        if (classIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<ClassResponse> classSections = courseManagementClient.getClassSectionsByIds(
+                BatchClassLookupRequest.builder()
+                        .classIds(classIds)
+                        .build()
+        );
+
+        Set<UUID> targetClassIds = classSections.stream()
+                .filter(item -> courseId.equals(item.getSubjectId()))
+                .map(ClassResponse::getId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (targetClassIds.isEmpty()) {
+            return List.of();
+        }
+
+        return enrollmentRepository.findDistinctStudentIdsByClassIds(new ArrayList<>(targetClassIds));
     }
 
     /**

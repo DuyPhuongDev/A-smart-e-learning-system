@@ -1,10 +1,12 @@
 package com.hcmut.lms.learning.service;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface EnrollmentService {
@@ -36,4 +38,10 @@ public interface EnrollmentService {
     EnrollmentResponse changeClass(UUID id, EnrollmentRequest enrollmentRequest);
 
     void unEnroll(UUID id);
+
+    List<UUID> getStudentIdsByClassId(UUID classId);
+
+    List<InternalClassStudentIdsResponse> getStudentIdsByClassIds(List<UUID> classIds);
+
+    List<UUID> getStudentIdsByCourseId(UUID courseId);
 }

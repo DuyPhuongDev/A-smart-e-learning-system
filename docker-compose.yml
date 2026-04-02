@@ -23,6 +23,68 @@ services:
       retries: 5
 
   # ========================================
+  # Kafka Stack
+  # ========================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.0
+    container_name: lms-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - lms-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    container_name: lms-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - lms-network
+
+  # ========================================
+  # Observability Stack
+  # ========================================
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: lms-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+    networks:
+      - lms-network
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: lms-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - lms-network
+
+  # ========================================
   # Qdrant - Vector Database for RAG Chatbot
   # ========================================
   qdrant-vector-db:
@@ -137,10 +199,13 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
+        condition: service_started
+      kafka:
         condition: service_started
     networks:
       - lms-network
@@ -160,10 +225,13 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
+        condition: service_started
+      kafka:
         condition: service_started
     networks:
       - lms-network
@@ -183,10 +251,13 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
+        condition: service_started
+      kafka:
         condition: service_started
     networks:
       - lms-network
@@ -252,10 +323,17 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - NOTIFICATION_WS_ALLOWED_ORIGINS=http://localhost:3000
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-no-reply@welearning.local}
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
+        condition: service_started
+      kafka:
         condition: service_started
     networks:
       - lms-network
@@ -275,10 +353,13 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       postgres:
         condition: service_healthy
       eureka-server:
+        condition: service_started
+      kafka:
         condition: service_started
     networks:
       - lms-network
@@ -290,7 +371,7 @@ services:
       dockerfile: coaching-chatbot-service/Dockerfile
     container_name: coachingchatbot-service
     ports:
-      - "8086:8092"
+      - "8092:8092"
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - DB_HOST=postgres
@@ -315,3 +396,4 @@ networks:
 volumes:
   postgres-data:
   qdrant-data:
+  grafana-data:

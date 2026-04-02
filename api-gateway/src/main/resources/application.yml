@@ -14,7 +14,7 @@ spring:
               allowedMethods:
                 - GET
                 - POST
-                - OPTION
+                - OPTIONS
                 - PUT
                 - DELETE
         webflux:
@@ -51,6 +51,17 @@ spring:
               uri: lb://assessment-service
               predicates:
                 - Path=/api/assessment/**
+            # Notification Service REST APIs
+            - id: notification-service
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/v1/notifications/**
+
+            # Notification Service WebSocket (STOMP handshake/upgrade)
+            - id: notification-service-ws
+              uri: lb:ws://notification-service
+              predicates:
+                - Path=/ws/notifications,/ws/notifications/**
             # Coaching Chatbot Service (for Fargate worker callbacks)
             - id: coaching-chatbot-service
               uri: lb://coaching-chatbot-service

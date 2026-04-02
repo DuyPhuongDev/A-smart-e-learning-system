@@ -1,7 +1,9 @@
 package com.hcmut.lms.usermanagement.service;
 
 import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.request.InternalResolveUsersRequest;
 import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.InternalUserSummaryResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserRoleResponse;
 
@@ -38,4 +40,6 @@ public interface UserService {
      * Get all users with TEACHER role
      */
     List<UserResponse> getAllTeachers();
+
+    List<InternalUserSummaryResponse> resolveUsers(InternalResolveUsersRequest request);
 }
