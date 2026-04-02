@@ -153,6 +153,8 @@ CREATE TABLE user_management.roles_service_functions (
 CREATE TABLE user_management.students (
 	user_id uuid NOT NULL,
 	student_code varchar NOT NULL,
+  intake_year_id uuid NOT NULL,
+  department_id uuid NOT NULL,
 	CONSTRAINT students_pkey PRIMARY KEY (user_id),
 	CONSTRAINT students_student_code_key UNIQUE (student_code),
 	CONSTRAINT students_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_management.users(id)

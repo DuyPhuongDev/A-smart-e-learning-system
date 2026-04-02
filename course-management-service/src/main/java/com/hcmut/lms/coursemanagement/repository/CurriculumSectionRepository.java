@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Repository
 public interface CurriculumSectionRepository extends JpaRepository<CurriculumSection, UUID> {
-    
+
     @Query("SELECT cs FROM CurriculumSection cs " +
            "WHERE cs.curriculum.id.code = :code " +
            "AND cs.curriculum.id.specializationId = :specializationId " +
@@ -19,6 +19,17 @@ public interface CurriculumSectionRepository extends JpaRepository<CurriculumSec
            "ORDER BY cs.displayOrder")
     List<CurriculumSection> findByCurriculumId(
         @Param("code") String code,
+        @Param("specializationId") UUID specializationId,
+        @Param("intakeYearId") UUID intakeYearId
+    );
+
+    @Query("SELECT DISTINCT cs FROM CurriculumSection cs " +
+           "LEFT JOIN FETCH cs.curriculumSubjects csub " +
+           "LEFT JOIN FETCH csub.subject s " +
+           "WHERE cs.curriculum.id.specializationId = :specializationId " +
+           "AND cs.curriculum.id.intakeYearId = :intakeYearId " +
+           "ORDER BY cs.displayOrder, csub.displayOrder")
+    List<CurriculumSection> findBySpecializationAndIntakeYearWithSubjects(
         @Param("specializationId") UUID specializationId,
         @Param("intakeYearId") UUID intakeYearId
     );

@@ -16,4 +16,10 @@ public interface UserManagementClient {
 
     @GetMapping("/api/users/internal/teachers")
     List<UserResponse> getAllTeachers();
+
+    @GetMapping("/api/users/internal/students/{studentCode}")
+    UserResponse getStudentByStudentCode(@PathVariable String studentCode);
+
+    @GetMapping("/api/users/internal/teachers/subject-group/{subjectGroupId}")
+    List<UserResponse> getTeachersBySubjectGroupId(@PathVariable UUID subjectGroupId);
 }

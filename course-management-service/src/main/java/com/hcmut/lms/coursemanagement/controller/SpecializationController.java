@@ -1,6 +1,8 @@
 package com.hcmut.lms.coursemanagement.controller;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.common.helper.CurrentUser;
+import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.SpecializationRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.SpecializationResponse;
 import com.hcmut.lms.coursemanagement.application.service.SpecializationService;
@@ -17,65 +19,72 @@ import java.util.UUID;
 @RequestMapping("${prefix-api}/specializations")
 @RequiredArgsConstructor
 public class SpecializationController {
-    
-    private final SpecializationService specializationService;
-    
-    @PostMapping
-    public ResponseEntity<SpecializationResponse> createSpecialization(
-            @Valid @RequestBody SpecializationRequest request) {
-        SpecializationResponse response = specializationService.createSpecialization(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+  private final SpecializationService specializationService;
+
+  @PostMapping
+  public ResponseEntity<SpecializationResponse> createSpecialization(
+      @Valid @RequestBody SpecializationRequest request) {
+    SpecializationResponse response = specializationService.createSpecialization(request);
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<SpecializationResponse> updateSpecialization(
+      @PathVariable UUID id,
+      @Valid @RequestBody SpecializationRequest request) {
+    SpecializationResponse response = specializationService.updateSpecialization(id, request);
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<SpecializationResponse> getSpecializationById(@PathVariable UUID id) {
+    SpecializationResponse response = specializationService.getSpecializationById(id);
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/code/{code}")
+  public ResponseEntity<SpecializationResponse> getSpecializationByCode(@PathVariable String code) {
+    SpecializationResponse response = specializationService.getSpecializationByCode(code);
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping
+  public ResponseEntity<?> getAllSpecializations(
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer size) {
+    if (page != null && size != null) {
+      PageResponse<SpecializationResponse> response = specializationService.getAllSpecializations(page, size);
+      return ResponseEntity.ok(response);
     }
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<SpecializationResponse> updateSpecialization(
-            @PathVariable UUID id,
-            @Valid @RequestBody SpecializationRequest request) {
-        SpecializationResponse response = specializationService.updateSpecialization(id, request);
-        return ResponseEntity.ok(response);
+    List<SpecializationResponse> response = specializationService.getAllSpecializations();
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/department/{departmentId}")
+  public ResponseEntity<?> getSpecializationsByDepartmentId(
+      @PathVariable UUID departmentId, @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer size) {
+    if (page != null && size != null) {
+      PageResponse<SpecializationResponse> response = specializationService.getSpecializationsByDepartmentId(
+          departmentId, page, size);
+      return ResponseEntity.ok(response);
     }
-    
-    @GetMapping("/{id}")
-    public ResponseEntity<SpecializationResponse> getSpecializationById(@PathVariable UUID id) {
-        SpecializationResponse response = specializationService.getSpecializationById(id);
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/code/{code}")
-    public ResponseEntity<SpecializationResponse> getSpecializationByCode(@PathVariable String code) {
-        SpecializationResponse response = specializationService.getSpecializationByCode(code);
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping
-    public ResponseEntity<?> getAllSpecializations(
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        if (page != null && size != null) {
-            PageResponse<SpecializationResponse> response = specializationService.getAllSpecializations(page, size);
-            return ResponseEntity.ok(response);
-        }
-        List<SpecializationResponse> response = specializationService.getAllSpecializations();
-        return ResponseEntity.ok(response);
-    }
-    
-    @GetMapping("/department/{departmentId}")
-    public ResponseEntity<?> getSpecializationsByDepartmentId(
-            @PathVariable UUID departmentId,
-            @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
-        if (page != null && size != null) {
-            PageResponse<SpecializationResponse> response = specializationService.getSpecializationsByDepartmentId(departmentId, page, size);
-            return ResponseEntity.ok(response);
-        }
-        List<SpecializationResponse> response = specializationService.getSpecializationsByDepartmentId(departmentId);
-        return ResponseEntity.ok(response);
-    }
-    
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSpecialization(@PathVariable UUID id) {
-        specializationService.deleteSpecialization(id);
-        return ResponseEntity.noContent().build();
-    }
+    List<SpecializationResponse> response = specializationService.getSpecializationsByDepartmentId(departmentId);
+    return ResponseEntity.ok(response);
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deleteSpecialization(@PathVariable UUID id) {
+    specializationService.deleteSpecialization(id);
+    return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/me/options")
+  public ResponseEntity<List<SpecializationResponse>> getListSpecializationOptionByMe(
+      @CurrentUser CurrentUserInfo currentUser) {
+    List<SpecializationResponse> response = specializationService.getListSpecializationOptionByMe(currentUser.getId());
+    return ResponseEntity.ok(response);
+  }
 }
 

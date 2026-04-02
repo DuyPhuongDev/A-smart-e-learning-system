@@ -30,6 +30,7 @@ public interface ClassSectionMapper {
     
     @Mapping(target = "subjectId", source = "subject.id")
     @Mapping(target = "subjectName", source = "subject.name")
+    @Mapping(target = "subjectCode", source = "subject.code")
     @Mapping(target = "credits", source = "subject.credits")
     @Mapping(target = "semesterId", source = "semester.id")
     @Mapping(target = "semesterCode", source = "semester.semesterCode")

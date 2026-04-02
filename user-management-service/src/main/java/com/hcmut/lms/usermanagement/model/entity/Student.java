@@ -15,17 +15,23 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Student {
-    
-    @Id
-    @Column(name = "user_id")
-    private UUID userId;
-    
-    @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "user_id")
-    private User user;
-    
-    @Column(name = "student_code", unique = true, nullable = false, length = 255)
-    private String studentCode;
+
+  @Id
+  @Column(name = "user_id")
+  private UUID userId;
+
+  @OneToOne(fetch = FetchType.LAZY)
+  @MapsId
+  @JoinColumn(name = "user_id")
+  private User user;
+
+  @Column(name = "student_code", unique = true, nullable = false, length = 255)
+  private String studentCode;
+
+  @Column(name = "intake_year_id", nullable = false)
+  private UUID intakeYearId;
+
+  @Column(name = "department_id", nullable = false)
+  private UUID departmentId;
 }
 

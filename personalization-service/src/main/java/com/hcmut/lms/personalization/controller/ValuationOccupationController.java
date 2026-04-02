@@ -21,29 +21,31 @@ import java.util.Objects;
 @Slf4j
 public class ValuationOccupationController {
 
-    private final ValuationOccupationService valuationService;
+  private final ValuationOccupationService valuationService;
 
-    @PostMapping
-    public ResponseEntity<AsyncSubmissionResponse> valuate(@Valid @RequestBody ValuationOccupationRequest request) {
-        int subjectCount = (int) request.getSubjectIds().stream().filter(Objects::nonNull).distinct().count();
-        int occupationCount = (int) request.getOccupationCodes().stream().filter(Objects::nonNull).distinct().count();
+  @PostMapping
+  public ResponseEntity<AsyncSubmissionResponse> valuate(@Valid @RequestBody ValuationOccupationRequest request) {
+    int subjectCount = (int) request.getSubjectIds().stream().filter(Objects::nonNull).distinct().count();
+    int occupationCount = (int) request.getOccupationCodes().stream().filter(Objects::nonNull).distinct().count();
 
-        valuationService.valuateAsync(request)
-                .whenComplete((result, throwable) -> {
-                    if (throwable != null) {
-                        log.error("Background valuation failed for subjectCount={} occupationCount={}", subjectCount, occupationCount, throwable);
-                        return;
-                    }
-                    log.info("Background valuation completed for subjectCount={} occupationCount={} persistedCount={}",
-                            subjectCount, occupationCount, result != null ? result.getPersistedCount() : null);
-                });
+    valuationService.valuateAsync(request).whenComplete((result, throwable) -> {
+      if (throwable != null) {
+        log.error(
+            "Background valuation failed for subjectCount={} occupationCount={}", subjectCount, occupationCount,
+            throwable);
+        return;
+      }
+      log.info(
+          "Background valuation completed for subjectCount={} occupationCount={} persistedCount={}", subjectCount,
+          occupationCount, result != null ? result.getPersistedCount() : null);
+    });
 
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(AsyncSubmissionResponse.builder()
-                        .status("ACCEPTED")
-                        .message("Valuation started successfully. Processing continues in the background.")
-                        .subjectCount(subjectCount)
-                        .occupationCount(occupationCount)
-                        .build());
-    }
+    return ResponseEntity.status(HttpStatus.ACCEPTED)
+        .body(AsyncSubmissionResponse.builder()
+            .status("ACCEPTED")
+            .message("Valuation started successfully. Processing continues in the background.")
+            .subjectCount(subjectCount)
+            .occupationCount(occupationCount)
+            .build());
+  }
 }

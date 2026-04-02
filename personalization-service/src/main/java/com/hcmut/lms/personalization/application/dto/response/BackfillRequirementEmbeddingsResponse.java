@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BackfillRequirementEmbeddingsResponse {
-    private long missingCount;
-    private long embeddedCount;
-    private boolean migrationGenerated;
-    private String migrationFile;
+  private long missingCount;
+  private long embeddedCount;
+  private boolean migrationGenerated;
+  private String migrationFile;
 }
 

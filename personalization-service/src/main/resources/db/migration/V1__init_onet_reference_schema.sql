@@ -9,24 +9,12 @@ CREATE TABLE IF NOT EXISTS personalization.occupation_data (
     occupation_data_id uuid NOT NULL DEFAULT gen_random_uuid(),
     onetsoc_code varchar(10) NOT NULL,
     title varchar(150) NOT NULL,
+    title_vn varchar(150) NOT NULL,
     description varchar(1000) NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT occupation_data_pkey PRIMARY KEY (occupation_data_id),
     CONSTRAINT occupation_data_onetsoc_code_uk UNIQUE (onetsoc_code)
-);
-
-CREATE TABLE IF NOT EXISTS personalization.scales_reference (
-    scales_reference_id uuid NOT NULL DEFAULT gen_random_uuid(),
-    scale_id varchar(3) NOT NULL,
-    scale_name varchar(50) NOT NULL,
-    minimum numeric(3,0) NOT NULL,
-    maximum numeric(3,0) NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT scales_reference_min_max_chk CHECK (minimum <= maximum),
-    CONSTRAINT scales_reference_pkey PRIMARY KEY (scales_reference_id),
-    CONSTRAINT scales_reference_scale_id_uk UNIQUE (scale_id)
 );
 
 CREATE TABLE IF NOT EXISTS personalization.iwa_reference (
@@ -138,11 +126,6 @@ CREATE INDEX IF NOT EXISTS idx_requirement_embedding_hnsw
     WITH (m = 16, ef_construction = 64);
 
 COMMENT ON TABLE personalization.occupation_data IS 'Master occupation list keyed by O*NET SOC code.';
-COMMENT ON TABLE personalization.scales_reference IS 'Scale dictionary used to interpret numeric values such as IM, LV, etc.';
-COMMENT ON COLUMN personalization.scales_reference.scale_id IS 'Scale identifier from O*NET (example: IM, LV).';
-COMMENT ON COLUMN personalization.scales_reference.scale_name IS 'Human-readable scale name.';
-COMMENT ON COLUMN personalization.scales_reference.minimum IS 'Lower bound for the scale range.';
-COMMENT ON COLUMN personalization.scales_reference.maximum IS 'Upper bound for the scale range.';
 
 COMMENT ON TABLE personalization.iwa_reference IS 'Intermediate Work Activities with embedded content model information.';
 COMMENT ON COLUMN personalization.iwa_reference.iwa_id IS 'Unique IWA identifier.';

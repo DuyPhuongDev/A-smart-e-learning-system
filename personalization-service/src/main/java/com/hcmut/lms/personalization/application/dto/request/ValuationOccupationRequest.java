@@ -14,8 +14,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ValuationOccupationRequest {
-    @NotEmpty
-    private List<UUID> subjectIds;
+  @NotEmpty
+  private List<UUID> subjectIds;
 
-    private List<String> occupationCodes;
+  private List<String> occupationCodes;
 }

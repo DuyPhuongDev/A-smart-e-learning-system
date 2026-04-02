@@ -14,15 +14,13 @@ import java.util.UUID;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SemesterResponse {
-    private UUID id;
-    private String semesterCode;
-    private String startDate;
-    private String endDate;
-    private UUID academicYearId;
-    private String academicYearCode;
-    private Integer semKey;
-    private String createdAt;
-    private String updatedAt;
+  private UUID id;
+  private String semesterCode;
+  private String startDate;
+  private String endDate;
+  private UUID academicYearId;
+  private String academicYearCode;
+  private Integer semKey;
+  private String createdAt;
+  private String updatedAt;
 }
-
-

@@ -11,7 +11,8 @@ CREATE TABLE course_management.academic_years (
   end_date date NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  CONSTRAINT academic_years_pkey PRIMARY KEY (id)
+  CONSTRAINT academic_years_pkey PRIMARY KEY (id),
+  CONSTRAINT academic_years_year_code_key UNIQUE (year_code)
 );
 
 -- course_management.faculties definition
@@ -25,6 +26,20 @@ CREATE TABLE course_management.faculties (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   CONSTRAINT faculties_pkey PRIMARY KEY (id)
+);
+
+-- course_management.departments definition
+-- Drop table
+-- DROP TABLE course_management.departments;
+CREATE TABLE course_management.departments (
+  id uuid NOT NULL,
+  name VARCHAR NULL,
+  description VARCHAR NULL,
+  faculty_id uuid NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  CONSTRAINT departments_pkey PRIMARY KEY (id),
+  CONSTRAINT departments_faculty_id_fkey FOREIGN KEY (faculty_id) REFERENCES course_management.faculties (id)
 );
 
 -- course_management.gradings definition
@@ -44,28 +59,31 @@ CREATE TABLE course_management.gradings (
 -- Drop table
 -- DROP TABLE course_management.graduation_requirements;
 CREATE TABLE course_management.graduation_requirements (
-  id uuid NOT NULL,
-  name VARCHAR NULL,
-  description VARCHAR NULL,
-  code VARCHAR NULL,
-  thresh_hold VARCHAR NULL,
+  -- Identifiers
+  graduation_requirement_id UUID PRIMARY KEY,
+  department_id UUID NOT NULL, -- Suggestion: REFERENCES departments(id)
+  intake_year_id UUID NOT NULL, -- Suggestion: REFERENCES intake_years(id)
+  -- Information
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(50) UNIQUE,
+  description TEXT,
+  -- Requirement Logic
+  -- Using DECIMAL allows for GPA (3.5) and Credits (120) in the same column
+  threshold_value DECIMAL(10, 2) NOT NULL,
+  -- e.g., 'GPA', 'CREDITS', 'HOURS', 'COURSES', 'PERCENT'
+  unit VARCHAR(50) NOT NULL,
+  -- Defines how to pass: 'GTE' (>=), 'GT' (>), 'LTE' (<=), 'LT' (<), 'EQ' (=)
+  evaluation_rule VARCHAR(20) NOT NULL DEFAULT 'GTE',
+  -- Metadata
+  is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  CONSTRAINT graduation_requirements_pkey PRIMARY KEY (id)
+  CONSTRAINT graduation_requirements_department_id_fkey FOREIGN KEY (department_id) REFERENCES course_management.departments (id) ON DELETE CASCADE,
+  CONSTRAINT graduation_requirements_intake_year_id_fkey FOREIGN KEY (intake_year_id) REFERENCES course_management.academic_years (id) ON DELETE CASCADE
 );
 
--- course_management.intake_years definition
--- Drop table
--- DROP TABLE course_management.intake_years;
-CREATE TABLE course_management.intake_years (
-  id uuid NOT NULL,
-  start_year int4 NOT NULL,
-  name VARCHAR NULL,
-  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  CONSTRAINT intake_years_pkey PRIMARY KEY (id),
-  CONSTRAINT intake_years_start_year_key UNIQUE (start_year)
-);
+-- Recommended Index for faster lookups when checking a student's eligibility
+CREATE INDEX idx_grad_req_dept_intake ON course_management.graduation_requirements (department_id, intake_year_id);
 
 CREATE TABLE course_management.subject_groups (
   subject_group_id uuid NOT NULL,
@@ -76,6 +94,8 @@ CREATE TABLE course_management.subject_groups (
   CONSTRAINT subject_groups_pkey PRIMARY KEY (subject_group_id)
 );
 
+CREATE TYPE course_management.subject_grading_type AS ENUM ('GRADED', 'PASS_FAIL', 'BOTH');
+
 CREATE TABLE course_management.subjects (
   id uuid NOT NULL,
   name VARCHAR NULL,
@@ -84,25 +104,14 @@ CREATE TABLE course_management.subjects (
   subject_group_id uuid NULL,
   credits int4 NULL,
   category VARCHAR(50),
+  grading_type course_management.subject_grading_type DEFAULT 'GRADED' NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   CONSTRAINT subjects_pkey PRIMARY KEY (id),
   CONSTRAINT subjects_subject_group_id_fkey FOREIGN KEY (subject_group_id) REFERENCES course_management.subject_groups (subject_group_id)
 );
 
--- course_management.departments definition
--- Drop table
--- DROP TABLE course_management.departments;
-CREATE TABLE course_management.departments (
-  id uuid NOT NULL,
-  name VARCHAR NULL,
-  description VARCHAR NULL,
-  faculty_id uuid NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  CONSTRAINT departments_pkey PRIMARY KEY (id),
-  CONSTRAINT departments_faculty_id_fkey FOREIGN KEY (faculty_id) REFERENCES course_management.faculties (id)
-);
+
 
 -- course_management.semesters definition
 -- Drop table
@@ -116,7 +125,8 @@ CREATE TABLE course_management.semesters (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   CONSTRAINT semesters_pkey PRIMARY KEY (id),
-  CONSTRAINT semesters_academic_year_id_fkey FOREIGN KEY (academic_year_id) REFERENCES course_management.academic_years (id)
+  CONSTRAINT semesters_academic_year_id_fkey FOREIGN KEY (academic_year_id) REFERENCES course_management.academic_years (id),
+  CONSTRAINT semesters_semester_code_key UNIQUE (semester_code)
 );
 
 -- course_management.specializations definition
@@ -209,32 +219,8 @@ CREATE TABLE course_management.curriculums (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   CONSTRAINT curriculums_code_key UNIQUE (code),
   CONSTRAINT curriculums_pkey PRIMARY KEY (code, specialization_id, intake_year_id),
-  CONSTRAINT curriculums_intake_year_id_fkey FOREIGN KEY (intake_year_id) REFERENCES course_management.intake_years (id) ON DELETE CASCADE,
+  CONSTRAINT curriculums_intake_year_id_fkey FOREIGN KEY (intake_year_id) REFERENCES course_management.academic_years (id) ON DELETE CASCADE,
   CONSTRAINT curriculums_specialization_id_fkey FOREIGN KEY (specialization_id) REFERENCES course_management.specializations (id) ON DELETE CASCADE
-);
-
--- course_management.graduation_requirements_curriculums definition
--- Drop table
--- DROP TABLE course_management.graduation_requirements_curriculums;
-CREATE TABLE course_management.graduation_requirements_curriculums (
-  graduation_requirement_id uuid NOT NULL,
-  curriculum_intake_year_id uuid NOT NULL,
-  curriculum_code VARCHAR NOT NULL,
-  curriculum_specialization_id uuid NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  CONSTRAINT graduation_requirements_curriculums_pkey PRIMARY KEY (
-    graduation_requirement_id,
-    curriculum_intake_year_id,
-    curriculum_code,
-    curriculum_specialization_id
-  ),
-  CONSTRAINT graduation_requirements_curri_curriculum_intake_year_id_cu_fkey FOREIGN KEY (
-    curriculum_code,
-    curriculum_specialization_id,
-    curriculum_intake_year_id
-  ) REFERENCES course_management.curriculums (code, specialization_id, intake_year_id) ON DELETE CASCADE,
-  CONSTRAINT graduation_requirements_curricul_graduation_requirement_id_fkey FOREIGN KEY (graduation_requirement_id) REFERENCES course_management.graduation_requirements (id)
 );
 
 -- course_management.chapters definition
@@ -290,7 +276,6 @@ CREATE TABLE course_management.curriculum_subjects (
   subject_id uuid NOT NULL,
   display_order int4 NULL,
   is_required BOOL NULL,
-  category_name VARCHAR NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   CONSTRAINT curriculum_subjects_pkey PRIMARY KEY (curriculum_section_id, subject_id, id),

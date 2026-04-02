@@ -20,6 +20,8 @@ public class ClassResponse {
     private String teacherName;
     private UUID subjectId;
     private String subjectName;
+    private String subjectCode;
+    private Integer credits;
     private UUID semesterId;
     private String semesterCode;
     private UUID createdBy;

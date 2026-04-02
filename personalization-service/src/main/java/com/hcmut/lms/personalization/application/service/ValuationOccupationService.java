@@ -6,5 +6,5 @@ import com.hcmut.lms.personalization.application.dto.response.ValuationSubjectPe
 import java.util.concurrent.CompletableFuture;
 
 public interface ValuationOccupationService {
-    CompletableFuture<ValuationSubjectPersistenceResponse> valuateAsync(ValuationOccupationRequest request);
+  CompletableFuture<ValuationSubjectPersistenceResponse> valuateAsync(ValuationOccupationRequest request);
 }

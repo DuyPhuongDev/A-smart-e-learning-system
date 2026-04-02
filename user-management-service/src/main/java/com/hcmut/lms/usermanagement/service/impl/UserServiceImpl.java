@@ -6,6 +6,7 @@ import com.hcmut.lms.usermanagement.exception.ResourceNotFoundException;
 import com.hcmut.lms.usermanagement.mapper.UserMapper;
 import com.hcmut.lms.usermanagement.model.dto.request.CreateUserRequest;
 import com.hcmut.lms.usermanagement.model.dto.request.UpdateUserRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.StudentResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserRoleResponse;
 import com.hcmut.lms.usermanagement.model.entity.*;
@@ -233,6 +234,23 @@ public class UserServiceImpl implements UserService {
     public List<UserResponse> getAllTeachers() {
         return userRepository.findAllTeachersWithRole("TEACHER").stream()
                 .map(userMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserResponse getStudentByStudentCode(String studentCode) {
+        Student student = studentRepository.findByStudentCode(studentCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Student", "studentCode", studentCode));
+        return userMapper.toResponse(student.getUser());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getTeachersBySubjectGroupId(UUID subjectGroupId) {
+        return teacherRepository.findAll().stream()
+                .filter(teacher -> subjectGroupId.equals(teacher.getSubjectGroupId()))
+                .map(teacher -> userMapper.toResponse(teacher.getUser()))
                 .collect(Collectors.toList());
     }
 }

@@ -23,7 +23,7 @@ public interface CurriculumMapper {
     @Mapping(target = "specializationId", source = "id.specializationId")
     @Mapping(target = "specializationName", source = "specialization.name")
     @Mapping(target = "intakeYearId", source = "id.intakeYearId")
-    @Mapping(target = "intakeYearStartYear", source = "intakeYear.startYear")
+    @Mapping(target = "intakeYearStartDate", source = "intakeYear.startDate")
     @Mapping(target = "createdAt", expression = "java(entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null)")
     @Mapping(target = "updatedAt", expression = "java(entity.getUpdatedAt() != null ? entity.getUpdatedAt().toString() : null)")
     CurriculumResponse toResponse(Curriculum entity);

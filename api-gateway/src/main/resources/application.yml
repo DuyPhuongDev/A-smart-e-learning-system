@@ -51,6 +51,11 @@ spring:
               uri: lb://coaching-chatbot-service
               predicates:
                 - Path=/api/coaching-chatbot/**
+            # Personalization Service
+            - id: personalization-service
+              uri: lb://personalization-service
+              predicates:
+                - Path=/api/personalization/**
 
   # Disable Redis auto-configuration (for development without Redis)
   autoconfigure:

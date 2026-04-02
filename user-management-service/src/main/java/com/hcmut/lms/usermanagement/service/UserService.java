@@ -38,4 +38,14 @@ public interface UserService {
      * Get all users with TEACHER role
      */
     List<UserResponse> getAllTeachers();
+
+    /**
+     * Get student by student code
+     */
+    UserResponse getStudentByStudentCode(String studentCode);
+
+    /**
+     * Get teachers by subject group ID
+     */
+    List<UserResponse> getTeachersBySubjectGroupId(UUID subjectGroupId);
 }

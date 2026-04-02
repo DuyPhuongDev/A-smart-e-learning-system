@@ -13,10 +13,11 @@ import java.util.UUID;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class EnrollmentResponse {
-    private UUID id;
-    private UUID studentId;
-    private UUID classId;
-    private LocalDateTime enrolledAt;
-    private Double finalGrade;
-    private Integer attemptNo;
+  private UUID id;
+  private UUID studentId;
+  private UUID classId;
+  private LocalDateTime enrolledAt;
+  private Double finalGrade;
+  private Boolean isPassed;
+  private Integer attemptNo;
 }
