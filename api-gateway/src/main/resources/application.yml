@@ -46,6 +46,11 @@ spring:
               uri: lb://learning-service
               predicates:
                 - Path=/api/learning/**
+            # Assessment Service
+            - id: assessment-service
+              uri: lb://assessment-service
+              predicates:
+                - Path=/api/assessment/**
             # Coaching Chatbot Service (for Fargate worker callbacks)
             - id: coaching-chatbot-service
               uri: lb://coaching-chatbot-service
