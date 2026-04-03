@@ -474,6 +474,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                                 .id(option.getId())
                                 .content(option.getContent())
                                 .orderIndex(option.getOrderIndex())
+                                .correct(option.isCorrect())
                                 .explanation(includeOptionExplanation ? option.getExplanation() : null)
                                 .build())
                         .toList());
