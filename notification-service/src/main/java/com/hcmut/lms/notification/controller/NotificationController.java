@@ -18,6 +18,8 @@ import com.hcmut.lms.notification.dto.response.UnreadCountResponse;
 import com.hcmut.lms.notification.service.NotificationApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.hcmut.lms.notification.service.SseNotificationBroadcaster;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +41,7 @@ import java.util.UUID;
 public class NotificationController {
 
     private final NotificationApplicationService notificationApplicationService;
+    private final SseNotificationBroadcaster sseNotificationBroadcaster;
 
     @PostMapping("/admin")
     public ResponseEntity<AdminNotificationCreateResponse> createAdminNotification(
@@ -97,6 +101,11 @@ public class NotificationController {
     ) {
         notificationApplicationService.cancel(currentUser, id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamNotifications(@CurrentUser CurrentUserInfo currentUser) {
+        return sseNotificationBroadcaster.register(currentUser.getId());
     }
 
     @GetMapping("/me")

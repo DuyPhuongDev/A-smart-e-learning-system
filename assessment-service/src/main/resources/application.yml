@@ -50,9 +50,12 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
 
+notification:
+  events:
+    topic: ${KAFKA_NOTIFICATION_INBOUND_TOPIC:lms.events.notification}
+
 assessment:
   events:
-    topic-prefix: ${ASSESSMENT_EVENT_TOPIC_PREFIX:lms.events}
     deadline-reminder-cron: ${ASSESSMENT_DEADLINE_REMINDER_CRON:0 */5 * * * *}
     deadline-reminder-minutes-before: ${ASSESSMENT_DEADLINE_REMINDER_MINUTES_BEFORE:1440}
     deadline-reminder-window-minutes: ${ASSESSMENT_DEADLINE_REMINDER_WINDOW_MINUTES:5}

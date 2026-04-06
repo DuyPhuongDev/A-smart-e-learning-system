@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class NotificationDlqEntity {
     private String eventKey;
 
     @Column(name = "payload", columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String payload;
 
     @Column(name = "error_message", columnDefinition = "text")

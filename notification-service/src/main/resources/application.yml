@@ -46,7 +46,7 @@ spring:
           starttls:
             enable: true
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     consumer:
       group-id: notification-service
       auto-offset-reset: earliest
@@ -57,8 +57,6 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 notification:
-  websocket:
-    allowed-origins: ${NOTIFICATION_WS_ALLOWED_ORIGINS:http://localhost:3000}
   scheduler:
     poll-interval-ms: 30000
     outbox-interval-ms: 5000
@@ -73,7 +71,7 @@ notification:
     quiet-hours-start: "22:00"
     quiet-hours-end: "07:00"
   kafka:
-    topics-pattern: lms\\.events\\..*
+    inbound-topic: ${KAFKA_NOTIFICATION_INBOUND_TOPIC:lms.events.notification}
     outbound-topic: lms.events.notification.created
 
 eureka:

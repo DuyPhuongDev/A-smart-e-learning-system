@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -35,6 +36,7 @@ public class NotificationOutboxEntity extends AuditableEntity {
     private String eventKey;
 
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String payload;
 
     @Enumerated(EnumType.STRING)

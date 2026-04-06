@@ -24,7 +24,7 @@ import com.hcmut.lms.notification.dto.response.InboxNotificationResponse;
 import com.hcmut.lms.notification.dto.response.NotificationPreferenceResponse;
 import com.hcmut.lms.notification.dto.response.NotificationRuleResponse;
 import com.hcmut.lms.notification.dto.response.NotificationTemplateResponse;
-import com.hcmut.lms.notification.dto.response.WebSocketNotificationPayload;
+import com.hcmut.lms.notification.dto.response.RealtimeNotificationPayload;
 import com.hcmut.lms.notification.entity.NotificationDeliveryLogEntity;
 import com.hcmut.lms.notification.entity.NotificationDlqEntity;
 import com.hcmut.lms.notification.entity.NotificationEntity;
@@ -37,7 +37,6 @@ import com.hcmut.lms.notification.enums.DeliveryStatus;
 import com.hcmut.lms.notification.enums.DeferReason;
 import com.hcmut.lms.notification.enums.NotificationChannel;
 import com.hcmut.lms.notification.enums.NotificationFrequency;
-import com.hcmut.lms.notification.enums.NotificationPriority;
 import com.hcmut.lms.notification.enums.NotificationStatus;
 import com.hcmut.lms.notification.enums.NotificationType;
 import com.hcmut.lms.notification.enums.OutboxStatus;
@@ -46,7 +45,8 @@ import com.hcmut.lms.notification.enums.SendMode;
 import com.hcmut.lms.notification.enums.TargetMode;
 import com.hcmut.lms.notification.exception.BadRequestException;
 import com.hcmut.lms.notification.exception.ResourceNotFoundException;
-import com.hcmut.lms.notification.kafka.LmsEventEnvelope;
+import com.hcmut.lms.common.event.NotificationTargetType;
+import com.hcmut.lms.common.event.SimpleNotificationEvent;
 import com.hcmut.lms.notification.repository.NotificationDeliveryLogRepository;
 import com.hcmut.lms.notification.repository.NotificationDlqRepository;
 import com.hcmut.lms.notification.repository.NotificationOutboxRepository;
@@ -56,7 +56,10 @@ import com.hcmut.lms.notification.repository.NotificationRuleRepository;
 import com.hcmut.lms.notification.repository.NotificationTemplateRepository;
 import com.hcmut.lms.notification.repository.UserNotificationRepository;
 import com.hcmut.lms.notification.service.NotificationApplicationService;
+import com.hcmut.lms.notification.service.NotificationAsyncEmailService;
+import com.hcmut.lms.notification.service.NotificationEmailDeliveryWorker;
 import com.hcmut.lms.notification.service.NotificationMetricsService;
+import com.hcmut.lms.notification.service.SseNotificationBroadcaster;
 import com.hcmut.lms.notification.util.JsonCodec;
 import com.hcmut.lms.notification.util.RoleGuard;
 import com.hcmut.lms.notification.util.TimePolicy;
@@ -68,8 +71,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -84,6 +88,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -92,8 +97,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -114,8 +117,9 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
     private final UserManagementInternalClient userManagementInternalClient;
     private final LearningInternalClient learningInternalClient;
     private final KafkaTemplate<String, String> kafkaTemplate;
-    private final SimpMessagingTemplate simpMessagingTemplate;
-    private final org.springframework.mail.javamail.JavaMailSender javaMailSender;
+    private final SseNotificationBroadcaster sseNotificationBroadcaster;
+    private final NotificationAsyncEmailService notificationAsyncEmailService;
+    private final NotificationEmailDeliveryWorker notificationEmailDeliveryWorker;
     private final NotificationMetricsService notificationMetricsService;
     private final NotificationProperties notificationProperties;
     private final JsonCodec jsonCodec;
@@ -525,7 +529,7 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
             String body = buildDigestEmailBody(userItems);
             long startedAt = System.currentTimeMillis();
             try {
-                sendEmailToUser(userId, subject, body);
+                notificationEmailDeliveryWorker.sendDigest(userId, subject, body);
                 Instant deliveredAt = Instant.now();
                 for (UserNotificationEntity item : userItems) {
                     item.setDeliveryStatus(DeliveryStatus.DELIVERED);
@@ -631,58 +635,77 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
     @Override
     @Transactional
     public void handleInboundEvent(String payload) {
-        LmsEventEnvelope envelope;
+        SimpleNotificationEvent event;
         try {
-            envelope = objectMapper.readValue(payload, LmsEventEnvelope.class);
+            event = objectMapper.readValue(payload, SimpleNotificationEvent.class);
         } catch (Exception ex) {
-            throw new BadRequestException("Invalid event payload: " + ex.getMessage());
+            throw new BadRequestException("Invalid notification event payload: " + ex.getMessage());
         }
 
-        if (envelope.getEventType() == null || envelope.getEventId() == null) {
-            throw new BadRequestException("eventType and eventId are required");
+        String semantic = event.resolvedSemanticType();
+        if (!StringUtils.hasText(semantic)) {
+            throw new BadRequestException("semanticType (or type) is required");
+        }
+        if (!StringUtils.hasText(event.getMessageId())) {
+            throw new BadRequestException("messageId is required");
         }
 
-        String sourceService = envelope.getSourceService() == null ? "" : envelope.getSourceService().trim();
-        String eventType = envelope.getEventType().trim();
-        String normalizedEventType = eventType.toLowerCase();
-        if ("notification-service".equalsIgnoreCase(sourceService) || normalizedEventType.startsWith("notification.")) {
-            log.debug("Skip internal notification event eventType={} sourceService={}", eventType, sourceService);
+        String sourceServiceRaw = StringUtils.hasText(event.getSourceService()) ? event.getSourceService().trim() : "";
+        if ("notification-service".equalsIgnoreCase(sourceServiceRaw)) {
+            log.debug("Skip internal notification event sourceService={}", sourceServiceRaw);
             return;
         }
 
-        NotificationRuleEntity rule = notificationRuleRepository.findById(normalizedEventType).orElse(null);
+        String sourceServiceKey = sourceServiceRaw.isEmpty() ? null : sourceServiceRaw;
+
+        NotificationRuleEntity rule = notificationRuleRepository.findById(semantic).orElse(null);
         if (rule == null || !rule.isEnabled()) {
-            log.info("No enabled rule for eventType={}", envelope.getEventType());
+            log.info("No enabled rule for semanticType={}", semantic);
             return;
         }
 
         if (notificationRepository.findBySourceServiceAndSourceEventIdAndType(
-                envelope.getSourceService(),
-                envelope.getEventId(),
+                sourceServiceKey,
+                event.getMessageId(),
                 rule.getNotificationType()).isPresent()) {
-            log.info("Duplicate inbound event skipped eventType={} eventId={}", envelope.getEventType(), envelope.getEventId());
+            log.info("Duplicate inbound event skipped semanticType={} messageId={}", semantic, event.getMessageId());
             return;
         }
+
+        if (event.getTargetType() == null) {
+            throw new BadRequestException("targetType is required");
+        }
+
+        TargetMode targetMode = mapSimpleTargetToTargetMode(event.getTargetType());
+        String targetPayloadJson = buildSimpleTargetPayload(event.getTargetType(), event.getTargetId());
 
         NotificationEntity entity = new NotificationEntity();
         entity.setId(UUID.randomUUID());
         entity.setType(rule.getNotificationType());
         entity.setPriority(rule.getPriority());
-        entity.setTitle(resolveEventTitle(rule, envelope.getData()));
-        entity.setContent(resolveEventContent(rule, envelope.getData()));
+        entity.setTitle(StringUtils.hasText(event.getTitle())
+                ? event.getTitle().trim()
+                : fallbackEventTitle(rule.getNotificationType()));
+        entity.setContent(StringUtils.hasText(event.getContent())
+                ? event.getContent().trim()
+                : "You have a new notification.");
         entity.setCreatedBy(null);
-        entity.setSourceService(envelope.getSourceService());
-        entity.setSourceEventId(envelope.getEventId());
-        entity.setTargetMode(rule.getTargetMode());
-        entity.setTargetPayload(resolveInboundTargetPayload(rule, envelope.getData()));
+        entity.setSourceService(sourceServiceKey);
+        entity.setSourceEventId(event.getMessageId());
+        entity.setTargetMode(targetMode);
+        entity.setTargetPayload(targetPayloadJson);
         entity.setChannels(rule.getChannels());
         entity.setScheduledAt(null);
         entity.setExpiresAt(null);
         entity.setStatus(NotificationStatus.SENT);
-        entity.setMetadata(jsonCodec.toJsonString(Map.of(
-                "eventType", envelope.getEventType(),
-                "occurredAt", envelope.getOccurredAt() == null ? Instant.now().toString() : envelope.getOccurredAt().toString()
-        )));
+
+        Map<String, Object> meta = new LinkedHashMap<>();
+        if (event.getMetadata() != null) {
+            meta.putAll(event.getMetadata());
+        }
+        meta.put("semanticType", semantic);
+        meta.put("occurredAt", Instant.now().toString());
+        entity.setMetadata(jsonCodec.toJsonString(meta));
 
         notificationRepository.save(entity);
         notificationMetricsService.incrementCreated(entity.getType());
@@ -806,41 +829,16 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
             return;
         }
 
-        long startedAt = System.currentTimeMillis();
-        try {
-            sendEmailToUser(
-                    userNotification.getUserId(),
-                    userNotification.getNotification().getTitle(),
-                    userNotification.getNotification().getContent()
-            );
-
-            userNotification.setDeliveryStatus(DeliveryStatus.DELIVERED);
-            userNotification.setDeliveredAt(Instant.now());
-            userNotification.setDeliveryAttempts(userNotification.getDeliveryAttempts() + 1);
-            userNotification.setNextAttemptAt(null);
-            userNotification.setLastError(null);
-            userNotification.setDeferReason(null);
-            userNotificationRepository.save(userNotification);
-
-            logDelivery(userNotification, "smtp-gmail", "sent", "250", System.currentTimeMillis() - startedAt, true);
-            notificationMetricsService.incrementDelivery(NotificationChannel.EMAIL, DeliveryStatus.DELIVERED);
-            notificationMetricsService.recordDeliveryLatency(NotificationChannel.EMAIL, System.currentTimeMillis() - startedAt);
-        } catch (Exception ex) {
-            int attempts = userNotification.getDeliveryAttempts() + 1;
-            userNotification.setDeliveryAttempts(attempts);
-            userNotification.setDeliveryStatus(DeliveryStatus.FAILED);
-            userNotification.setLastError(ex.getMessage());
-            userNotification.setDeferReason(DeferReason.RETRY);
-            userNotification.setNextAttemptAt(nextRetryTime(attempts));
-            userNotificationRepository.save(userNotification);
-
-            if (nextRetryTime(attempts) == null) {
-                moveUserNotificationToDlq(userNotification, ex.getMessage());
-            }
-
-            logDelivery(userNotification, "smtp-gmail", "failed", "500", System.currentTimeMillis() - startedAt, false);
-            notificationMetricsService.incrementDelivery(NotificationChannel.EMAIL, DeliveryStatus.FAILED);
-            notificationMetricsService.recordDeliveryLatency(NotificationChannel.EMAIL, System.currentTimeMillis() - startedAt);
+        UUID id = userNotification.getId();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    notificationAsyncEmailService.deliverWhenReady(id);
+                }
+            });
+        } else {
+            notificationAsyncEmailService.deliverWhenReady(id);
         }
     }
 
@@ -860,37 +858,9 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
         return TimePolicy.isInQuietHours(Instant.now(), DEFAULT_ZONE, quietStart, quietEnd);
     }
 
-    private void sendEmailToUser(UUID userId, String subject, String body) {
-        String recipientEmail = resolveUserEmail(userId);
-        if (!StringUtils.hasText(recipientEmail)) {
-            throw new BadRequestException("Cannot resolve email for user " + userId);
-        }
-
-        org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
-        message.setFrom(notificationProperties.getEmail().getFrom());
-        message.setTo(recipientEmail);
-        message.setSubject(subject);
-        message.setText(body);
-        javaMailSender.send(message);
-    }
-
-    private String resolveUserEmail(UUID userId) {
-        List<InternalUserSummaryResponse> users = userManagementInternalClient.resolveUsers(
-                InternalResolveUsersRequest.builder()
-                        .userIds(List.of(userId))
-                        .build()
-        );
-        return users.stream()
-                .filter(user -> userId.equals(user.getId()))
-                .map(InternalUserSummaryResponse::getEmail)
-                .filter(StringUtils::hasText)
-                .findFirst()
-                .orElse(null);
-    }
-
     private void pushRealtime(UserNotificationEntity userNotification) {
         NotificationEntity notification = userNotification.getNotification();
-        WebSocketNotificationPayload payload = WebSocketNotificationPayload.builder()
+        RealtimeNotificationPayload payload = RealtimeNotificationPayload.builder()
                 .userNotificationId(userNotification.getId())
                 .notificationId(notification.getId())
                 .title(notification.getTitle())
@@ -900,11 +870,7 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
                 .createdAt(notification.getCreatedAt())
                 .build();
 
-        simpMessagingTemplate.convertAndSendToUser(
-                userNotification.getUserId().toString(),
-                "/queue/notifications",
-                payload
-        );
+        sseNotificationBroadcaster.broadcast(userNotification.getUserId(), payload);
     }
 
     private Set<UUID> resolveRecipients(TargetMode targetMode, JsonNode targetPayload) {
@@ -1285,28 +1251,6 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
                 .build();
     }
 
-    private String resolveEventTitle(NotificationRuleEntity rule, JsonNode data) {
-        if (!StringUtils.hasText(rule.getTemplateCode())) {
-            return fallbackEventTitle(rule.getNotificationType());
-        }
-        NotificationTemplateEntity template = notificationTemplateRepository.findById(rule.getTemplateCode()).orElse(null);
-        if (template == null || !template.isActive()) {
-            return fallbackEventTitle(rule.getNotificationType());
-        }
-        return renderTemplate(template.getTitleTemplate(), data);
-    }
-
-    private String resolveEventContent(NotificationRuleEntity rule, JsonNode data) {
-        if (!StringUtils.hasText(rule.getTemplateCode())) {
-            return "You have a new notification.";
-        }
-        NotificationTemplateEntity template = notificationTemplateRepository.findById(rule.getTemplateCode()).orElse(null);
-        if (template == null || !template.isActive()) {
-            return "You have a new notification.";
-        }
-        return renderTemplate(template.getContentTemplate(), data);
-    }
-
     private String fallbackEventTitle(NotificationType type) {
         return switch (type) {
             case ASSIGNMENT_CREATED -> "Bài tập mới";
@@ -1318,59 +1262,28 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
         };
     }
 
-    private String resolveInboundTargetPayload(NotificationRuleEntity rule, JsonNode data) {
-        JsonNode configuredPayload = jsonCodec.toJsonNode(rule.getTargetPayload());
-        if (configuredPayload != null && !configuredPayload.isEmpty() && configuredPayload.size() > 0) {
-            return jsonCodec.toJsonString(configuredPayload);
-        }
-
-        Map<String, Object> payload = switch (rule.getTargetMode()) {
-            case USER_LIST -> {
-                Set<String> ids = new LinkedHashSet<>();
-                appendIfPresent(ids, data, "userId");
-                appendIfPresent(ids, data, "studentId");
-                appendArrayIfPresent(ids, data, "userIds");
-                appendArrayIfPresent(ids, data, "studentIds");
-                yield Map.of("userIds", ids);
-            }
-            case COURSE -> {
-                String classId = textValue(data, "classId");
-                String courseId = textValue(data, "courseId");
-                List<String> classIds = textArray(data, "classIds");
-                if (classId != null) {
-                    yield Map.of("classId", classId);
-                }
-                if (!classIds.isEmpty()) {
-                    yield Map.of("classIds", classIds);
-                }
-                if (courseId != null) {
-                    yield Map.of("courseId", courseId);
-                }
-                yield Map.of();
-            }
-            case PROGRAM -> {
-                List<String> specializationIds = textArray(data, "specializationIds");
-                yield Map.of("specializationIds", specializationIds);
-            }
-            case GROUP, ALL -> Map.of();
+    private TargetMode mapSimpleTargetToTargetMode(NotificationTargetType tt) {
+        return switch (tt) {
+            case CLASS, COURSE -> TargetMode.COURSE;
+            case GLOBAL -> TargetMode.ALL;
+            case USER -> TargetMode.USER_LIST;
         };
-        return jsonCodec.toJsonString(payload);
     }
 
-    private String renderTemplate(String template, JsonNode data) {
-        if (!StringUtils.hasText(template) || data == null || data.isEmpty()) {
-            return template;
+    private String buildSimpleTargetPayload(NotificationTargetType tt, String targetId) {
+        if (tt == NotificationTargetType.GLOBAL) {
+            return jsonCodec.toJsonString(Map.of());
         }
-        Pattern pattern = Pattern.compile("\\{\\{\\s*([a-zA-Z0-9_]+)\\s*}}");
-        Matcher matcher = pattern.matcher(template);
-        StringBuilder builder = new StringBuilder();
-        while (matcher.find()) {
-            String key = matcher.group(1);
-            String value = data.has(key) && !data.get(key).isNull() ? data.get(key).asText() : "";
-            matcher.appendReplacement(builder, Matcher.quoteReplacement(value));
+        if (!StringUtils.hasText(targetId)) {
+            throw new BadRequestException("targetId is required for targetType " + tt);
         }
-        matcher.appendTail(builder);
-        return builder.toString();
+        String id = targetId.trim();
+        return switch (tt) {
+            case CLASS -> jsonCodec.toJsonString(Map.of("classId", id));
+            case COURSE -> jsonCodec.toJsonString(Map.of("courseId", id));
+            case USER -> jsonCodec.toJsonString(Map.of("userIds", List.of(id)));
+            case GLOBAL -> jsonCodec.toJsonString(Map.of());
+        };
     }
 
     private ReadStatus parseReadStatus(String status) {
@@ -1495,39 +1408,6 @@ public class NotificationApplicationServiceImpl implements NotificationApplicati
         }
         builder.append("\nTrân trọng,\nWeLearning LMS");
         return builder.toString();
-    }
-
-    private void appendIfPresent(Set<String> values, JsonNode data, String fieldName) {
-        String value = textValue(data, fieldName);
-        if (StringUtils.hasText(value)) {
-            values.add(value);
-        }
-    }
-
-    private void appendArrayIfPresent(Set<String> values, JsonNode data, String fieldName) {
-        values.addAll(textArray(data, fieldName));
-    }
-
-    private String textValue(JsonNode data, String fieldName) {
-        if (data == null || data.get(fieldName) == null || data.get(fieldName).isNull()) {
-            return null;
-        }
-        String value = data.get(fieldName).asText();
-        return StringUtils.hasText(value) ? value : null;
-    }
-
-    private List<String> textArray(JsonNode data, String fieldName) {
-        if (data == null || data.get(fieldName) == null || !data.get(fieldName).isArray()) {
-            return List.of();
-        }
-        List<String> result = new ArrayList<>();
-        for (JsonNode node : data.get(fieldName)) {
-            String value = node.asText();
-            if (StringUtils.hasText(value)) {
-                result.add(value);
-            }
-        }
-        return result;
     }
 
     private <T> List<T> safeList(Collection<T> values) {

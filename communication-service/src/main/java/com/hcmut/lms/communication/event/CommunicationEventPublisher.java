@@ -3,6 +3,8 @@ package com.hcmut.lms.communication.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcmut.lms.communication.dto.request.DiscussionReplyEventRequest;
 import com.hcmut.lms.communication.dto.request.MaintenanceScheduleEventRequest;
+import com.hcmut.lms.common.event.NotificationTargetType;
+import com.hcmut.lms.common.event.SimpleNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,82 +24,105 @@ public class CommunicationEventPublisher {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${communication.events.topic-prefix:lms.events}")
-    private String topicPrefix;
+    @Value("${notification.events.topic:lms.events.notification}")
+    private String notificationTopic;
 
     @Value("${spring.application.name:communication-service}")
     private String sourceService;
 
     public void publishDiscussionReplyCreated(String postId, DiscussionReplyEventRequest request) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("postId", postId);
-        String eventKey = postId + ":" + Instant.now().toEpochMilli();
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("postId", postId);
+        String messageId = postId + ":" + Instant.now().toEpochMilli();
 
         if (request != null) {
             if (StringUtils.hasText(request.getEventId())) {
-                eventKey = request.getEventId().trim();
+                messageId = request.getEventId().trim();
             }
-            putIfNotBlank(data, "classId", request.getClassId());
-            putIfNotBlank(data, "courseId", request.getCourseId());
-            putIfNotBlank(data, "userId", request.getUserId());
+            putIfNotBlank(metadata, "classId", request.getClassId());
+            putIfNotBlank(metadata, "courseId", request.getCourseId());
+            putIfNotBlank(metadata, "userId", request.getUserId());
             if (request.getUserIds() != null && !request.getUserIds().isEmpty()) {
-                data.put("userIds", request.getUserIds());
+                metadata.put("userIds", request.getUserIds());
             }
-            putIfNotBlank(data, "replyByUserId", request.getReplyByUserId());
-            putIfNotBlank(data, "replyContent", request.getReplyContent());
+            putIfNotBlank(metadata, "replyByUserId", request.getReplyByUserId());
+            putIfNotBlank(metadata, "replyContent", request.getReplyContent());
         }
 
-        publish(
-                "discussion.reply.created",
-                "communication.discussion.reply.created",
-                eventKey,
-                data
-        );
+        NotificationTargetType targetType;
+        String targetId = null;
+        if (request != null && StringUtils.hasText(request.getClassId())) {
+            targetType = NotificationTargetType.CLASS;
+            targetId = request.getClassId().trim();
+        } else if (request != null && StringUtils.hasText(request.getCourseId())) {
+            targetType = NotificationTargetType.COURSE;
+            targetId = request.getCourseId().trim();
+        } else {
+            log.warn("Discussion reply event missing classId/courseId; skipping notification postId={}", postId);
+            return;
+        }
+
+        SimpleNotificationEvent event = SimpleNotificationEvent.builder()
+                .messageId(messageId)
+                .sourceService(sourceService)
+                .semanticType("DISCUSSION_REPLY")
+                .targetType(targetType)
+                .targetId(targetId)
+                .title("Có phản hồi thảo luận mới")
+                .content("Một phản hồi mới vừa được gửi trong thảo luận.")
+                .metadata(metadata)
+                .build();
+
+        publish(event);
     }
 
     public void publishSystemMaintenanceScheduled(MaintenanceScheduleEventRequest request) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        String eventKey = "system-maintenance:" + Instant.now().toEpochMilli();
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        String messageId = "system-maintenance:" + Instant.now().toEpochMilli();
         if (request != null) {
             if (StringUtils.hasText(request.getEventId())) {
-                eventKey = request.getEventId().trim();
+                messageId = request.getEventId().trim();
             }
-            putIfNotBlank(data, "title", request.getTitle());
-            putIfNotBlank(data, "message", request.getMessage());
-            putIfNotBlank(data, "scheduledAt", request.getScheduledAt());
-            putIfNotBlank(data, "expiresAt", request.getExpiresAt());
+            putIfNotBlank(metadata, "title", request.getTitle());
+            putIfNotBlank(metadata, "message", request.getMessage());
+            putIfNotBlank(metadata, "scheduledAt", request.getScheduledAt());
+            putIfNotBlank(metadata, "expiresAt", request.getExpiresAt());
         }
 
-        publish(
-                "system.maintenance.scheduled",
-                "system.maintenance.scheduled",
-                eventKey,
-                data
-        );
+        String title = request != null && StringUtils.hasText(request.getTitle())
+                ? request.getTitle().trim()
+                : "Thông báo bảo trì hệ thống";
+        String content = request != null && StringUtils.hasText(request.getMessage())
+                ? request.getMessage().trim()
+                : "Hệ thống LMS sẽ bảo trì theo lịch đã thông báo.";
+
+        SimpleNotificationEvent event = SimpleNotificationEvent.builder()
+                .messageId(messageId)
+                .sourceService(sourceService)
+                .semanticType("SYSTEM_MAINTENANCE")
+                .targetType(NotificationTargetType.GLOBAL)
+                .title(title)
+                .content(content)
+                .metadata(metadata)
+                .build();
+
+        publish(event);
     }
 
-    private void publish(String topicSuffix, String eventType, String key, Map<String, Object> data) {
+    private void publish(SimpleNotificationEvent event) {
         try {
-            LmsEventEnvelope envelope = LmsEventEnvelope.builder()
-                    .eventId(key)
-                    .eventType(eventType)
-                    .occurredAt(Instant.now())
-                    .sourceService(sourceService)
-                    .version("1.0")
-                    .data(data)
-                    .build();
-
-            String topic = topicPrefix + "." + topicSuffix;
-            String payload = objectMapper.writeValueAsString(envelope);
-            kafkaTemplate.send(topic, key, payload).whenComplete((result, throwable) -> {
+            String key = event.getMessageId();
+            String payload = objectMapper.writeValueAsString(event);
+            kafkaTemplate.send(notificationTopic, key, payload).whenComplete((result, throwable) -> {
                 if (throwable != null) {
-                    log.error("Failed publishing {} with key={}: {}", eventType, key, throwable.getMessage(), throwable);
+                    log.error("Failed publishing semanticType={} key={}: {}",
+                            event.resolvedSemanticType(), key, throwable.getMessage(), throwable);
                 } else {
-                    log.debug("Published {} with key={} to {}", eventType, key, topic);
+                    log.debug("Published semanticType={} key={} to {}", event.resolvedSemanticType(), key, notificationTopic);
                 }
             });
         } catch (Exception ex) {
-            log.error("Cannot publish {} with key={}: {}", eventType, key, ex.getMessage(), ex);
+            log.error("Cannot publish key={}: {}", event.getMessageId(), ex.getMessage(), ex);
         }
     }
 

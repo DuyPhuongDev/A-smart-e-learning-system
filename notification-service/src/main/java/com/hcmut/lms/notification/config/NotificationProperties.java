@@ -5,7 +5,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.LocalTime;
-import java.util.List;
 
 @Data
 @Configuration
@@ -16,7 +15,6 @@ public class NotificationProperties {
     private Scheduler scheduler = new Scheduler();
     private Email email = new Email();
     private Kafka kafka = new Kafka();
-    private Websocket websocket = new Websocket();
 
     @Data
     public static class Scheduler {
@@ -37,12 +35,7 @@ public class NotificationProperties {
 
     @Data
     public static class Kafka {
-        private String topicsPattern = "lms\\.events\\..*";
+        private String inboundTopic = "lms.events.notification";
         private String outboundTopic = "lms.events.notification.created";
-    }
-
-    @Data
-    public static class Websocket {
-        private List<String> allowedOrigins = List.of("http://localhost:3000");
     }
 }

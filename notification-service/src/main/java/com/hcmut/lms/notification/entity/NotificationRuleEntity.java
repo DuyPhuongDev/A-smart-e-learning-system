@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Getter
 @Setter
@@ -31,6 +32,7 @@ public class NotificationRuleEntity extends AuditableEntity {
     private NotificationType notificationType;
 
     @Column(name = "channels", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String channels;
 
     @Enumerated(EnumType.STRING)
@@ -49,5 +51,6 @@ public class NotificationRuleEntity extends AuditableEntity {
     private TargetMode targetMode;
 
     @Column(name = "target_payload", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String targetPayload;
 }

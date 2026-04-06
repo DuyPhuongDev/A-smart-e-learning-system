@@ -10,6 +10,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnTransformer;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -56,9 +57,11 @@ public class NotificationEntity extends AuditableEntity {
     private TargetMode targetMode;
 
     @Column(name = "target_payload", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String targetPayload;
 
     @Column(name = "channels", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String channels;
 
     @Column(name = "scheduled_at")
@@ -72,5 +75,6 @@ public class NotificationEntity extends AuditableEntity {
     private NotificationStatus status;
 
     @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
     private String metadata;
 }

@@ -15,7 +15,7 @@ public class NotificationEventConsumer {
     private final NotificationApplicationService notificationApplicationService;
 
     @KafkaListener(
-            topicPattern = "${notification.kafka.topics-pattern:lms\\.events\\..*}",
+            topics = "${notification.kafka.inbound-topic:lms.events.notification}",
             groupId = "${spring.kafka.consumer.group-id:notification-service}"
     )
     public void consume(ConsumerRecord<String, String> record) {

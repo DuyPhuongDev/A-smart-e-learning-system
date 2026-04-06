@@ -34,6 +34,6 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
 
-communication:
+notification:
   events:
-    topic-prefix: ${COMMUNICATION_EVENT_TOPIC_PREFIX:lms.events}
+    topic: ${KAFKA_NOTIFICATION_INBOUND_TOPIC:lms.events.notification}
