@@ -1,0 +1,25 @@
+package com.hcmut.lms.notification.client;
+
+import com.hcmut.lms.notification.client.dto.BatchClassStudentIdsRequest;
+import com.hcmut.lms.notification.client.dto.BatchClassStudentIdsResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+import java.util.List;
+import java.util.UUID;
+
+@FeignClient(name = "learning-service")
+public interface LearningInternalClient {
+
+    @GetMapping("/api/learning/v1/enrollment/internal/class/{classId}/students")
+    List<UUID> resolveStudentsByClass(@PathVariable("classId") UUID classId);
+
+    @PostMapping("/api/learning/v1/enrollment/internal/classes/students")
+    BatchClassStudentIdsResponse resolveStudentsByClassBatch(@RequestBody BatchClassStudentIdsRequest request);
+
+    @GetMapping("/api/learning/v1/enrollment/internal/course/{courseId}/students")
+    List<UUID> resolveStudentsByCourse(@PathVariable("courseId") UUID courseId);
+}

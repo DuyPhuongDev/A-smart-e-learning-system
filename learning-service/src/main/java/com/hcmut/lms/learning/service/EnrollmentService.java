@@ -1,6 +1,7 @@
 package com.hcmut.lms.learning.service;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
@@ -44,4 +45,10 @@ public interface EnrollmentService {
      * Used by course-management-service for student progress tracking
      */
     List<StudentEnrollmentResponse> getStudentEnrollmentsWithSubjects(UUID studentId);
+
+    List<UUID> getStudentIdsByClassId(UUID classId);
+
+    List<InternalClassStudentIdsResponse> getStudentIdsByClassIds(List<UUID> classIds);
+
+    List<UUID> getStudentIdsByCourseId(UUID courseId);
 }

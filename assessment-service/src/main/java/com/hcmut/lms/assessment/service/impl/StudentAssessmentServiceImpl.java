@@ -19,6 +19,7 @@ import com.hcmut.lms.assessment.exception.BadRequestException;
 import com.hcmut.lms.assessment.exception.CodeJudgeUnavailableException;
 import com.hcmut.lms.assessment.exception.ForbiddenException;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
+import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
 import com.hcmut.lms.assessment.handler.dto.*;
 import com.hcmut.lms.assessment.repository.*;
 import com.hcmut.lms.assessment.service.AssessmentExecutionService;
@@ -63,6 +64,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     private final LearningEnrollmentClient learningEnrollmentClient;
     private final AssessmentExecutionService assessmentExecutionService;
     private final CppJudgeService cppJudgeService;
+    private final AssessmentEventPublisher assessmentEventPublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -163,7 +165,11 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         List<AttemptQuestionResponse> questions = assessmentQuestionRepository
                 .findByAssessmentIdOrderByIndex(assessment.getId())
                 .stream()
-                .map(aq -> toAttemptQuestionResponse(aq, submissionByQuestionId.get(aq.getQuestion().getId())))
+                .map(aq -> toAttemptQuestionResponse(
+                        aq,
+                        submissionByQuestionId.get(aq.getQuestion().getId()),
+                        attempt.getStatus() == AssessmentSubmissionStatus.SUBMITTED
+                ))
                 .toList();
 
         return AttemptDetailResponse.builder()
@@ -315,6 +321,10 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         attempt.setScore(totalScore);
         assessmentSubmissionRepository.save(attempt);
 
+        if (!hasPendingReview) {
+            assessmentEventPublisher.publishSubmissionGraded(attempt, "GRADED");
+        }
+
         return SubmitAttemptResponse.builder()
                 .attemptId(attempt.getId())
                 .assessmentId(attempt.getAssessment().getId())
@@ -444,7 +454,11 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         return saved.getUpdatedAt();
     }
 
-    private AttemptQuestionResponse toAttemptQuestionResponse(AssessmentQuestion assessmentQuestion, QuestionSubmission submission) {
+    private AttemptQuestionResponse toAttemptQuestionResponse(
+            AssessmentQuestion assessmentQuestion,
+            QuestionSubmission submission,
+            boolean includeOptionExplanation
+    ) {
         Question question = (Question) Hibernate.unproxy(assessmentQuestion.getQuestion());
         QuestionSubmission concreteSubmission = resolveConcreteSubmission(submission);
 
@@ -466,6 +480,8 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                                 .id(option.getId())
                                 .content(option.getContent())
                                 .orderIndex(option.getOrderIndex())
+                                .correct(option.isCorrect())
+                                .explanation(includeOptionExplanation ? option.getExplanation() : null)
                                 .build())
                         .toList());
 

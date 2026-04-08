@@ -9,6 +9,7 @@ import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
+import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
 import com.hcmut.lms.assessment.exception.UnsupportedQuestionTypeException;
 import com.hcmut.lms.assessment.handler.QuestionHandler;
@@ -43,6 +44,7 @@ public class AssessmentServiceImpl implements AssessmentService {
     private final AssessmentQuestionRepository assessmentQuestionRepository;
     private final AssessmentMapper assessmentMapper;
     private final QuestionMapper questionMapper;
+    private final AssessmentEventPublisher assessmentEventPublisher;
 
     @Override
     public AssessmentResponse createAssessment(AssessmentRequest request) {
@@ -125,7 +127,10 @@ public class AssessmentServiceImpl implements AssessmentService {
         log.info("Changing status of assessment with id {} to {}", id, status.name());
         Assessment assessment = findAssessmentById(id);
         assessment.setAssessmentStatus(status);
-        assessmentRepository.save(assessment);
+        Assessment saved = assessmentRepository.save(assessment);
+        if (status == AssessmentStatus.PUBLISHED) {
+            assessmentEventPublisher.publishAssignmentCreated(saved);
+        }
     }
 
     private Assessment findAssessmentById(UUID id) {

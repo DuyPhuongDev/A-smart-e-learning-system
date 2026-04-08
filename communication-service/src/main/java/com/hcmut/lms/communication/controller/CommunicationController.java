@@ -1,10 +1,19 @@
 package com.hcmut.lms.communication.controller;
 
+import com.hcmut.lms.communication.dto.request.DiscussionReplyEventRequest;
+import com.hcmut.lms.communication.dto.request.MaintenanceScheduleEventRequest;
+import com.hcmut.lms.communication.event.CommunicationEventPublisher;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/communication")
+@RequiredArgsConstructor
 public class CommunicationController {
+
+    private final CommunicationEventPublisher communicationEventPublisher;
 
     @PostMapping("/message")
     public String sendMessage() {
@@ -43,8 +52,26 @@ public class CommunicationController {
     }
 
     @PostMapping("/forum/post/{postId}/reply")
-    public String replyToPost(@PathVariable String postId) {
-        // TODO: Implement reply to post logic
-        return "Reply to post - To be implemented";
+    public Map<String, String> replyToPost(
+            @PathVariable String postId,
+            @RequestBody(required = false) DiscussionReplyEventRequest request
+    ) {
+        communicationEventPublisher.publishDiscussionReplyCreated(postId, request);
+        return Map.of(
+                "message", "Reply event accepted",
+                "postId", postId,
+                "eventType", "communication.discussion.reply.created"
+        );
+    }
+
+    @PostMapping("/system/maintenance/schedule")
+    public Map<String, String> publishMaintenanceSchedule(
+            @RequestBody(required = false) MaintenanceScheduleEventRequest request
+    ) {
+        communicationEventPublisher.publishSystemMaintenanceScheduled(request);
+        return Map.of(
+                "message", "Maintenance schedule event accepted",
+                "eventType", "system.maintenance.scheduled"
+        );
     }
 }

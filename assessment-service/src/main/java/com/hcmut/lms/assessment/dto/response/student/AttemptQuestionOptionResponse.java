@@ -12,6 +12,7 @@ import java.util.UUID;
 public class AttemptQuestionOptionResponse {
     private UUID id;
     private String content;
+    private boolean correct;
     private int orderIndex;
     private String explanation;
 }

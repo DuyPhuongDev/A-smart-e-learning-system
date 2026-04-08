@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${subject}">Notification</title>
+</head>
+<body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #222;">
+<p th:text="${title}">Title</p>
+<div th:utext="${content}">Content</div>
+</body>
+</html>
