@@ -70,6 +70,7 @@ CREATE TABLE learning.enrollments (
   completion_time TIMESTAMP,
   final_grade FLOAT,
   attempt_no INT DEFAULT 1,
+  is_passed BOOLEAN DEFAULT NULL,
   progress_percentage FLOAT DEFAULT 0.0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT (now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT (now())

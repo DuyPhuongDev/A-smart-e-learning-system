@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AsyncSubmissionResponse {
-    private String status;
-    private String message;
-    private int subjectCount;
-    private int occupationCount;
+  private String status;
+  private String message;
+  private int subjectCount;
+  private int occupationCount;
 }
 

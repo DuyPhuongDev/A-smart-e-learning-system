@@ -27,7 +27,10 @@ public class Teacher {
     
     @Column(name = "teacher_code", unique = true, nullable = false, length = 255)
     private String teacherCode;
-    
+
+    @Column(name = "subject_group_id")
+    private UUID subjectGroupId;
+
     @Column(columnDefinition = "text")
     private String bio;
 }

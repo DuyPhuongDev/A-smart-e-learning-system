@@ -29,9 +29,7 @@ CREATE TABLE learning.grade_prediction_features_dataset (
     updated_at                  timestamptz NOT NULL DEFAULT now(),
 
     CONSTRAINT grade_prediction_features_dataset_pkey PRIMARY KEY (id),
-    CONSTRAINT grade_prediction_features_dataset_unique UNIQUE (student_id, semester_id, subject_id),
-    CONSTRAINT grade_prediction_features_dataset_semester_id_fkey FOREIGN KEY (semester_id) REFERENCES course_management.semesters(id),
-    CONSTRAINT grade_prediction_features_dataset_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES course_management.subjects(id)
+    CONSTRAINT grade_prediction_features_dataset_unique UNIQUE (student_id, semester_id, subject_id)
 );
 
 -- ============================================================

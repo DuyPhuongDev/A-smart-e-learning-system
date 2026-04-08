@@ -1,6 +1,8 @@
 package com.hcmut.lms.learning.service;
 
+import com.hcmut.lms.learning.dto.request.BatchGradePredictionRequest;
 import com.hcmut.lms.learning.dto.request.RawFeaturePredictionRequest;
+import com.hcmut.lms.learning.dto.response.BatchGradePredictionResponse;
 import com.hcmut.lms.learning.dto.response.GradePredictionResponse;
 
 import java.util.UUID;
@@ -29,4 +31,12 @@ public interface GradePredictionService {
      * @return GradePredictionResponse with prediction and uncertainty details
      */
     GradePredictionResponse predictGradeFromRawFeatures(RawFeaturePredictionRequest request);
+
+    /**
+     * Batch predict grades for multiple student-subject pairs.
+     *
+     * @param request batch prediction request with list of student-subject pairs
+     * @return BatchGradePredictionResponse with list of predictions
+     */
+    BatchGradePredictionResponse predictGradeBatch(BatchGradePredictionRequest request);
 }

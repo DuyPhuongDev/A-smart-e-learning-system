@@ -56,17 +56,16 @@ spring:
               uri: lb://notification-service
               predicates:
                 - Path=/api/v1/notifications/**
-
-            # Notification Service WebSocket (STOMP handshake/upgrade)
-            - id: notification-service-ws
-              uri: lb:ws://notification-service
-              predicates:
-                - Path=/ws/notifications,/ws/notifications/**
             # Coaching Chatbot Service (for Fargate worker callbacks)
             - id: coaching-chatbot-service
               uri: lb://coaching-chatbot-service
               predicates:
                 - Path=/api/coaching-chatbot/**
+            # Personalization Service
+            - id: personalization-service
+              uri: lb://personalization-service
+              predicates:
+                - Path=/api/personalization/**
 
   # Disable Redis auto-configuration (for development without Redis)
   autoconfigure:

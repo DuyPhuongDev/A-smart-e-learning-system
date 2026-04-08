@@ -42,4 +42,14 @@ public interface UserService {
     List<UserResponse> getAllTeachers();
 
     List<InternalUserSummaryResponse> resolveUsers(InternalResolveUsersRequest request);
+
+    /**
+     * Get student by student code
+     */
+    UserResponse getStudentByStudentCode(String studentCode);
+
+    /**
+     * Get teachers by subject group ID
+     */
+    List<UserResponse> getTeachersBySubjectGroupId(UUID subjectGroupId);
 }

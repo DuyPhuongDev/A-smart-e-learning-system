@@ -5,6 +5,7 @@ import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
+import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,7 +26,7 @@ public interface EnrollmentService {
      * @param size Page size
      * @return Paginated list of enrolled class cards
      */
-    PageResponse<EnrolledClassCardResponse> getEnrolledClasses(UUID studentId, String semesterCode, 
+    PageResponse<EnrolledClassCardResponse> getEnrolledClasses(UUID studentId, String semesterCode,
                                                                String searchTerm, int page, int size);
 
     /**
@@ -38,6 +39,12 @@ public interface EnrollmentService {
     EnrollmentResponse changeClass(UUID id, EnrollmentRequest enrollmentRequest);
 
     void unEnroll(UUID id);
+
+    /**
+     * Get all enrollments for a student with subject information
+     * Used by course-management-service for student progress tracking
+     */
+    List<StudentEnrollmentResponse> getStudentEnrollmentsWithSubjects(UUID studentId);
 
     List<UUID> getStudentIdsByClassId(UUID classId);
 

@@ -8,9 +8,9 @@ import com.hcmut.lms.personalization.application.dto.response.FlattenOccupationJ
 import java.util.List;
 
 public interface OnetFlattenService {
-    List<FlattenOccupationJobResponse> flatten(FlattenOccupationRequest request);
+  List<FlattenOccupationJobResponse> flatten(FlattenOccupationRequest request);
 
-    BackfillRequirementEmbeddingsResponse backfillRequirementEmbeddings(BackfillRequirementEmbeddingsRequest request);
+  BackfillRequirementEmbeddingsResponse backfillRequirementEmbeddings(BackfillRequirementEmbeddingsRequest request);
 
-    void backfillRequirementEmbeddingsAsync(BackfillRequirementEmbeddingsRequest request);
+  void backfillRequirementEmbeddingsAsync(BackfillRequirementEmbeddingsRequest request);
 }

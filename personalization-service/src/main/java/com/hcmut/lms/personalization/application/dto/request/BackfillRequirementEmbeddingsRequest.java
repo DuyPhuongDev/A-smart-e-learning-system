@@ -12,10 +12,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BackfillRequirementEmbeddingsRequest {
-    // Optional; empty means scan all occupation codes.
-    private List<String> occupationCodes;
+  // Optional; empty means scan all occupation codes.
+  private List<String> occupationCodes;
 
-    // "yes" -> generate/update V4 init migration file from current embedding table.
-    private String optimal;
+  // "yes" -> generate/update V4 init migration file from current embedding table.
+  private String optimal;
 }
 

@@ -49,7 +49,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Data for Name: students; Type: TABLE DATA; Schema: user_management; Owner: lms_user
 --
 
-INSERT INTO user_management.students (user_id, student_code) VALUES ('8f06fef7-9024-43f9-9bbc-cf89b9d063c1', '2110001')
+INSERT INTO user_management.students (user_id, student_code, intake_year_id, department_id) VALUES ('8f06fef7-9024-43f9-9bbc-cf89b9d063c1', '2110001', '9ab1203e-27f6-4aa9-8f91-3a1980b03ba8', 'f6f1f3bd-cb99-4ec2-8a45-16d59c2c1371')
 ON CONFLICT (user_id) DO NOTHING;
 
 

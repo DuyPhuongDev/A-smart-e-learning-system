@@ -1,7 +1,7 @@
 package com.hcmut.lms.coursemanagement.domain.entity.curriculum;
 
 import com.hcmut.lms.coursemanagement.domain.entity.BaseEntity;
-import com.hcmut.lms.coursemanagement.domain.entity.intakeYear.IntakeYear;
+import com.hcmut.lms.coursemanagement.domain.entity.academicYear.AcademicYear;
 import com.hcmut.lms.coursemanagement.domain.entity.specialization.Specialization;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,7 +42,7 @@ public class Curriculum extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("intakeYearId")
     @JoinColumn(name = "intake_year_id", nullable = false)
-    private IntakeYear intakeYear;
+    private AcademicYear intakeYear;
     
     @OneToMany(mappedBy = "curriculum", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

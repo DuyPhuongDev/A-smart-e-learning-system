@@ -18,7 +18,7 @@ public class CurriculumResponse {
     private UUID specializationId;
     private String specializationName;
     private UUID intakeYearId;
-    private Integer intakeYearStartYear;
+    private String intakeYearStartDate;
     private String name;
     private Integer totalCredits;
     private String description;

@@ -1,8 +1,7 @@
 package com.hcmut.lms.coursemanagement.application.dto.request;
 
 import jakarta.validation.constraints.NotEmpty;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -10,6 +9,10 @@ import java.util.UUID;
 /**
  * Request DTO for batch class section lookup
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 public class BatchClassLookupRequest {
@@ -18,4 +21,8 @@ public class BatchClassLookupRequest {
     
     private String semesterCode;
     private String searchTerm;
+
+    public BatchClassLookupRequest(List<UUID> classIds) {
+        this.classIds = classIds;
+    }
 }
