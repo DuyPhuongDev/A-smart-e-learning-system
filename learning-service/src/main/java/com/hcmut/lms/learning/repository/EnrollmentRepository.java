@@ -23,6 +23,10 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
      */
     List<Enrollment> findByStudentId(UUID studentId);
 
+    List<Enrollment> findByClassId(UUID classId);
+
+    List<Enrollment> findByClassIdIn(List<UUID> classIds);
+
     /**
      * Check if student already enrolled in a class
      */
@@ -48,4 +52,13 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
      * Find graded enrollments for a set of class IDs.
      */
     List<Enrollment> findByClassIdInAndFinalGradeIsNotNull(List<UUID> classIds);
+
+    @Query("select distinct e.studentId from Enrollment e where e.classId = :classId")
+    List<UUID> findDistinctStudentIdsByClassId(@Param("classId") UUID classId);
+
+    @Query("select distinct e.studentId from Enrollment e where e.classId in :classIds")
+    List<UUID> findDistinctStudentIdsByClassIds(@Param("classIds") List<UUID> classIds);
+
+    @Query("select distinct e.classId from Enrollment e")
+    List<UUID> findDistinctClassIds();
 }

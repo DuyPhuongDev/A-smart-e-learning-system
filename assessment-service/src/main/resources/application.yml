@@ -37,6 +37,11 @@ spring:
     table: flyway_schema_history
     out-of-order: false
     validate-on-migrate: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 eureka:
   client:
@@ -45,3 +50,12 @@ eureka:
     fetch-registry: true
     register-with-eureka: true
 
+notification:
+  events:
+    topic: ${KAFKA_NOTIFICATION_INBOUND_TOPIC:lms.events.notification}
+
+assessment:
+  events:
+    deadline-reminder-cron: ${ASSESSMENT_DEADLINE_REMINDER_CRON:0 */5 * * * *}
+    deadline-reminder-minutes-before: ${ASSESSMENT_DEADLINE_REMINDER_MINUTES_BEFORE:1440}
+    deadline-reminder-window-minutes: ${ASSESSMENT_DEADLINE_REMINDER_WINDOW_MINUTES:15}

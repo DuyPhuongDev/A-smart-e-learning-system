@@ -1,9 +1,13 @@
 package com.hcmut.lms.usermanagement.controller;
 
+import com.hcmut.lms.usermanagement.model.dto.request.InternalResolveUsersRequest;
+import com.hcmut.lms.usermanagement.model.dto.response.InternalUserSummaryResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserResponse;
 import com.hcmut.lms.usermanagement.model.dto.response.UserRoleResponse;
 import com.hcmut.lms.usermanagement.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,5 +47,11 @@ public class InternalUserController {
     @GetMapping("/{id}")
     public UserResponse getById(@PathVariable UUID id) {
         return userService.getById(id);
+    }
+
+    @PostMapping("/resolve")
+    public List<InternalUserSummaryResponse> resolveUsers(@RequestBody(required = false) InternalResolveUsersRequest request) {
+        InternalResolveUsersRequest safeRequest = request == null ? new InternalResolveUsersRequest() : request;
+        return userService.resolveUsers(safeRequest);
     }
 }

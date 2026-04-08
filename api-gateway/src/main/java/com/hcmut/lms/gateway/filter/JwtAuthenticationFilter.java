@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -55,20 +56,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        // Check for Authorization header
-        if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-            log.warn("Missing Authorization header for: {} {}", method, path);
-            return onError(exchange, "Missing Authorization header", HttpStatus.UNAUTHORIZED);
+        String token = resolveAccessToken(request);
+        if (!StringUtils.hasText(token)) {
+            log.warn("Missing auth token for: {} {}", method, path);
+            return onError(
+                    exchange,
+                    "Missing auth token (Authorization header or access_token query param)",
+                    HttpStatus.UNAUTHORIZED
+            );
         }
-
-        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        
-        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-            log.warn("Invalid Authorization header format for: {} {}", method, path);
-            return onError(exchange, "Invalid Authorization header format", HttpStatus.UNAUTHORIZED);
-        }
-
-        String token = authHeader.substring(BEARER_PREFIX.length());
 
         // Validate token
         if (!jwtUtil.validateToken(token)) {
@@ -91,9 +87,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             // Create mutated request with user context headers
             ServerHttpRequest mutatedRequest = request.mutate()
-                    .header(USER_ID_HEADER, userId)
-                    .header(USER_EMAIL_HEADER, email)
-                    .header(USER_ROLE_HEADER, role != null ? role : "UNKNOWN")
+                    .headers(headers -> {
+                        // Ensure downstream services only receive gateway-verified user context.
+                        headers.remove(USER_ID_HEADER);
+                        headers.remove(USER_EMAIL_HEADER);
+                        headers.remove(USER_ROLE_HEADER);
+                        headers.set(USER_ID_HEADER, userId);
+                        headers.set(USER_EMAIL_HEADER, email);
+                        headers.set(USER_ROLE_HEADER, role != null ? role : "UNKNOWN");
+                    })
                     .build();
 
             log.debug("Authenticated user: {} ({}) [{}] for: {} {}", email, userId, role, method, path);
@@ -109,6 +111,32 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     public int getOrder() {
         // Run early in the filter chain, but after logging/tracing filters
         return -100;
+    }
+
+    private String resolveAccessToken(ServerHttpRequest request) {
+        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.hasText(authHeader)) {
+            if (authHeader.startsWith(BEARER_PREFIX)) {
+                return authHeader.substring(BEARER_PREFIX.length());
+            }
+            // If Authorization is present but malformed, reject explicitly.
+            return null;
+        }
+
+        String path = request.getPath().value();
+        if (isNotificationWebSocketPath(path)) {
+            String token = request.getQueryParams().getFirst("access_token");
+            if (!StringUtils.hasText(token)) {
+                token = request.getQueryParams().getFirst("token");
+            }
+            return token;
+        }
+
+        return null;
+    }
+
+    private boolean isNotificationWebSocketPath(String path) {
+        return "/ws/notifications".equals(path) || path.startsWith("/ws/notifications/");
     }
 
     /**
@@ -132,4 +160,3 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return response.writeWith(Mono.just(buffer));
     }
 }
-
