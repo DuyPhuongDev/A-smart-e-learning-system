@@ -15,10 +15,13 @@ import com.hcmut.lms.notification.dto.response.NotificationPreferenceResponse;
 import com.hcmut.lms.notification.dto.response.NotificationRuleResponse;
 import com.hcmut.lms.notification.dto.response.NotificationTemplateResponse;
 import com.hcmut.lms.notification.dto.response.UnreadCountResponse;
-import com.hcmut.lms.notification.service.NotificationApplicationService;
+import com.hcmut.lms.notification.service.AdminNotificationService;
+import com.hcmut.lms.notification.service.NotificationConfigService;
+import com.hcmut.lms.notification.service.NotificationPreferenceService;
+import com.hcmut.lms.notification.service.SseNotificationBroadcaster;
+import com.hcmut.lms.notification.service.UserInboxService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import com.hcmut.lms.notification.service.SseNotificationBroadcaster;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +43,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationApplicationService notificationApplicationService;
+    private final AdminNotificationService adminNotificationService;
+    private final UserInboxService userInboxService;
+    private final NotificationPreferenceService notificationPreferenceService;
+    private final NotificationConfigService notificationConfigService;
     private final SseNotificationBroadcaster sseNotificationBroadcaster;
 
     @PostMapping("/admin")
@@ -49,7 +55,7 @@ public class NotificationController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestBody @Valid AdminCreateNotificationRequest request
     ) {
-        return ResponseEntity.ok(notificationApplicationService.createAdminNotification(currentUser, request, idempotencyKey));
+        return ResponseEntity.ok(adminNotificationService.create(currentUser, request, idempotencyKey));
     }
 
     @GetMapping("/admin")
@@ -64,17 +70,8 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(notificationApplicationService.getAdminNotifications(
-                currentUser,
-                status,
-                type,
-                channel,
-                from,
-                to,
-                keyword,
-                page,
-                size
-        ));
+        return ResponseEntity.ok(adminNotificationService.list(
+                currentUser, status, type, channel, from, to, keyword, page, size));
     }
 
     @GetMapping("/admin/{id}")
@@ -82,7 +79,7 @@ public class NotificationController {
             @CurrentUser CurrentUserInfo currentUser,
             @PathVariable("id") UUID id
     ) {
-        return ResponseEntity.ok(notificationApplicationService.getAdminNotificationDetail(currentUser, id));
+        return ResponseEntity.ok(adminNotificationService.detail(currentUser, id));
     }
 
     @PostMapping("/admin/{id}/send-now")
@@ -90,7 +87,7 @@ public class NotificationController {
             @CurrentUser CurrentUserInfo currentUser,
             @PathVariable("id") UUID id
     ) {
-        notificationApplicationService.sendNow(currentUser, id);
+        adminNotificationService.sendNow(currentUser, id);
         return ResponseEntity.ok().build();
     }
 
@@ -99,7 +96,7 @@ public class NotificationController {
             @CurrentUser CurrentUserInfo currentUser,
             @PathVariable("id") UUID id
     ) {
-        notificationApplicationService.cancel(currentUser, id);
+        adminNotificationService.cancel(currentUser, id);
         return ResponseEntity.ok().build();
     }
 
@@ -115,12 +112,12 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(notificationApplicationService.getMyInbox(currentUser, status, page, size));
+        return ResponseEntity.ok(userInboxService.getMyInbox(currentUser, status, page, size));
     }
 
     @GetMapping("/me/unread-count")
     public ResponseEntity<UnreadCountResponse> getUnreadCount(@CurrentUser CurrentUserInfo currentUser) {
-        return ResponseEntity.ok(new UnreadCountResponse(notificationApplicationService.getUnreadCount(currentUser)));
+        return ResponseEntity.ok(new UnreadCountResponse(userInboxService.getUnreadCount(currentUser)));
     }
 
     @PostMapping("/me/{userNotificationId}/read")
@@ -128,19 +125,19 @@ public class NotificationController {
             @CurrentUser CurrentUserInfo currentUser,
             @PathVariable UUID userNotificationId
     ) {
-        notificationApplicationService.markRead(currentUser, userNotificationId);
+        userInboxService.markRead(currentUser, userNotificationId);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/me/read-all")
     public ResponseEntity<Void> markReadAll(@CurrentUser CurrentUserInfo currentUser) {
-        notificationApplicationService.markReadAll(currentUser);
+        userInboxService.markReadAll(currentUser);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/me/preferences")
     public ResponseEntity<List<NotificationPreferenceResponse>> getPreferences(@CurrentUser CurrentUserInfo currentUser) {
-        return ResponseEntity.ok(notificationApplicationService.getPreferences(currentUser));
+        return ResponseEntity.ok(notificationPreferenceService.getPreferences(currentUser));
     }
 
     @PutMapping("/me/preferences")
@@ -148,17 +145,17 @@ public class NotificationController {
             @CurrentUser CurrentUserInfo currentUser,
             @RequestBody @Valid PreferencesUpsertRequest request
     ) {
-        return ResponseEntity.ok(notificationApplicationService.upsertPreferences(currentUser, request));
+        return ResponseEntity.ok(notificationPreferenceService.upsertPreferences(currentUser, request));
     }
 
     @PostMapping("/me/preferences/reset")
     public ResponseEntity<List<NotificationPreferenceResponse>> resetPreferences(@CurrentUser CurrentUserInfo currentUser) {
-        return ResponseEntity.ok(notificationApplicationService.resetPreferences(currentUser));
+        return ResponseEntity.ok(notificationPreferenceService.resetPreferences(currentUser));
     }
 
     @GetMapping("/admin/rules")
     public ResponseEntity<List<NotificationRuleResponse>> getRules(@CurrentUser CurrentUserInfo currentUser) {
-        return ResponseEntity.ok(notificationApplicationService.getRules(currentUser));
+        return ResponseEntity.ok(notificationConfigService.getRules(currentUser));
     }
 
     @PutMapping("/admin/rules/{eventType}")
@@ -167,12 +164,12 @@ public class NotificationController {
             @PathVariable String eventType,
             @RequestBody @Valid RuleUpdateRequest request
     ) {
-        return ResponseEntity.ok(notificationApplicationService.updateRule(currentUser, eventType, request));
+        return ResponseEntity.ok(notificationConfigService.updateRule(currentUser, eventType, request));
     }
 
     @GetMapping("/admin/templates")
     public ResponseEntity<List<NotificationTemplateResponse>> getTemplates(@CurrentUser CurrentUserInfo currentUser) {
-        return ResponseEntity.ok(notificationApplicationService.getTemplates(currentUser));
+        return ResponseEntity.ok(notificationConfigService.getTemplates(currentUser));
     }
 
     @PutMapping("/admin/templates/{code}")
@@ -181,6 +178,6 @@ public class NotificationController {
             @PathVariable String code,
             @RequestBody @Valid TemplateUpdateRequest request
     ) {
-        return ResponseEntity.ok(notificationApplicationService.updateTemplate(currentUser, code, request));
+        return ResponseEntity.ok(notificationConfigService.updateTemplate(currentUser, code, request));
     }
 }

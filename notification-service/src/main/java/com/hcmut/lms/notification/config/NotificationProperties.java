@@ -4,8 +4,6 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.LocalTime;
-
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "notification")
@@ -29,8 +27,6 @@ public class NotificationProperties {
     public static class Email {
         private String from = "no-reply@welearning.local";
         private String retryDelaysMinutes = "1,5,15";
-        private LocalTime quietHoursStart = LocalTime.of(22, 0);
-        private LocalTime quietHoursEnd = LocalTime.of(7, 0);
     }
 
     @Data

@@ -1,6 +1,5 @@
 package com.hcmut.lms.notification.dto.request;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.hcmut.lms.notification.enums.NotificationChannel;
 import com.hcmut.lms.notification.enums.NotificationPriority;
 import com.hcmut.lms.notification.enums.NotificationType;
@@ -12,7 +11,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 public class AdminCreateNotificationRequest {
@@ -32,7 +33,19 @@ public class AdminCreateNotificationRequest {
     @NotNull
     private TargetMode targetMode;
 
-    private JsonNode targetPayload;
+    // Required when targetMode = USER_LIST
+    private Set<UUID> userIds;
+
+    // Required when targetMode = GROUP (values: ADMIN, TEACHER, STUDENT)
+    private Set<String> groups;
+
+    // Required when targetMode = COURSE (provide courseId or classIds)
+    private List<UUID> classIds;
+
+    // Required when targetMode = PROGRAM
+    private List<UUID> specializationIds;
+
+    // targetMode = ALL requires no extra fields
 
     @NotEmpty
     private Set<NotificationChannel> channels;
@@ -43,6 +56,4 @@ public class AdminCreateNotificationRequest {
     private OffsetDateTime scheduledAt;
 
     private OffsetDateTime expiresAt;
-
-    private JsonNode metadata;
 }

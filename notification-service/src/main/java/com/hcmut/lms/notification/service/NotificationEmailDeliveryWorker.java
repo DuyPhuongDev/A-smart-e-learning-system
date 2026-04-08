@@ -43,7 +43,6 @@ public class NotificationEmailDeliveryWorker {
     private final UserNotificationRepository userNotificationRepository;
     private final NotificationDeliveryLogRepository notificationDeliveryLogRepository;
     private final NotificationDlqRepository notificationDlqRepository;
-    private final NotificationMetricsService notificationMetricsService;
     private final NotificationProperties notificationProperties;
     private final UserManagementInternalClient userManagementInternalClient;
     private final JavaMailSender javaMailSender;
@@ -78,8 +77,6 @@ public class NotificationEmailDeliveryWorker {
             userNotificationRepository.save(userNotification);
 
             logDelivery(userNotification, "smtp-gmail", "sent", "250", System.currentTimeMillis() - startedAt, true);
-            notificationMetricsService.incrementDelivery(NotificationChannel.EMAIL, DeliveryStatus.DELIVERED);
-            notificationMetricsService.recordDeliveryLatency(NotificationChannel.EMAIL, System.currentTimeMillis() - startedAt);
         } catch (Exception ex) {
             int attempts = userNotification.getDeliveryAttempts() + 1;
             userNotification.setDeliveryAttempts(attempts);
@@ -94,8 +91,6 @@ public class NotificationEmailDeliveryWorker {
             }
 
             logDelivery(userNotification, "smtp-gmail", "failed", "500", System.currentTimeMillis() - startedAt, false);
-            notificationMetricsService.incrementDelivery(NotificationChannel.EMAIL, DeliveryStatus.FAILED);
-            notificationMetricsService.recordDeliveryLatency(NotificationChannel.EMAIL, System.currentTimeMillis() - startedAt);
             log.warn("Email delivery failed userNotificationId={}: {}", userNotificationId, ex.getMessage());
         }
     }
@@ -174,7 +169,6 @@ public class NotificationEmailDeliveryWorker {
         dlq.setAttempts(userNotification.getDeliveryAttempts());
         dlq.setCreatedAt(Instant.now());
         notificationDlqRepository.save(dlq);
-        notificationMetricsService.incrementDlq();
     }
 
     private void logDelivery(

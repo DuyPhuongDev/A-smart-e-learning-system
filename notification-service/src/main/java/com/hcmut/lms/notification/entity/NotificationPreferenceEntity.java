@@ -11,7 +11,6 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalTime;
 import java.util.UUID;
 
 @Getter
@@ -42,10 +41,4 @@ public class NotificationPreferenceEntity extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "frequency", nullable = false, length = 32)
     private NotificationFrequency frequency;
-
-    @Column(name = "quiet_hours_start")
-    private LocalTime quietHoursStart;
-
-    @Column(name = "quiet_hours_end")
-    private LocalTime quietHoursEnd;
 }

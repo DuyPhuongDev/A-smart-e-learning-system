@@ -6,7 +6,7 @@ package com.hcmut.lms.common.event;
 public enum NotificationTargetType {
     /** Single class — targetId = class UUID */
     CLASS,
-    /** Course — targetId = course UUID (all students in course) */
+    /** Subject — targetId = course UUID (all students in subject) */
     COURSE,
     /** All active users in the system */
     GLOBAL,

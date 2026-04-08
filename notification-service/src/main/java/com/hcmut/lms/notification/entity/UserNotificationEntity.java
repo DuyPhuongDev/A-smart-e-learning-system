@@ -5,14 +5,7 @@ import com.hcmut.lms.notification.enums.DeferReason;
 import com.hcmut.lms.notification.enums.NotificationChannel;
 import com.hcmut.lms.notification.enums.NotificationFrequency;
 import com.hcmut.lms.notification.enums.ReadStatus;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 

@@ -5,8 +5,6 @@ import com.hcmut.lms.notification.enums.NotificationType;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalTime;
-
 @Data
 @Builder
 public class NotificationPreferenceResponse {
@@ -15,6 +13,4 @@ public class NotificationPreferenceResponse {
     private boolean emailEnabled;
     private boolean pushEnabled;
     private NotificationFrequency frequency;
-    private LocalTime quietHoursStart;
-    private LocalTime quietHoursEnd;
 }

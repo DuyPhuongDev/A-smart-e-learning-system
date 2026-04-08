@@ -64,8 +64,6 @@ CREATE TABLE IF NOT EXISTS notification.notification_preferences (
     email_enabled BOOLEAN NOT NULL DEFAULT false,
     push_enabled BOOLEAN NOT NULL DEFAULT false,
     frequency VARCHAR(32) NOT NULL DEFAULT 'IMMEDIATE',
-    quiet_hours_start TIME,
-    quiet_hours_end TIME,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uk_notification_preferences_user_type UNIQUE (user_id, notification_type)

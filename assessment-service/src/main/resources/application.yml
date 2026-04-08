@@ -38,7 +38,7 @@ spring:
     out-of-order: false
     validate-on-migrate: true
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -58,4 +58,4 @@ assessment:
   events:
     deadline-reminder-cron: ${ASSESSMENT_DEADLINE_REMINDER_CRON:0 */5 * * * *}
     deadline-reminder-minutes-before: ${ASSESSMENT_DEADLINE_REMINDER_MINUTES_BEFORE:1440}
-    deadline-reminder-window-minutes: ${ASSESSMENT_DEADLINE_REMINDER_WINDOW_MINUTES:5}
+    deadline-reminder-window-minutes: ${ASSESSMENT_DEADLINE_REMINDER_WINDOW_MINUTES:15}

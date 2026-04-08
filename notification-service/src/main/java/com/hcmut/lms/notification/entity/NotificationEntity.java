@@ -4,12 +4,7 @@ import com.hcmut.lms.notification.enums.NotificationPriority;
 import com.hcmut.lms.notification.enums.NotificationStatus;
 import com.hcmut.lms.notification.enums.NotificationType;
 import com.hcmut.lms.notification.enums.TargetMode;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnTransformer;
 import lombok.Getter;
 import lombok.Setter;
@@ -56,10 +51,12 @@ public class NotificationEntity extends AuditableEntity {
     @Column(name = "target_mode", nullable = false, length = 32)
     private TargetMode targetMode;
 
+    // Tham số chi tiết cho targetMode (id khóa học, danh sách user, …).
     @Column(name = "target_payload", nullable = false, columnDefinition = "jsonb")
     @ColumnTransformer(write = "?::jsonb")
     private String targetPayload;
 
+    // Danh sách kênh (thường là mảng IN_APP, EMAIL, …) — không phải một cột enum đơn.
     @Column(name = "channels", nullable = false, columnDefinition = "jsonb")
     @ColumnTransformer(write = "?::jsonb")
     private String channels;

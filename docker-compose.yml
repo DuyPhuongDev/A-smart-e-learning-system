@@ -61,35 +61,6 @@ services:
       - kafka-data-1:/var/lib/kafka/data
 
   # ========================================
-  # Observability Stack
-  # ========================================
-  prometheus:
-    image: prom/prometheus:v2.53.0
-    container_name: lms-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./infra/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
-    networks:
-      - lms-network
-
-  grafana:
-    image: grafana/grafana:11.1.0
-    container_name: lms-grafana
-    ports:
-      - "3001:3000"
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-    volumes:
-      - grafana-data:/var/lib/grafana
-    depends_on:
-      - prometheus
-    networks:
-      - lms-network
-
-  # ========================================
   # Qdrant - Vector Database for RAG Chatbot
   # ========================================
   qdrant-vector-db:

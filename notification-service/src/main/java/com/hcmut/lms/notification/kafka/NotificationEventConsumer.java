@@ -1,6 +1,6 @@
 package com.hcmut.lms.notification.kafka;
 
-import com.hcmut.lms.notification.service.NotificationApplicationService;
+import com.hcmut.lms.notification.service.NotificationInboundService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class NotificationEventConsumer {
 
-    private final NotificationApplicationService notificationApplicationService;
+    private final NotificationInboundService notificationInboundService;
 
     @KafkaListener(
             topics = "${notification.kafka.inbound-topic:lms.events.notification}",
@@ -24,9 +24,9 @@ public class NotificationEventConsumer {
         }
 
         try {
-            notificationApplicationService.handleInboundEvent(record.value());
+            notificationInboundService.handleInboundEvent(record.value());
         } catch (Exception ex) {
-            notificationApplicationService.recordInboundFailure(
+            notificationInboundService.recordInboundFailure(
                     record.topic(),
                     record.key(),
                     record.value(),
