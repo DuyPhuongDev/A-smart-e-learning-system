@@ -25,7 +25,6 @@ public class ClassSectionDatasetResponse {
     private Integer credits;
     private UUID semesterId;
     private String semesterCode;
-    private String yearCode;
-    private Integer semesterNumber;
+    /** Computed via SemKeyUtil: (2000 + YY) * 10 + S from semesterCode, e.g. "HK231" -> 20231 */
     private Integer semKey;
 }

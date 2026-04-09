@@ -78,4 +78,10 @@ public class CourseManagementFallback implements CourseManagementClient {
         log.error("CourseManagement service unavailable. Unable to get current semester.");
         throw new ServiceUnavailableException("Course management service is unavailable");
     }
+
+    @Override
+    public SemesterResponse getSemesterById(UUID semesterId) {
+        log.error("CourseManagement service unavailable. Unable to get semester by ID: {}", semesterId);
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
 }

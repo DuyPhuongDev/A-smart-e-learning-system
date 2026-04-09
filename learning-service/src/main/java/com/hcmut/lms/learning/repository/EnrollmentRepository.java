@@ -61,4 +61,17 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
 
     @Query("select distinct e.classId from Enrollment e")
     List<UUID> findDistinctClassIds();
+
+    /**
+     * Find all graded enrollments that were last updated within a given time range.
+     * Used to limit dataset computation to recent data.
+     */
+    @Query("""
+        SELECT e FROM Enrollment e
+        WHERE e.finalGrade IS NOT NULL
+          AND e.updatedAt BETWEEN :startTime AND :endTime
+        """)
+    List<Enrollment> findByFinalGradeIsNotNullAndUpdatedAtBetween(
+            @Param("startTime") java.time.Instant startTime,
+            @Param("endTime") java.time.Instant endTime);
 }
