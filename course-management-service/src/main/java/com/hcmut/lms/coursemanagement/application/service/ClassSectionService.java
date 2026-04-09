@@ -5,6 +5,7 @@ import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionDatasetResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionReportMetadataResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassStatusResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
@@ -70,4 +71,9 @@ public interface ClassSectionService {
      * Used by learning-service to compute subject-level baselines.
      */
     List<ClassSectionDatasetResponse> getClassSectionsBySubjectWindow(UUID subjectId, Integer targetSemKey, Integer windowSpan);
+
+    /**
+     * Report metadata for teacher report dashboards.
+     */
+    ClassSectionReportMetadataResponse getClassSectionReportMetadata(UUID classId);
 }

@@ -52,6 +52,16 @@ public class LearningExceptionHandler {
                 .build();
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleForbiddenException(ForbiddenException e) {
+        log.error(e.getMessage(), e);
+        return ErrorResponse.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .message(e.getMessage())
+                .build();
+    }
+
     @ExceptionHandler(ModelNotAvailableException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public ErrorResponse handleModelNotAvailableException(ModelNotAvailableException e) {

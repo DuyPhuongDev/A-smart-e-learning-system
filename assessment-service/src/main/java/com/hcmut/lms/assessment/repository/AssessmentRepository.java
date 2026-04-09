@@ -12,6 +12,8 @@ public interface AssessmentRepository extends JpaRepository<Assessment, UUID> {
 
     org.springframework.data.domain.Page<Assessment> findAllByClassId(UUID classId, org.springframework.data.domain.Pageable pageable);
 
+    List<Assessment> findByClassIdOrderByCreatedAtAsc(UUID classId);
+
     List<Assessment> findByAssessmentStatusAndCloseTimeBetween(
             AssessmentStatus status,
             LocalDateTime from,

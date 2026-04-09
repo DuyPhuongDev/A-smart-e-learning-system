@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -415,6 +416,32 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .map(this::toDatasetResponse)
                 .filter(r -> r.getSemKey() != null && r.getSemKey() >= windowLow && r.getSemKey() < targetSemKey)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ClassSectionReportMetadataResponse getClassSectionReportMetadata(UUID classId) {
+        ClassSection classSection = classSectionRepository.findByIdWithChaptersAndLectures(classId)
+                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+
+        AtomicInteger displayOrder = new AtomicInteger(1);
+        List<LectureReportMetadataResponse> lectures = classSection.getChapters().stream()
+                .sorted(Comparator.comparing(Chapter::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
+                .flatMap(chapter -> chapter.getLectures().stream()
+                        .sorted(Comparator.comparing(Lecture::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))))
+                .map(lecture -> LectureReportMetadataResponse.builder()
+                        .lectureId(lecture.getId())
+                        .title(lecture.getTitle())
+                        .order(displayOrder.getAndIncrement())
+                        .estimateTimeSpent(lecture.getEstimateTimeSpent())
+                        .build())
+                .toList();
+
+        return ClassSectionReportMetadataResponse.builder()
+                .classId(classSection.getId())
+                .teacherId(classSection.getTeacherId())
+                .lectures(lectures)
+                .build();
     }
 
     private ClassSectionDatasetResponse toDatasetResponse(ClassSection cs) {

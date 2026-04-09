@@ -1,6 +1,7 @@
 package com.hcmut.lms.coursemanagement.controller.internal;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
+import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionReportMetadataResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassStatusResponse;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
@@ -54,5 +55,10 @@ public class InternalClassController {
     @GetMapping("/{id}/count-lecture")
     public ResponseEntity<Integer> countNumberLecturesByClassId(@PathVariable UUID id){
         return ResponseEntity.ok(classSectionService.countNumberLecturesByClassId(id));
+    }
+
+    @GetMapping("/{id}/report-metadata")
+    public ResponseEntity<ClassSectionReportMetadataResponse> getClassSectionReportMetadata(@PathVariable("id") UUID id) {
+        return ResponseEntity.ok(classSectionService.getClassSectionReportMetadata(id));
     }
 }

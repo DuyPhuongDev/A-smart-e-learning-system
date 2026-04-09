@@ -67,4 +67,15 @@ public interface StudyTimeRepository extends JpaRepository<StudyTime, UUID> {
      * Count study sessions for a student in a class
      */
     long countByStudentIdAndClassId(UUID studentId, UUID classId);
+
+    /**
+     * Aggregate total spent seconds by lecture in a class.
+     */
+    @Query("""
+            SELECT st.lectureId, COALESCE(SUM(st.durationSeconds), 0)
+            FROM StudyTime st
+            WHERE st.classId = :classId
+            GROUP BY st.lectureId
+            """)
+    List<Object[]> sumDurationByClassGroupedByLecture(@Param("classId") UUID classId);
 }
