@@ -73,4 +73,11 @@ public interface CourseManagementClient {
      */
     @GetMapping("/semesters/current")
     SemesterResponse getCurrentSemester();
+
+    /**
+     * Get a specific semester by ID.
+     * Calls: GET /api/courses/internal/semesters/{id}
+     */
+    @GetMapping("/semesters/{id}")
+    SemesterResponse getSemesterById(@PathVariable("id") UUID semesterId);
 }
