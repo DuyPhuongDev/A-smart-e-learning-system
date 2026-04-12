@@ -46,5 +46,15 @@ public class InternalSubjectController {
     public ResponseEntity<SubjectResponse> getSubjectById(@PathVariable UUID subjectId) {
         return ResponseEntity.ok(subjectService.getSubjectById(subjectId));
     }
+
+    /**
+     * Get all subject IDs in the database.
+     * Used by learning-service to pre-compute SubjectSemesterMetrics for all subjects.
+     * GET /api/courses/internal/subjects/ids
+     */
+    @GetMapping("/ids")
+    public ResponseEntity<List<UUID>> getAllSubjectIds() {
+        return ResponseEntity.ok(subjectService.getAllSubjectIds());
+    }
 }
 

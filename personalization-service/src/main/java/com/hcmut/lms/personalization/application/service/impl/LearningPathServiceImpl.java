@@ -6,6 +6,7 @@ import com.hcmut.lms.personalization.application.dto.request.UpdateLearningPathR
 import com.hcmut.lms.personalization.application.dto.response.*;
 import com.hcmut.lms.personalization.application.mapper.LearningPathMapper;
 import com.hcmut.lms.personalization.application.service.LearningPathService;
+import com.hcmut.lms.personalization.application.service.impl.learning_path.LearningPathGenerationService;
 import com.hcmut.lms.personalization.application.service.impl.support.AcademicCalendarDisplaySupport;
 import com.hcmut.lms.personalization.client.CourseManagementClient;
 import com.hcmut.lms.personalization.client.dto.CurriculumResolutionResponse;
@@ -50,7 +51,7 @@ public class LearningPathServiceImpl implements LearningPathService {
   public LearningPathResponse getActiveLearningPath(UUID studentId) {
     return learningPathRepository.findTopByStudentIdAndIsActiveTrueOrderByUpdatedAtDesc(studentId)
         .map(path -> toPathResponse(path, studentId))
-        .orElse(null);
+        .orElseThrow(() -> new EntityNotFoundException("Active learning path not found for studentId=" + studentId));
   }
 
   @Override
@@ -124,7 +125,7 @@ public class LearningPathServiceImpl implements LearningPathService {
   public List<LearningPathSectionResponse> getSections(UUID studentId, UUID learningPathId) {
     getOwnedPath(studentId, learningPathId);
     Map<UUID, SectionDisplayInfo> sectionDisplayInfo = buildSectionDisplayInfo(studentId);
-    return learningPathSectionRepository.findByLearningPathIdOrderBySemesterOrderAsc(learningPathId)
+    return learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(learningPathId)
         .stream()
         .map(section -> toSectionResponse(section, sectionDisplayInfo))
         .toList();
@@ -163,7 +164,7 @@ public class LearningPathServiceImpl implements LearningPathService {
   public List<LearningPathValidationConflictResponse> validate(UUID studentId, UUID learningPathId) {
     getOwnedPath(studentId, learningPathId);
 
-    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderBySemesterOrderAsc(
+    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
         learningPathId);
 
     Map<UUID, Integer> creditsBySection = new HashMap<>();
@@ -200,7 +201,7 @@ public class LearningPathServiceImpl implements LearningPathService {
   public LearningPathGraphResponse getGraph(UUID studentId, UUID learningPathId) {
     getOwnedPath(studentId, learningPathId);
 
-    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderBySemesterOrderAsc(
+    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
         learningPathId);
     Map<UUID, Integer> semesterOrderBySection = sections.stream()
         .collect(
@@ -266,7 +267,7 @@ public class LearningPathServiceImpl implements LearningPathService {
   }
 
   private LearningPathResponse toPathResponse(LearningPath path, UUID studentId) {
-    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderBySemesterOrderAsc(
+    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
         path.getLearningPathId());
     Map<UUID, SectionDisplayInfo> sectionDisplayInfo = buildSectionDisplayInfo(studentId);
     List<LearningPathSectionResponse> sectionResponses = sections.stream()
@@ -305,14 +306,17 @@ public class LearningPathServiceImpl implements LearningPathService {
   private Map<UUID, SectionDisplayInfo> buildSectionDisplayInfo(UUID studentId) {
     Map<UUID, SectionDisplayInfo> displayBySemesterId = new HashMap<>();
 
-    for (SemesterResponse semester : courseManagementClient.getRemainingSemesters(studentId)) {
-      if (semester.getId() == null) {
-        continue;
+    List<SemesterResponse> remainingSemesters = courseManagementClient.getRemainingSemesters(studentId);
+    if (remainingSemesters != null) {
+      for (SemesterResponse semester : remainingSemesters) {
+        if (semester.getId() == null) {
+          continue;
+        }
+        displayBySemesterId.put(semester.getId(),
+            new SectionDisplayInfo(
+                AcademicCalendarDisplaySupport.academicYearFromCode(semester.getAcademicYearCode()),
+                AcademicCalendarDisplaySupport.semesterFromCode(semester.getSemesterCode())));
       }
-      displayBySemesterId.put(semester.getId(),
-          new SectionDisplayInfo(
-              AcademicCalendarDisplaySupport.academicYearFromCode(semester.getAcademicYearCode()),
-              AcademicCalendarDisplaySupport.semesterFromCode(semester.getSemesterCode())));
     }
 
     StudentLearningProgressResponse progress = courseManagementClient.getStudentProgress(studentId);
@@ -360,7 +364,7 @@ public class LearningPathServiceImpl implements LearningPathService {
   }
 
   private List<LearningPathSubject> loadSubjectsBySemesterOrder(UUID learningPathId) {
-    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderBySemesterOrderAsc(
+    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
         learningPathId);
     Map<UUID, Integer> semesterOrderBySection = sections.stream()
         .collect(

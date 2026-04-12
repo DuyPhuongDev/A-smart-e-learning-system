@@ -202,6 +202,15 @@ public class SubjectServiceImpl implements SubjectService {
                         .build())
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> getAllSubjectIds() {
+        log.info("Fetching all subject IDs");
+        return subjectRepository.findAll().stream()
+                .map(Subject::getId)
+                .toList();
+    }
 }
 
 

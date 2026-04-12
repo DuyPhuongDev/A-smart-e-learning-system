@@ -74,6 +74,12 @@ public class CourseManagementFallback implements CourseManagementClient {
     }
 
     @Override
+    public List<SemesterResponse> getAllSemesters() {
+        log.error("CourseManagement service unavailable. Unable to fetch all semesters.");
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
     public SemesterResponse getCurrentSemester() {
         log.error("CourseManagement service unavailable. Unable to get current semester.");
         throw new ServiceUnavailableException("Course management service is unavailable");
@@ -82,6 +88,12 @@ public class CourseManagementFallback implements CourseManagementClient {
     @Override
     public SemesterResponse getSemesterById(UUID semesterId) {
         log.error("CourseManagement service unavailable. Unable to get semester by ID: {}", semesterId);
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
+    public List<UUID> getAllSubjectIds() {
+        log.error("CourseManagement service unavailable. Unable to fetch subject IDs.");
         throw new ServiceUnavailableException("Course management service is unavailable");
     }
 }

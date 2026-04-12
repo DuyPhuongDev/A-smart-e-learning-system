@@ -25,40 +25,6 @@ public interface SubjectSemesterMetricsRepository extends JpaRepository<SubjectS
     List<SubjectSemesterMetrics> findBySubjectIdOrderByCreatedAtAsc(UUID subjectId);
 
     /**
-     * Find all metrics for a subject, ordered by creation time descending.
-     */
-    List<SubjectSemesterMetrics> findBySubjectIdOrderByCreatedAtDesc(UUID subjectId);
-
-    /**
-     * Find the most recent computed metrics for a subject (by created_at).
-     * Used for temporal carry-forward fallback (Level 1) when semKey is not available.
-     */
-    Optional<SubjectSemesterMetrics> findFirstBySubjectIdOrderByCreatedAtDesc(UUID subjectId);
-
-    /**
-     * Find the most recent metrics for a subject ordered by semKey (semester chronology).
-     * Preferred over createdAt ordering for Level 1 fallback since it reflects
-     * actual semester recency, not computation recency.
-     */
-    @Query("""
-        SELECT m FROM SubjectSemesterMetrics m
-        WHERE m.subjectId = :subjectId AND m.semKey IS NOT NULL
-        ORDER BY m.semKey DESC
-        LIMIT 1
-        """)
-    Optional<SubjectSemesterMetrics> findMostRecentBySubjectId(@Param("subjectId") UUID subjectId);
-
-    /**
-     * Check if any metrics exist for a subject.
-     */
-    boolean existsBySubjectId(UUID subjectId);
-
-    /**
-     * Find all metrics for a list of subjects at a specific semester.
-     */
-    List<SubjectSemesterMetrics> findBySubjectIdInAndSemesterId(List<UUID> subjectIds, UUID semesterId);
-
-    /**
      * Find all metrics for given (subjectId, semesterId) pairs.
      * Used for batch loading to avoid N+1 queries.
      */

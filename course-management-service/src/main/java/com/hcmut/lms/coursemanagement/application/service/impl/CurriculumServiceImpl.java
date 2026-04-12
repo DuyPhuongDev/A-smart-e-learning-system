@@ -346,7 +346,16 @@ public class CurriculumServiceImpl implements CurriculumService {
     }
 
     String yearCode = curriculum.getIntakeYear().getYearCode();
-    return yearCode != null && yearCode.contains(String.valueOf(intakeYear));
+    if (yearCode != null) {
+      try {
+        int parsedYear = Integer.parseInt(yearCode.trim());
+        int fullYear = parsedYear < 100 ? parsedYear + 2000 : parsedYear;
+        return fullYear == intakeYear;
+      } catch (NumberFormatException e) {
+        return false;
+      }
+    }
+    return false;
   }
 }
 

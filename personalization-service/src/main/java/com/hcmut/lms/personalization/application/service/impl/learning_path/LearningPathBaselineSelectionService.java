@@ -1,6 +1,7 @@
-package com.hcmut.lms.personalization.application.service.impl;
+package com.hcmut.lms.personalization.application.service.impl.learning_path;
 
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SubjectCandidate;
+import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
 import com.hcmut.lms.personalization.application.service.impl.validation.StudentProgressDataService;
 import com.hcmut.lms.personalization.client.LearningServiceClient;
 import com.hcmut.lms.personalization.client.dto.*;
@@ -30,16 +31,20 @@ public class LearningPathBaselineSelectionService {
   private final SubjectOccupationValuationRepository subjectOccupationValuationRepository;
 
   public BaselineSelectionResult buildBaselinePath(
-      CurriculumFullResponse curriculum,
-      LearningGoal goal,
+      CurriculumFullResponse curriculum, LearningGoal goal,
       StudentProgressDataService.StudentProgressData progressData) {
 
     List<SubjectCandidate> allUncompletedCandidates = new ArrayList<>();
     Set<UUID> completedIds = new HashSet<>(progressData.completedSubjectIds());
 
-    for (CurriculumFullResponse.CurriculumSectionFull section : curriculum.getSections()) {
+    List<CurriculumFullResponse.CurriculumSectionFull> sections = curriculum.getSections() != null ?
+        curriculum.getSections() : Collections.emptyList();
+
+    for (CurriculumFullResponse.CurriculumSectionFull section : sections) {
       int sectionWeight = section.getPriorityWeight() != null ? section.getPriorityWeight() : 5;
-      for (CurriculumFullResponse.CurriculumSubjectFull subject : section.getSubjects()) {
+      List<CurriculumFullResponse.CurriculumSubjectFull> subjects = section.getSubjects() != null ?
+          section.getSubjects() : Collections.emptyList();
+      for (CurriculumFullResponse.CurriculumSubjectFull subject : subjects) {
         if (completedIds.contains(subject.getSubjectId())) {
           continue;
         }
@@ -61,15 +66,16 @@ public class LearningPathBaselineSelectionService {
       }
     }
 
-    return selectSubjectsForRequiredSectionCredits(allUncompletedCandidates, curriculum, goal, progressData, completedIds);
+    return selectSubjectsForRequiredSectionCredits(
+        allUncompletedCandidates, curriculum, goal, progressData, completedIds);
   }
 
   private BaselineSelectionResult selectSubjectsForRequiredSectionCredits(
-      List<SubjectCandidate> candidates,
-      CurriculumFullResponse curriculum,
-      LearningGoal goal,
-      StudentProgressDataService.StudentProgressData progressData,
-      Set<UUID> completedSubjectIds) {
+      List<SubjectCandidate> candidates, CurriculumFullResponse curriculum, LearningGoal goal,
+      StudentProgressDataService.StudentProgressData progressData, Set<UUID> completedSubjectIds) {
+
+    List<CurriculumFullResponse.CurriculumSectionFull> curriculumSections = curriculum.getSections() != null ?
+        curriculum.getSections() : Collections.emptyList();
 
     Map<UUID, Double> scoreBySubjectId = buildScoreMap(candidates, goal);
 
@@ -77,8 +83,7 @@ public class LearningPathBaselineSelectionService {
         .stream()
         .collect(Collectors.toMap(
             StudentProgressDataService.CompletedSubjectDetail::subjectId,
-            this::resolveCompletedGradeScore,
-            Math::max));
+            this::resolveCompletedGradeScore, Math::max));
 
     Map<UUID, List<SubjectCandidate>> uncompletedBySection = candidates.stream()
         .collect(Collectors.groupingBy(SubjectCandidate::getSectionId));
@@ -86,16 +91,18 @@ public class LearningPathBaselineSelectionService {
     Map<UUID, Integer> countedCompletedCreditsBySection = new HashMap<>();
     Map<UUID, Integer> overflowCompletedCreditsBySection = new HashMap<>();
 
-    for (CurriculumFullResponse.CurriculumSectionFull section : curriculum.getSections()) {
+    for (CurriculumFullResponse.CurriculumSectionFull section : curriculumSections) {
       UUID sectionId = section.getSectionId();
       int requiredCredits = section.getRequiredCredits() != null ? section.getRequiredCredits() : 0;
 
-      List<CurriculumFullResponse.CurriculumSubjectFull> completedInSection = section.getSubjects()
+      List<CurriculumFullResponse.CurriculumSubjectFull> completedInSection = section.getSubjects() != null ?
+          section.getSubjects()
           .stream()
           .filter(subject -> completedSubjectIds.contains(subject.getSubjectId()))
-          .toList();
+          .toList() : Collections.emptyList();
 
-      Set<UUID> countedCompleted = selectBestCompletedSubset(completedInSection, requiredCredits, completedGradeBySubjectId);
+      Set<UUID> countedCompleted = selectBestCompletedSubset(
+          completedInSection, requiredCredits, completedGradeBySubjectId);
 
       int countedCredits = completedInSection.stream()
           .filter(subject -> countedCompleted.contains(subject.getSubjectId()))
@@ -111,15 +118,15 @@ public class LearningPathBaselineSelectionService {
     }
 
     Map<UUID, Integer> transferredCreditsBySection = transferSpecializedOverflowToFreeElective(
-        curriculum,
-        countedCompletedCreditsBySection,
-        overflowCompletedCreditsBySection);
+        curriculumSections,
+        countedCompletedCreditsBySection, overflowCompletedCreditsBySection);
 
-    Optional<CurriculumFullResponse.CurriculumSectionFull> freeElectiveOpt = curriculum.getSections().stream()
+    Optional<CurriculumFullResponse.CurriculumSectionFull> freeElectiveOpt = curriculumSections.stream()
         .filter(section -> FREE_ELECTIVE_SECTION_KEY.equals(normalizeSectionName(section.getSectionName())))
         .findFirst();
 
-    UUID freeElectiveSectionId = freeElectiveOpt.map(CurriculumFullResponse.CurriculumSectionFull::getSectionId).orElse(null);
+    UUID freeElectiveSectionId = freeElectiveOpt.map(CurriculumFullResponse.CurriculumSectionFull::getSectionId)
+        .orElse(null);
 
     Set<UUID> selectedSubjectIds = new HashSet<>();
     List<SubjectCandidate> selected = new ArrayList<>();
@@ -133,7 +140,7 @@ public class LearningPathBaselineSelectionService {
     mandatoryZeroCredit.stream().map(SubjectCandidate::getSubjectId).forEach(selectedSubjectIds::add);
 
     // Pick normal sections first. Free elective is processed last to avoid duplicate picks.
-    for (CurriculumFullResponse.CurriculumSectionFull section : curriculum.getSections()) {
+    for (CurriculumFullResponse.CurriculumSectionFull section : curriculumSections) {
       UUID sectionId = section.getSectionId();
       if (freeElectiveSectionId != null && freeElectiveSectionId.equals(sectionId)) {
         continue;
@@ -157,10 +164,11 @@ public class LearningPathBaselineSelectionService {
 
     if (freeElectiveOpt.isPresent()) {
       CurriculumFullResponse.CurriculumSectionFull freeSection = freeElectiveOpt.get();
-      int neededCredits = resolveNeededCredits(freeSection, countedCompletedCreditsBySection, transferredCreditsBySection);
+      int neededCredits = resolveNeededCredits(
+          freeSection, countedCompletedCreditsBySection, transferredCreditsBySection);
 
       if (neededCredits > 0) {
-        Set<UUID> specializedSectionIds = curriculum.getSections().stream()
+        Set<UUID> specializedSectionIds = curriculumSections.stream()
             .filter(section -> SPECIALIZED_SECTION_KEYS.contains(normalizeSectionName(section.getSectionName())))
             .map(CurriculumFullResponse.CurriculumSectionFull::getSectionId)
             .collect(Collectors.toSet());
@@ -182,16 +190,17 @@ public class LearningPathBaselineSelectionService {
       }
     }
 
-    int effectiveCompletedCredits = countedCompletedCreditsBySection.values().stream().mapToInt(Integer::intValue).sum()
-        + transferredCreditsBySection.values().stream().mapToInt(Integer::intValue).sum();
+    int effectiveCompletedCredits = countedCompletedCreditsBySection.values()
+        .stream()
+        .mapToInt(Integer::intValue)
+        .sum() + transferredCreditsBySection.values().stream().mapToInt(Integer::intValue).sum();
 
     return new BaselineSelectionResult(selected, effectiveCompletedCredits);
   }
 
   private int resolveNeededCredits(
       CurriculumFullResponse.CurriculumSectionFull section,
-      Map<UUID, Integer> countedCompletedCreditsBySection,
-      Map<UUID, Integer> transferredCreditsBySection) {
+      Map<UUID, Integer> countedCompletedCreditsBySection, Map<UUID, Integer> transferredCreditsBySection) {
     int requiredCredits = section.getRequiredCredits() != null ? section.getRequiredCredits() : 0;
     int completedCredits = countedCompletedCreditsBySection.getOrDefault(section.getSectionId(), 0);
     int transferredCredits = transferredCreditsBySection.getOrDefault(section.getSectionId(), 0);
@@ -199,12 +208,10 @@ public class LearningPathBaselineSelectionService {
   }
 
   private Map<UUID, Integer> transferSpecializedOverflowToFreeElective(
-      CurriculumFullResponse curriculum,
-      Map<UUID, Integer> countedCompletedCreditsBySection,
-      Map<UUID, Integer> overflowCompletedCreditsBySection) {
+      List<CurriculumFullResponse.CurriculumSectionFull> curriculumSections,
+      Map<UUID, Integer> countedCompletedCreditsBySection, Map<UUID, Integer> overflowCompletedCreditsBySection) {
 
-    Optional<CurriculumFullResponse.CurriculumSectionFull> freeElectiveSection = curriculum.getSections()
-        .stream()
+    Optional<CurriculumFullResponse.CurriculumSectionFull> freeElectiveSection = curriculumSections.stream()
         .filter(section -> FREE_ELECTIVE_SECTION_KEY.equals(normalizeSectionName(section.getSectionName())))
         .findFirst();
 
@@ -213,16 +220,15 @@ public class LearningPathBaselineSelectionService {
     }
 
     UUID freeElectiveSectionId = freeElectiveSection.get().getSectionId();
-    int freeRequired = freeElectiveSection.get().getRequiredCredits() != null
-        ? freeElectiveSection.get().getRequiredCredits()
-        : 0;
+    int freeRequired = freeElectiveSection.get().getRequiredCredits() != null ? freeElectiveSection.get()
+        .getRequiredCredits() : 0;
     int freeCompleted = countedCompletedCreditsBySection.getOrDefault(freeElectiveSectionId, 0);
     int freeDeficit = Math.max(0, freeRequired - freeCompleted);
     if (freeDeficit <= 0) {
       return Collections.emptyMap();
     }
 
-    int transferable = curriculum.getSections().stream()
+    int transferable = curriculumSections.stream()
         .filter(section -> SPECIALIZED_SECTION_KEYS.contains(normalizeSectionName(section.getSectionName())))
         .mapToInt(section -> overflowCompletedCreditsBySection.getOrDefault(section.getSectionId(), 0))
         .sum();
@@ -237,8 +243,7 @@ public class LearningPathBaselineSelectionService {
 
   private Set<UUID> selectBestCompletedSubset(
       List<CurriculumFullResponse.CurriculumSubjectFull> completedSubjects,
-      int targetCredits,
-      Map<UUID, Double> completedGradeBySubjectId) {
+      int targetCredits, Map<UUID, Double> completedGradeBySubjectId) {
 
     if (completedSubjects.isEmpty() || targetCredits <= 0) {
       return Collections.emptySet();
@@ -274,8 +279,7 @@ public class LearningPathBaselineSelectionService {
   }
 
   private List<SubjectCandidate> selectCandidatesForCredits(
-      List<SubjectCandidate> sectionCandidates,
-      int targetCredits,
+      List<SubjectCandidate> sectionCandidates, int targetCredits,
       Map<UUID, Double> scoreBySubjectId) {
 
     if (sectionCandidates.isEmpty() || targetCredits <= 0) {
@@ -309,7 +313,8 @@ public class LearningPathBaselineSelectionService {
     Map<Integer, CreditSelectionState> finalStates = states;
 
     Optional<Integer> exactCredits = finalStates.keySet().stream().filter(c -> c == targetCredits).findFirst();
-    int selectedCredits = exactCredits.orElseGet(() -> finalStates.keySet().stream()
+    int selectedCredits = exactCredits.orElseGet(() -> finalStates.keySet()
+        .stream()
         .filter(c -> c >= targetCredits)
         .min(Integer::compareTo)
         .orElse(finalStates.keySet().stream().max(Integer::compareTo).orElse(0)));
@@ -328,16 +333,15 @@ public class LearningPathBaselineSelectionService {
     Integer timeOrder = goal.getCompletedOnTime();
 
     boolean focusOccupation =
-        occupationOrder != null && (gpaOrder == null || occupationOrder < gpaOrder)
-            && (timeOrder == null || occupationOrder < timeOrder);
+        occupationOrder != null && (gpaOrder == null || occupationOrder < gpaOrder) && (timeOrder == null || occupationOrder < timeOrder);
 
     if (focusOccupation) {
-      return goal.getTargetOccupationCode() != null
-          ? buildOccupationScoreMap(candidates, goal.getTargetOccupationCode())
-          : buildAverageOccupationScoreMap(candidates);
+      return goal.getTargetOccupationCode() != null ? buildOccupationScoreMap(
+          candidates, goal.getTargetOccupationCode()) : buildAverageOccupationScoreMap(candidates);
     }
 
-    return buildPredictedGradeScoreMap(candidates, goal.getStudentId());
+    int mainCreditCap = IntensityCreditCapSupport.mainSemesterCap(goal.getPrefMainSemLearnIntensity());
+    return buildPredictedGradeScoreMap(candidates, goal.getStudentId(), mainCreditCap);
   }
 
   private int calculatePriority1(Integer recommendedYear, Integer recommendedSemester) {
@@ -363,8 +367,7 @@ public class LearningPathBaselineSelectionService {
 
     Map<UUID, BigDecimal> valuationMap = valuations.stream()
         .collect(Collectors.toMap(
-            SubjectOccupationValuation::getSubjectId,
-            SubjectOccupationValuation::getTotalValue,
+            SubjectOccupationValuation::getSubjectId, SubjectOccupationValuation::getTotalValue,
             (v1, v2) -> v1.compareTo(v2) > 0 ? v1 : v2));
 
     Map<UUID, Double> scores = new HashMap<>();
@@ -400,12 +403,13 @@ public class LearningPathBaselineSelectionService {
     return scores;
   }
 
-  private Map<UUID, Double> buildPredictedGradeScoreMap(List<SubjectCandidate> electives, UUID studentId) {
+  private Map<UUID, Double> buildPredictedGradeScoreMap(
+      List<SubjectCandidate> electives, UUID studentId, int mainCreditCap) {
     List<BatchGradePredictionRequest.GradePredictionItem> items = electives.stream()
         .map(e -> BatchGradePredictionRequest.GradePredictionItem.builder()
             .studentId(studentId)
             .subjectId(e.getSubjectId())
-            .plannedSemesterCredits(17)
+            .plannedSemesterCredits(mainCreditCap)
             .build())
         .toList();
 
@@ -417,12 +421,9 @@ public class LearningPathBaselineSelectionService {
         return Collections.emptyMap();
       }
 
-      return response.getPredictions()
-          .stream()
-          .collect(Collectors.toMap(
-              GradePredictionResponse::getSubjectId,
-              pred -> pred.getCorrectedPredictedGrade() != null ? pred.getCorrectedPredictedGrade() : 0.0,
-              Math::max));
+      return response.getPredictions().stream().collect(Collectors.toMap(
+          GradePredictionResponse::getSubjectId,
+          pred -> pred.getCorrectedPredictedGrade() != null ? pred.getCorrectedPredictedGrade() : 0.0, Math::max));
     } catch (Exception e) {
       log.warn("Predicted grade scoring failed, fallback to zero scores: {}", e.getMessage());
       return Collections.emptyMap();
@@ -449,8 +450,7 @@ public class LearningPathBaselineSelectionService {
     if (sectionName == null) {
       return "";
     }
-    String normalized = Normalizer.normalize(sectionName, Normalizer.Form.NFD)
-        .replaceAll("\\p{M}", "");
+    String normalized = Normalizer.normalize(sectionName, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     return normalized.trim().toLowerCase(Locale.ROOT);
   }
 

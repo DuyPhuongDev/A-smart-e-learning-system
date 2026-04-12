@@ -68,6 +68,14 @@ public interface CourseManagementClient {
     List<SubjectPrerequisiteMapResponse> getPrerequisiteMapping();
 
     /**
+     * Get all semesters.
+     * Used by learning-service to compute SubjectSemesterMetrics for all (subject, semester) pairs.
+     * Calls: GET /api/courses/internal/semesters
+     */
+    @GetMapping("/semesters")
+    List<SemesterResponse> getAllSemesters();
+
+    /**
      * Get the currently active semester based on the current date.
      * Calls: GET /api/courses/internal/semesters/current
      */
@@ -80,4 +88,13 @@ public interface CourseManagementClient {
      */
     @GetMapping("/semesters/{id}")
     SemesterResponse getSemesterById(@PathVariable("id") UUID semesterId);
+
+    /**
+     * Get all subject IDs in the database.
+     * Used to pre-compute SubjectSemesterMetrics for all subjects,
+     * including those with no enrollment data.
+     * Calls: GET /api/courses/internal/subjects/ids
+     */
+    @GetMapping("/subjects/ids")
+    List<UUID> getAllSubjectIds();
 }

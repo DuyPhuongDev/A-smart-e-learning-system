@@ -34,7 +34,7 @@ public class SemesterCalculationService {
     try {
       List<SemesterResponse> remainingSemesters = courseManagementClient.getRemainingSemesters(studentId);
       if (remainingSemesters == null || remainingSemesters.isEmpty()) {
-        return new SemesterAvailability(0, 0);
+        return new SemesterAvailability(0, 0, List.of());
       }
 
       List<SemesterResponse> sortedBySemKey = remainingSemesters.stream()
@@ -67,18 +67,25 @@ public class SemesterCalculationService {
           "Calculated available semesters for studentId={}: main={}, summer={}, total={}", studentId,
           availableMainSemesters, availableSummerSemesters, scopedSemesters.size());
 
-      return new SemesterAvailability(availableMainSemesters, availableSummerSemesters);
+      return new SemesterAvailability(availableMainSemesters, availableSummerSemesters, scopedSemesters);
 
     } catch (Exception e) {
       log.error("Failed to calculate available semesters for studentId={}: {}", studentId, e.getMessage());
       // Conservative fallback for resiliency when semester service is unavailable.
-      return new SemesterAvailability(8, 0);
+      return new SemesterAvailability(8, 0, List.of());
     }
   }
 
-  public record SemesterAvailability(int availableMainSemesters, int availableSummerSemesters) {
+  public record SemesterAvailability(
+      int availableMainSemesters,
+      int availableSummerSemesters,
+      List<SemesterResponse> sortedRemainingSemesters) {
     public int totalSemesters() {
       return availableMainSemesters + availableSummerSemesters;
+    }
+
+    public int availableMainSemestersOnly() {
+      return availableMainSemesters;
     }
   }
 }

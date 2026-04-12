@@ -353,8 +353,9 @@ public class StudentProgressServiceImpl implements StudentProgressService {
     Integer year = null;
     if (curriculum.getIntakeYear() != null && curriculum.getIntakeYear().getYearCode() != null) {
       try {
-        year = Integer.parseInt(curriculum.getIntakeYear().getYearCode().split("-")[0]);
-      } catch (Exception e) {
+        int parsedYear = Integer.parseInt(curriculum.getIntakeYear().getYearCode().trim());
+        year = parsedYear < 100 ? parsedYear + 2000 : parsedYear;
+      } catch (NumberFormatException e) {
         log.warn("Failed to parse year from yearCode: {}", curriculum.getIntakeYear().getYearCode());
       }
     }
@@ -534,7 +535,6 @@ public class StudentProgressServiceImpl implements StudentProgressService {
 
       case PASS_FAIL:
         // For pass/fail subjects, use isPassed from enrollment
-        System.out.println("Enrollment isPassed: " + enrollment.getId() + enrollment.getIsPassed());
         return enrollment.getIsPassed();
 
       case BOTH:
@@ -645,11 +645,7 @@ public class StudentProgressServiceImpl implements StudentProgressService {
     if (yearCode == null || yearCode.isBlank()) {
       return null;
     }
-    String normalized = yearCode.trim();
-    if (normalized.length() >= 4) {
-      return normalized.substring(2, 4);
-    }
-    return normalized;
+    return yearCode.trim();
   }
 
   private record SubjectProgressMeta(

@@ -59,16 +59,4 @@ public class SubjectSemesterMetricsController {
     List<SubjectSemesterMetrics> history = metricsService.getMetricsHistoryForSubject(subjectId);
     return ResponseEntity.ok(history);
   }
-
-  /**
-   * Compute metrics for a specific subject and semester on-demand.
-   */
-  @PostMapping("/subject/{subjectId}/semester/{semesterId}/compute")
-  public ResponseEntity<SubjectSemesterMetrics> computeMetrics(
-      @PathVariable UUID subjectId,
-      @PathVariable UUID semesterId) {
-
-    SubjectSemesterMetrics metrics = metricsService.getOrComputeMetrics(subjectId, semesterId);
-    return ResponseEntity.ok(metrics);
-  }
 }

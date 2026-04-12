@@ -23,11 +23,13 @@ public class GoalProbabilityAnalysisService {
         UUID studentId,
         String specializationId,
         List<UUID> remainingSubjectIds,
+        Map<UUID, Integer> remainingSubjectCredits,
         BigDecimal currentGpa,
         int earnedCredits,
         int remainingCredits,
         BigDecimal targetGpa,
-        int remainingSemesters
+        int remainingSemesters,
+        Integer mainCreditCap
     ) {
         log.info("Analyzing probability for student {}", studentId);
 
@@ -36,10 +38,12 @@ public class GoalProbabilityAnalysisService {
             return predictiveModelAnalyzer.analyze(
                 studentId,
                 remainingSubjectIds,
+                remainingSubjectCredits,
                 currentGpa,
                 earnedCredits,
                 remainingCredits,
-                targetGpa
+                targetGpa,
+                mainCreditCap
             );
         } else {
             log.info("Using historical data analyzer (earned credits: {})", earnedCredits);

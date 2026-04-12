@@ -10,6 +10,6 @@ import java.util.UUID;
 @Repository
 public interface LearningPathSectionRepository extends JpaRepository<LearningPathSection, UUID> {
 
-  List<LearningPathSection> findByLearningPathIdOrderBySemesterOrderAsc(UUID learningPathId);
+  List<LearningPathSection> findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(UUID learningPathId);
 }
 

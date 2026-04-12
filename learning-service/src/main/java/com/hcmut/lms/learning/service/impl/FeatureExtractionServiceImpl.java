@@ -49,6 +49,11 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
   private volatile long prereqCacheTimestamp = 0;
 
   @Override
+  public boolean hasGradedHistory(UUID studentId) {
+    return enrollmentRepository.existsGradedByStudentId(studentId);
+  }
+
+  @Override
   public Map<String, Object> extractFeatures(UUID studentId,
                                               UUID subjectId,
                                               Integer plannedSemesterCredits) {
@@ -188,6 +193,9 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
     }
 
     // Relative course features (prerequisites + recommendations)
+    // Note: Only prior enrollments are considered (semKey < targetSemKey), so subjects
+    // being predicted in the same batch are automatically excluded — they haven't been studied yet.
+    // If no related courses with grades are found, previous_sem_grade_avg is used as fallback.
     List<UUID> relatedSubjectIds = getRelatedSubjects(subjectId);
     boolean hasRelativeCourse = !relatedSubjectIds.isEmpty();
 

@@ -1,6 +1,7 @@
-package com.hcmut.lms.personalization.application.service.impl;
+package com.hcmut.lms.personalization.application.service.impl.learning_path;
 
 import com.hcmut.lms.personalization.application.dto.response.enums.SummerLearningIntensity;
+import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService;
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SemesterSlot;
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SubjectCandidate;
 import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
@@ -63,7 +64,9 @@ public class LearningPathGenerationService {
         semesterCalculationService.calculateAvailableSemesters(
         studentId, learningGoal.getExpectedCompletedSemester());
 
-    List<SemesterResponse> remainingSemesters = courseManagementClient.getRemainingSemesters(studentId);
+    // Reuse the already-sorted semester list from the calculation service
+    // to avoid a second API call and guarantee sorted order for the scheduler.
+    List<SemesterResponse> remainingSemesters = availability.sortedRemainingSemesters();
 
     int mainCreditCap = IntensityCreditCapSupport.mainSemesterCap(learningGoal.getPrefMainSemLearnIntensity());
     Map<UUID, Integer> preferredSummerCapBySemesterId = resolvePreferredSummerCaps(learningGoal);
@@ -72,6 +75,13 @@ public class LearningPathGenerationService {
         candidates, availability,
         remainingSemesters, mainCreditCap, preferredSummerCapBySemesterId,
         new HashSet<>(progressData.completedSubjectIds()));
+
+    // Remove empty semester slots (no subjects assigned) — higher intensity packs
+    // subjects into earlier semesters, leaving trailing empty slots that should not
+    // be persisted as learning path sections.
+    schedule = schedule.stream()
+        .filter(slot -> slot.getSubjects() != null && !slot.getSubjects().isEmpty())
+        .toList();
 
     ValidationResult validationResult = validateSchedule(learningGoal, candidates, schedule, progressData);
 
@@ -131,11 +141,13 @@ public class LearningPathGenerationService {
     }
 
     List<UUID> remainingSubjectIds = candidates.stream().map(SubjectCandidate::getSubjectId).toList();
-    int totalSemesters = schedule.size();
+    // Use main semester count for chain validation since summer semesters
+    // have lower credit caps and may not offer the required prerequisite subjects.
+    long mainSemesters = schedule.stream().filter(s -> !Boolean.TRUE.equals(s.getIsSummer())).count();
 
     PrerequisiteChainResult chainResult = prerequisiteChainValidatorService.validate(
         goal,
-        progressData.completedSubjectIds(), remainingSubjectIds, totalSemesters);
+        progressData.completedSubjectIds(), remainingSubjectIds, (int) mainSemesters);
 
     if (!chainResult.passed()) {
       return new ValidationResult(false, chainResult.reason(), "high");

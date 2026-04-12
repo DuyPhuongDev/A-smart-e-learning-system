@@ -1,4 +1,4 @@
-package com.hcmut.lms.personalization.application.service.impl;
+package com.hcmut.lms.personalization.application.service.impl.learning_path;
 
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SemesterSlot;
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SubjectCandidate;
@@ -43,7 +43,10 @@ public class LearningPathPersistenceService {
     int scheduledCredits = schedule.stream().mapToInt(SemesterSlot::getTotalCredits).sum();
     int completedCredits = Math.max(0, effectiveCompletedCredits);
     int totalCredits = scheduledCredits + completedCredits;
-    BigDecimal predictedGpa = calculatePredictedGpa(schedule, studentId);
+
+    // Single batch prediction call — reuse for both per-subject grades and GPA
+    Map<UUID, Double> predictedGradesBySubjectId = buildPredictedGradesMap(schedule, studentId);
+    BigDecimal predictedGpa = calculatePredictedGpaFromMap(schedule, predictedGradesBySubjectId);
 
     LearningPath path = LearningPath.builder()
         .studentId(studentId)
@@ -60,14 +63,15 @@ public class LearningPathPersistenceService {
     LearningPath savedPath = learningPathRepository.save(path);
     log.info("Saved learning path with id={}", savedPath.getLearningPathId());
 
-    persistSectionsAndSubjects(savedPath, schedule, progressData, studentId);
+    persistSectionsAndSubjects(savedPath, schedule, progressData, predictedGradesBySubjectId);
 
     return savedPath;
   }
 
   private void persistSectionsAndSubjects(
       LearningPath path, List<SemesterSlot> schedule,
-      StudentProgressDataService.StudentProgressData progressData, UUID studentId) {
+      StudentProgressDataService.StudentProgressData progressData,
+      Map<UUID, Double> predictedGradesBySubjectId) {
     log.info("Persisting sections and subjects for path={}", path.getLearningPathId());
 
     List<LearningPathSection> sections = new ArrayList<>();
@@ -98,11 +102,34 @@ public class LearningPathPersistenceService {
     }
 
     int completedSectionCount = completedSections.size();
-    int completedSemesterOrderOffset = completedSections.stream()
-        .map(Map.Entry::getValue)
-        .mapToInt(this::resolveCompletedSemesterOrder)
-        .max()
-        .orElse(0);
+    // Use count of completed sections as offset rather than max semesterOrder.
+    // This avoids gaps when completed semesterOrders are non-contiguous
+    // (e.g., [1, 2, 10] would create an offset of 10 instead of the intended 3).
+    int completedSemesterOrderOffset = completedSectionCount;
+
+    // Build academicYearOrder map starting from completed sections' academic years,
+    // so that scheduled semesters sharing an academicYearId with completed sections
+    // reuse the same academicYearOrder (e.g., summer HK233 shares year with HK231/HK232).
+    // Then extend for new academic years in the schedule with incrementing orders.
+    Map<UUID, Integer> academicYearOrderByAcademicYearId = new LinkedHashMap<>();
+    for (Map.Entry<CompletedSectionKey, List<StudentProgressDataService.CompletedSubjectDetail>> completedSection : completedSections) {
+      UUID academicYearId = completedSection.getKey().academicYearId();
+      int order = resolveCompletedAcademicYearOrder(completedSection.getValue());
+      if (!academicYearOrderByAcademicYearId.containsKey(academicYearId)) {
+        academicYearOrderByAcademicYearId.put(academicYearId, order);
+      }
+    }
+
+    int nextYearOrder = academicYearOrderByAcademicYearId.values().stream()
+        .max(Integer::compareTo)
+        .orElse(0) + 1;
+    for (SemesterSlot slot : schedule) {
+      SemesterResponse semesterInfo = slot.getSemesterInfo();
+      if (semesterInfo != null && semesterInfo.getAcademicYearId() != null
+          && !academicYearOrderByAcademicYearId.containsKey(semesterInfo.getAcademicYearId())) {
+        academicYearOrderByAcademicYearId.put(semesterInfo.getAcademicYearId(), nextYearOrder++);
+      }
+    }
 
     for (SemesterSlot slot : schedule) {
       SemesterResponse semesterInfo = slot.getSemesterInfo();
@@ -111,11 +138,13 @@ public class LearningPathPersistenceService {
       }
 
       int semesterOrder = slot.getSemesterOrder() + completedSemesterOrderOffset;
+      int academicYearOrder = academicYearOrderByAcademicYearId.getOrDefault(
+          semesterInfo.getAcademicYearId(), nextYearOrder - 1);
 
       LearningPathSection section = LearningPathSection.builder()
           .learningPathId(path.getLearningPathId())
           .academicYearId(semesterInfo.getAcademicYearId())
-          .academicYearOrder(((semesterOrder - 1) / 2) + 1)
+          .academicYearOrder(academicYearOrder)
           .semesterId(semesterInfo.getId())
           .semesterOrder(semesterOrder)
           .totalCredits(slot.getTotalCredits())
@@ -163,14 +192,13 @@ public class LearningPathPersistenceService {
       }
     }
 
-    Map<UUID, Double> predictedGradesBySubjectId = buildPredictedGradesMap(schedule, studentId);
-
     for (int i = 0; i < schedule.size(); i++) {
       SemesterSlot slot = schedule.get(i);
       LearningPathSection section = savedSections.get(i + completedSectionCount);
 
+      int studyOrderIndex = 1;
       for (SubjectCandidate candidate : slot.getSubjects()) {
-        Double predictedGrade = predictedGradesBySubjectId.getOrDefault(candidate.getSubjectId(), 3.0);
+        Double predictedGrade = predictedGradesBySubjectId.getOrDefault(candidate.getSubjectId(), DEFAULT_PREDICTED_GRADE_4PT);
 
         LearningPathSubject subject = LearningPathSubject.builder()
             .learningPathId(path.getLearningPathId())
@@ -185,10 +213,12 @@ public class LearningPathPersistenceService {
             .importanceScore(BigDecimal.valueOf(safePriority2(candidate)))
             .prerequisitesGraph(buildPrerequisiteGraph(candidate))
             .isCompleted(false)
+            .studyOrder(studyOrderIndex)
             .predictedGrade(BigDecimal.valueOf(predictedGrade).setScale(2, RoundingMode.HALF_UP))
             .build();
 
         allSubjects.add(subject);
+        studyOrderIndex++;
       }
     }
 
@@ -226,6 +256,14 @@ public class LearningPathPersistenceService {
   }
 
   private Map<UUID, Double> buildPredictedGradesMap(List<SemesterSlot> schedule, UUID studentId) {
+    // Build a map of subjectId -> planned semester credits using actual schedule data
+    Map<UUID, Integer> subjectCreditsMap = new HashMap<>();
+    for (SemesterSlot slot : schedule) {
+      for (SubjectCandidate candidate : slot.getSubjects()) {
+        subjectCreditsMap.putIfAbsent(candidate.getSubjectId(), slot.getTotalCredits());
+      }
+    }
+
     List<UUID> subjectIds = schedule.stream()
         .flatMap(slot -> slot.getSubjects().stream())
         .map(SubjectCandidate::getSubjectId)
@@ -240,7 +278,7 @@ public class LearningPathPersistenceService {
         .map(subjectId -> BatchGradePredictionRequest.GradePredictionItem.builder()
             .studentId(studentId)
             .subjectId(subjectId)
-            .plannedSemesterCredits(17)
+            .plannedSemesterCredits(subjectCreditsMap.getOrDefault(subjectId, 17))
             .build())
         .toList();
 
@@ -249,11 +287,15 @@ public class LearningPathPersistenceService {
 
       BatchGradePredictionResponse response = learningServiceClient.predictGradeBatch(request);
 
+      if (response == null || response.getPredictions() == null) {
+        return Collections.emptyMap();
+      }
+
       return response.getPredictions()
           .stream()
           .collect(Collectors.toMap(
               GradePredictionResponse::getSubjectId,
-              pred -> pred.getCorrectedPredictedGrade() != null ? pred.getCorrectedPredictedGrade() : 3.0));
+              pred -> pred.getCorrectedPredictedGrade() != null ? pred.getCorrectedPredictedGrade() : DEFAULT_PREDICTED_GRADE_4PT));
     } catch (Exception e) {
       log.warn("Failed to fetch predicted grades: {}", e.getMessage());
       return Collections.emptyMap();
@@ -266,54 +308,23 @@ public class LearningPathPersistenceService {
     return BigDecimal.valueOf(avgPriority / 2.0).setScale(2, RoundingMode.HALF_UP);
   }
 
-  private BigDecimal calculatePredictedGpa(List<SemesterSlot> schedule, UUID studentId) {
-    List<UUID> allSubjectIds = schedule.stream()
-        .flatMap(slot -> slot.getSubjects().stream())
-        .map(SubjectCandidate::getSubjectId)
-        .toList();
+  private static final double DEFAULT_PREDICTED_GRADE_4PT = 2.5;
 
-    if (allSubjectIds.isEmpty()) {
-      return BigDecimal.valueOf(3.0).setScale(2, RoundingMode.HALF_UP);
-    }
+  private BigDecimal calculatePredictedGpaFromMap(List<SemesterSlot> schedule, Map<UUID, Double> gradeMap) {
+    double totalWeightedGrade = 0.0;
+    int totalCredits = 0;
 
-    List<BatchGradePredictionRequest.GradePredictionItem> items = allSubjectIds.stream()
-        .map(subjectId -> BatchGradePredictionRequest.GradePredictionItem.builder()
-            .studentId(studentId)
-            .subjectId(subjectId)
-            .plannedSemesterCredits(17)
-            .build())
-        .toList();
-
-    BatchGradePredictionRequest request = BatchGradePredictionRequest.builder().predictions(items).build();
-
-    try {
-      BatchGradePredictionResponse response = learningServiceClient.predictGradeBatch(request);
-
-      double totalWeightedGrade = 0.0;
-      int totalCredits = 0;
-
-      Map<UUID, Double> gradeMap = response.getPredictions()
-          .stream()
-          .collect(Collectors.toMap(
-              GradePredictionResponse::getSubjectId,
-              pred -> pred.getCorrectedPredictedGrade() != null ? pred.getCorrectedPredictedGrade() : 7.0));
-
-      for (SemesterSlot slot : schedule) {
-        for (SubjectCandidate candidate : slot.getSubjects()) {
-          double grade = gradeMap.getOrDefault(candidate.getSubjectId(), 7.0);
-          int credits = safeCredits(candidate);
-          totalWeightedGrade += grade * credits;
-          totalCredits += credits;
-        }
+    for (SemesterSlot slot : schedule) {
+      for (SubjectCandidate candidate : slot.getSubjects()) {
+        double grade = gradeMap.getOrDefault(candidate.getSubjectId(), DEFAULT_PREDICTED_GRADE_4PT);
+        int credits = safeCredits(candidate);
+        totalWeightedGrade += grade * credits;
+        totalCredits += credits;
       }
-
-      double gpa = totalCredits > 0 ? totalWeightedGrade / totalCredits : 3.0;
-      return BigDecimal.valueOf(gpa).setScale(2, RoundingMode.HALF_UP);
-
-    } catch (Exception e) {
-      log.warn("Failed to calculate predicted GPA, using default: {}", e.getMessage());
-      return BigDecimal.valueOf(3.0).setScale(2, RoundingMode.HALF_UP);
     }
+
+    double gpa = totalCredits > 0 ? totalWeightedGrade / totalCredits : DEFAULT_PREDICTED_GRADE_4PT;
+    return BigDecimal.valueOf(gpa).setScale(2, RoundingMode.HALF_UP);
   }
 
   private List<PrerequisiteNode> buildPrerequisiteGraph(SubjectCandidate candidate) {

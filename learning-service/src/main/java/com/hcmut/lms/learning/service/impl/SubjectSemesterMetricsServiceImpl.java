@@ -2,6 +2,7 @@ package com.hcmut.lms.learning.service.impl;
 
 import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
+import com.hcmut.lms.learning.client.dto.SemesterResponse;
 import com.hcmut.lms.learning.entity.enrollment.Enrollment;
 import com.hcmut.lms.learning.entity.semester.GradeSemesterMetrics;
 import com.hcmut.lms.learning.entity.subject.SubjectSemesterMetrics;
@@ -41,78 +42,135 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
   public int computeAndSaveAllMetrics() {
     log.info("Starting subject semester metrics computation");
 
+    // Step 1: Load enrollment data (may be empty — still compute Level 2/3 defaults)
     List<Enrollment> gradedEnrollments = enrollmentRepository.findByFinalGradeIsNotNull();
-    if (gradedEnrollments.isEmpty()) {
-      log.warn("No graded enrollments found. Aborting metrics computation.");
-      return 0;
-    }
     log.info("Loaded {} graded enrollments", gradedEnrollments.size());
 
     Map<UUID, ClassSectionDatasetResponse> classMetaMap = fetchClassMetadata(gradedEnrollments);
-
     List<EnrichedEnrollment> enriched = buildEnrichedEnrollments(gradedEnrollments, classMetaMap);
-    if (enriched.isEmpty()) {
-      log.warn("No enrollments could be enriched with class metadata. Aborting.");
-      return 0;
-    }
     log.info("Enriched {} enrollments successfully", enriched.size());
 
-    // Build subject index for O(1) window filtering
+    // Step 2: Build subject grade index for O(1) window filtering
     Map<UUID, List<SubjectGrade>> gradesBySubject = buildSubjectGradeIndex(enriched);
     log.info("Built grade index for {} subjects", gradesBySubject.size());
 
-    // Get unique (subject, semester) pairs with their semKeys
-    Map<SubjectSemKey, Integer> semKeyBySubjectSem = buildSemKeyLookup(enriched);
-    log.info("Found {} unique (subject, semester) pairs", semKeyBySubjectSem.size());
+    // Step 3: Compute per-semester global statistics from enrollment data
+    Map<UUID, SemesterGlobalStats> semesterGlobalStatsFromEnrollment = computeSemesterGlobalStats(enriched);
+    log.info("Computed global statistics for {} semesters from enrollment data", semesterGlobalStatsFromEnrollment.size());
 
-    // Compute per-semester global statistics (median, mean, sample count)
-    Map<UUID, SemesterGlobalStats> semesterGlobalStats = computeSemesterGlobalStats(enriched);
-    log.info("Computed global statistics for {} semesters", semesterGlobalStats.size());
+    // Step 4: Get ALL subjects and ALL semesters from course-management-service
+    List<UUID> allSubjectIds;
+    try {
+      allSubjectIds = courseManagementClient.getAllSubjectIds();
+      log.info("Fetched {} subject IDs from course-management-service", allSubjectIds.size());
+    } catch (Exception e) {
+      log.error("Failed to fetch all subject IDs. Cannot compute metrics. Aborting: {}", e.getMessage());
+      return 0;
+    }
 
-    // Persist semester global statistics for on-demand lookups
+    List<SemesterResponse> allSemesters;
+    try {
+      allSemesters = courseManagementClient.getAllSemesters();
+      log.info("Fetched {} semesters from course-management-service", allSemesters.size());
+    } catch (Exception e) {
+      log.error("Failed to fetch all semesters. Cannot compute metrics. Aborting: {}", e.getMessage());
+      return 0;
+    }
+
+    // Filter: only semesters from the past up to the current (present) semester.
+    // Future semesters have no graded data and should not have metrics.
+    int currentSemKey = Integer.MAX_VALUE;
+    try {
+      SemesterResponse currentSemester = courseManagementClient.getCurrentSemester();
+      if (currentSemester != null && currentSemester.getSemKey() != null) {
+        currentSemKey = currentSemester.getSemKey();
+      }
+    } catch (Exception e) {
+      log.warn("Failed to get current semester for filtering. Will compute for all semesters: {}", e.getMessage());
+    }
+
+    final int maxSemKey = currentSemKey;
+    List<SemesterResponse> semestersToCompute = allSemesters.stream()
+        .filter(s -> s.getSemKey() != null && s.getSemKey() <= maxSemKey)
+        .sorted(Comparator.comparingInt(SemesterResponse::getSemKey))
+        .toList();
+
+    log.info("Filtered to {} semesters (past to present, semKey <= {})", semestersToCompute.size(), maxSemKey);
+
+    if (allSubjectIds.isEmpty() || semestersToCompute.isEmpty()) {
+      log.warn("No subjects or semesters found. Aborting metrics computation.");
+      return 0;
+    }
+
+    // Step 5: Build semester global stats for all semesters to compute.
+    // Semesters with enrollment data use computed stats; others use defaults.
+    Map<UUID, SemesterGlobalStats> semesterGlobalStats = new HashMap<>();
+    for (SemesterResponse semester : semestersToCompute) {
+      int semKey = semester.getSemKey() != null ? semester.getSemKey() : 0;
+      semesterGlobalStats.put(
+          semester.getId(),
+          semesterGlobalStatsFromEnrollment.getOrDefault(
+              semester.getId(),
+              new SemesterGlobalStats(DEFAULT_SEMESTER_MEDIAN, DEFAULT_SEMESTER_MEAN,
+                  DEFAULT_SEMESTER_SAMPLE_COUNT, semKey)));
+    }
+
+    // Persist semester global statistics
     saveSemesterGlobalMetrics(semesterGlobalStats);
 
-    // Pre-load historical metrics for fallback chain
-    Map<UUID, List<SubjectSemesterMetrics>> historicalMetricsBySubject = loadAllHistoricalMetrics();
+    // Step 6: Compute global subject baselines from enrollment data
     Map<UUID, GlobalSubjectBaseline> globalBaselines = computeGlobalBaselines(enriched);
     log.info("Computed global baselines for {} subjects", globalBaselines.size());
 
+    // Step 7: Build historical metrics map from scratch.
+    // We compute in chronological order and add each computed metric to this map,
+    // so Level 1 carry-forward always uses the freshest data from earlier semesters.
+    Map<UUID, List<SubjectSemesterMetrics>> historicalMetricsBySubject = new HashMap<>();
+
+    // Step 8: Compute metrics for ALL (subject, semester) pairs in chronological order.
+    // This ensures Level 1 carry-forward uses newly computed metrics from earlier semesters.
     List<SubjectSemesterMetrics> metricsToSave = new ArrayList<>();
     int errorCount = 0;
     int fallbackCount = 0;
+    int totalPairs = allSubjectIds.size() * semestersToCompute.size();
+    log.info("Computing metrics for {} subject-semester pairs ({} subjects × {} semesters)",
+        totalPairs, allSubjectIds.size(), semestersToCompute.size());
 
-    for (Map.Entry<SubjectSemKey, Integer> entry : semKeyBySubjectSem.entrySet()) {
-      try {
-        SubjectSemKey key = entry.getKey();
-        int currentSemKey = entry.getValue();
+    for (SemesterResponse semester : semestersToCompute) {
+      UUID semesterId = semester.getId();
+      int semKey = semester.getSemKey() != null ? semester.getSemKey() : 0;
+      SemesterGlobalStats semStats = semesterGlobalStats.get(semesterId);
 
-        // Get all grades for this subject from 3-year window
-        List<Double> windowGrades = extractWindowGrades(gradesBySubject.get(key.subjectId()), currentSemKey);
+      for (UUID subjectId : allSubjectIds) {
+        try {
+          List<Double> windowGrades = extractWindowGrades(
+              gradesBySubject.get(subjectId), semKey);
 
-        // Get semester global stats for shrinkage smoothing
-        SemesterGlobalStats semStats = semesterGlobalStats.getOrDefault(
-            key.semesterId(), new SemesterGlobalStats(DEFAULT_SEMESTER_MEDIAN, DEFAULT_SEMESTER_MEAN, DEFAULT_SEMESTER_SAMPLE_COUNT, currentSemKey));
+          SubjectSemesterMetrics metrics = computeMetricsWithFallback(
+              subjectId, semesterId, semKey, windowGrades, semStats,
+              historicalMetricsBySubject, globalBaselines);
 
-        SubjectSemesterMetrics metrics = computeMetricsWithFallback(
-            key.subjectId(), key.semesterId(), currentSemKey, windowGrades, semStats, historicalMetricsBySubject, globalBaselines);
+          if (metrics.getIsFallback()) {
+            fallbackCount++;
+          }
 
-        if (metrics.getIsFallback()) {
-          fallbackCount++;
+          metricsToSave.add(metrics);
+
+          // Add to historical map so Level 1 carry-forward can find it
+          // for later semesters of the same subject
+          historicalMetricsBySubject.computeIfAbsent(subjectId, k -> new ArrayList<>()).add(metrics);
+        } catch (Exception e) {
+          log.warn("Metrics computation failed for subjectId={}, semesterId={}: [{}] {}",
+              subjectId, semesterId, e.getClass().getSimpleName(), e.getMessage());
+          errorCount++;
         }
-
-        metricsToSave.add(metrics);
-      } catch (Exception e) {
-        log.warn(
-            "Metrics computation failed for subjectId={}, semesterId={}: [{}] {}", entry.getKey().subjectId(),
-            entry.getKey().semesterId(), e.getClass().getSimpleName(), e.getMessage());
-        errorCount++;
       }
     }
 
+    // Step 9: Batch save all metrics
     saveBatch(metricsToSave);
-    log.info(
-        "Subject semester metrics computation complete: success={}, fallback={}, errors={}", metricsToSave.size(),
-        fallbackCount, errorCount);
+    log.info("Subject semester metrics computation complete: total={}, fallback={}, errors={}",
+        metricsToSave.size(), fallbackCount, errorCount);
 
     return metricsToSave.size();
   }
@@ -220,18 +278,6 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
     return left;
   }
 
-  private Map<SubjectSemKey, Integer> buildSemKeyLookup(List<EnrichedEnrollment> enriched) {
-    return enriched.stream()
-        .collect(Collectors.toMap(
-            e -> new SubjectSemKey(e.subjectId(), e.semesterId()), EnrichedEnrollment::semKey,
-            (existing, replacement) -> existing));
-  }
-
-  private Map<UUID, List<SubjectSemesterMetrics>> loadAllHistoricalMetrics() {
-    List<SubjectSemesterMetrics> allMetrics = metricsRepository.findAll();
-    return allMetrics.stream().collect(Collectors.groupingBy(SubjectSemesterMetrics::getSubjectId));
-  }
-
   private SubjectSemesterMetrics computeMetricsWithFallback(
       UUID subjectId, UUID semesterId, int semKey, List<Double> windowGrades,
       SemesterGlobalStats semStats,
@@ -273,16 +319,15 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
           .build();
     }
 
-    // Level 1: Temporal Carry-Forward — use most recent semester by semKey, not createdAt
-    // semKey reflects actual semester chronology; createdAt may not if metrics were recomputed out of order
+    // Level 1: Temporal Carry-Forward — use the most recent metric from a STRICTLY EARLIER semester.
+    // Filter: semKey < current semKey prevents circular carry-forward from the same semester
+    // and ensures the carry-forward reflects genuinely prior data.
     List<SubjectSemesterMetrics> subjectMetrics = historicalMetricsBySubject.get(subjectId);
     if (subjectMetrics != null && !subjectMetrics.isEmpty()) {
       SubjectSemesterMetrics mostRecent = subjectMetrics.stream()
-          .filter(m -> m.getSemKey() != null)
+          .filter(m -> m.getSemKey() != null && m.getSemKey() < semKey)
           .max(Comparator.comparingInt(SubjectSemesterMetrics::getSemKey))
-          .orElse(subjectMetrics.stream()
-              .max(Comparator.comparing(SubjectSemesterMetrics::getCreatedAt))
-              .orElse(null));
+          .orElse(null);
       if (mostRecent != null) {
         int originalSampleCount = mostRecent.getSampleCount() != null ? mostRecent.getSampleCount() : 0;
         return createFallbackMetrics(
@@ -314,170 +359,6 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
         subjectId, semesterId, semKey, SubjectSemesterMetrics.DEFAULT_MEAN_GRADE,
         SubjectSemesterMetrics.DEFAULT_STD_DEV, 0, true, 3,
         semStats.median(), semStats.mean(), semStats.sampleCount(), smoothedMedian4pt);
-  }
-
-  @Override
-  public SubjectSemesterMetrics computeMetricsForSubjectSemester(UUID subjectId, UUID semesterId) {
-    // Optimized: Query only relevant classes and enrollments for this subject
-    log.debug("Computing metrics for subjectId={}, semesterId={}", subjectId, semesterId);
-
-    // Get current semester info for semKey
-    SemesterGlobalStats semStats = fetchSemesterStats(semesterId);
-    int currentSemKey = semStats.semKey();
-
-    // Query only class sections for this subject in the 3-year window
-    List<ClassSectionDatasetResponse> subjectClasses = fetchSubjectClassesInWindow(
-        subjectId, currentSemKey);
-
-    if (subjectClasses.isEmpty()) {
-      log.warn("No class sections found for subjectId={} in window", subjectId);
-    }
-
-    // Get enrollments only for these specific classes
-    List<UUID> classIds = subjectClasses.stream()
-        .map(ClassSectionDatasetResponse::getClassId)
-        .toList();
-
-    List<Double> windowGrades = List.of();
-    if (!classIds.isEmpty()) {
-      List<Enrollment> enrollments = enrollmentRepository.findByClassIdInAndFinalGradeIsNotNull(classIds);
-      windowGrades = enrollments.stream()
-          .map(Enrollment::getFinalGrade)
-          .toList();
-      log.debug("Found {} enrollments for subjectId={}", windowGrades.size(), subjectId);
-    }
-
-    // Load fallback data only if no real data available
-    Map<UUID, List<SubjectSemesterMetrics>> historicalMetrics = Map.of();
-    Map<UUID, GlobalSubjectBaseline> globalBaselines = Map.of();
-
-    if (windowGrades.isEmpty()) {
-      // Level 1: Only load metrics for THIS subject (not all subjects)
-      List<SubjectSemesterMetrics> subjectHistory = metricsRepository.findBySubjectIdOrderByCreatedAtAsc(subjectId);
-      historicalMetrics = Map.of(subjectId, subjectHistory);
-
-      // Level 2: Compute baseline from existing metrics records (avoids loading all enrollments)
-      GlobalSubjectBaseline baseline = computeBaselineFromMetrics(subjectId);
-      if (baseline != null) {
-        globalBaselines = Map.of(subjectId, baseline);
-      }
-    }
-
-    return computeMetricsWithFallback(subjectId, semesterId, currentSemKey, windowGrades, semStats,
-        historicalMetrics, globalBaselines);
-  }
-
-  /**
-   * Compute a subject's global baseline from its existing SubjectSemesterMetrics records.
-   * Uses weighted average of historical metrics instead of loading all enrollments.
-   * Falls back to unweighted average if sample counts are unavailable.
-   */
-  private GlobalSubjectBaseline computeBaselineFromMetrics(UUID subjectId) {
-    List<SubjectSemesterMetrics> metrics = metricsRepository.findBySubjectIdOrderByCreatedAtAsc(subjectId);
-    if (metrics.isEmpty()) {
-      return null;
-    }
-
-    // Use only real (non-fallback) metrics with sample count > 0 for the baseline
-    List<SubjectSemesterMetrics> realMetrics = metrics.stream()
-        .filter(m -> !m.getIsFallback() && m.getSampleCount() != null && m.getSampleCount() > 0)
-        .toList();
-
-    if (realMetrics.isEmpty()) {
-      return null;
-    }
-
-    // Weighted average using sample counts
-    double totalWeight = 0;
-    double weightedMeanSum = 0;
-    double weightedMedianSum = 0;
-    double avgStdDev = 0;
-    int totalSampleCount = 0;
-
-    for (SubjectSemesterMetrics m : realMetrics) {
-      int weight = m.getSampleCount();
-      weightedMeanSum += m.getMeanGrade() * weight;
-      // Approximate median from mean (smoothedMedian4pt converted back is not exact, use meanGrade)
-      weightedMedianSum += m.getMeanGrade() * weight;
-      totalSampleCount += weight;
-      totalWeight += weight;
-      avgStdDev += m.getStdDev();
-    }
-
-    double mean = weightedMeanSum / totalWeight;
-    double median = weightedMedianSum / totalWeight;
-    double stdDev = avgStdDev / realMetrics.size();
-
-    return new GlobalSubjectBaseline(mean, median, stdDev, totalSampleCount);
-  }
-
-  /**
-   * Fetch semester stats including semKey.
-   * Looks up persisted semester global stats first, falls back to closest semester by semKey,
-   * then falls back to system defaults.
-   */
-  private SemesterGlobalStats fetchSemesterStats(UUID semesterId) {
-    // Step 1: Get semKey from API (needed for window filtering)
-    int semKey = 0;
-    try {
-      var semester = courseManagementClient.getSemesterById(semesterId);
-      if (semester != null && semester.getSemKey() != null) {
-        semKey = semester.getSemKey();
-      }
-    } catch (Exception e) {
-      log.warn("Failed to fetch semester info for semesterId={}: {}", semesterId, e.getMessage());
-    }
-
-    // Step 2: Look up persisted semester global stats (exact match)
-    Optional<GradeSemesterMetrics> persisted = gradeSemesterMetricsService.findBySemesterId(semesterId);
-    if (persisted.isPresent()) {
-      GradeSemesterMetrics m = persisted.get();
-      return new SemesterGlobalStats(m.getMedianGrade(), m.getMeanGrade(), m.getSampleCount(), semKey);
-    }
-
-    // Step 3: Fallback - find closest semester by semKey proximity
-    if (semKey > 0) {
-      Optional<GradeSemesterMetrics> closest = gradeSemesterMetricsService.findClosestBySemKey(semKey);
-      if (closest.isPresent()) {
-        GradeSemesterMetrics m = closest.get();
-        log.info("Using closest semester metrics (semKey={}) for target semesterId={} (semKey={})",
-            m.getSemKey(), semesterId, semKey);
-        return new SemesterGlobalStats(m.getMedianGrade(), m.getMeanGrade(), m.getSampleCount(), semKey);
-      }
-    }
-
-    // Step 4: Final fallback - system defaults
-    log.warn("No semester metrics found for semesterId={} (semKey={}), using defaults", semesterId, semKey);
-    return new SemesterGlobalStats(DEFAULT_SEMESTER_MEDIAN, DEFAULT_SEMESTER_MEAN, DEFAULT_SEMESTER_SAMPLE_COUNT, semKey);
-  }
-
-  /**
-   * Fetch class sections for a subject within the 3-year window.
-   */
-  private List<ClassSectionDatasetResponse> fetchSubjectClassesInWindow(UUID subjectId, int currentSemKey) {
-    try {
-      return courseManagementClient.getClassSectionsBySubjectWindow(
-          com.hcmut.lms.learning.client.dto.SubjectWindowDatasetLookupRequest.builder()
-              .subjectId(subjectId)
-              .targetSemKey(currentSemKey)
-              .windowSpan(WINDOW_SPAN_COURSE)
-              .build()
-      );
-    } catch (Exception e) {
-      log.error("Failed to fetch class sections for subjectId={}: {}", subjectId, e.getMessage());
-      return List.of();
-    }
-  }
-
-  @Override
-  @Transactional
-  public SubjectSemesterMetrics getOrComputeMetrics(UUID subjectId, UUID semesterId) {
-    Optional<SubjectSemesterMetrics> existing = metricsRepository.findBySubjectIdAndSemesterId(subjectId, semesterId);
-    if (existing.isPresent()) {
-      return existing.get();
-    }
-    SubjectSemesterMetrics computed = computeMetricsForSubjectSemester(subjectId, semesterId);
-    return metricsRepository.save(computed);
   }
 
   @Override
@@ -641,9 +522,6 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
 
   private record EnrichedEnrollment(UUID studentId, UUID classId, UUID subjectId, UUID semesterId, int semKey,
                                     int credits, double finalGrade, UUID curriculumSectionId) {
-  }
-
-  private record SubjectSemKey(UUID subjectId, UUID semesterId) {
   }
 
   private record SubjectGrade(int semKey, double grade) {

@@ -203,8 +203,9 @@ public class SemesterServiceImpl implements SemesterService {
       throw new IllegalArgumentException("Invalid year code: " + yearCode);
     }
     try {
-      return Integer.parseInt(yearCode) + 2000;
-    } catch (NumberFormatException | StringIndexOutOfBoundsException ex) {
+      int parsedYear = Integer.parseInt(yearCode.trim());
+      return parsedYear < 100 ? parsedYear + 2000 : parsedYear;
+    } catch (NumberFormatException ex) {
       throw new IllegalArgumentException("Cannot parse year from code: " + yearCode);
     }
   }

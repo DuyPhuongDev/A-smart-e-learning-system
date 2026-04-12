@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -35,7 +37,34 @@ public class StudentProgressDataService {
     try {
       StudentLearningProgressResponse progressResponse = courseManagementClient.getStudentProgress(studentId);
 
+      if (progressResponse == null) {
+        log.warn("Null progress response for studentId={}, using defaults", studentId);
+        return new StudentProgressData(
+            new BigDecimal("2.50"),
+            new BigDecimal("2.00"),
+            0,
+            140,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            Map.of()
+        );
+      }
+
       StudentLearningProgressResponse.StudentLearningSummary summary = progressResponse.getSummary();
+      if (summary == null) {
+        log.warn("Null summary in progress response for studentId={}, using defaults", studentId);
+        return new StudentProgressData(
+            new BigDecimal("2.50"),
+            new BigDecimal("2.00"),
+            0,
+            140,
+            new ArrayList<>(),
+            new ArrayList<>(),
+            new ArrayList<>(),
+            Map.of()
+        );
+      }
 
       // Extract GPA and credits
       BigDecimal currentGpa10 = summary.getCumulativeGpa10() != null
@@ -52,12 +81,22 @@ public class StudentProgressDataService {
       List<UUID> completedSubjectIds = new ArrayList<>();
       List<UUID> remainingSubjectIds = new ArrayList<>();
       List<CompletedSubjectDetail> completedSubjects = new ArrayList<>();
+      Map<UUID, Integer> remainingSubjectCredits = new HashMap<>();
 
       if (progressResponse.getSections() != null) {
         for (StudentLearningProgressResponse.StudentProgressSectionItem section : progressResponse.getSections()) {
           if (section.getSubjects() != null) {
             for (StudentLearningProgressResponse.StudentProgressSubjectItem subject : section.getSubjects()) {
-              UUID subjectId = UUID.fromString(subject.getSubjectId());
+              if (subject.getSubjectId() == null || subject.getSubjectId().isBlank()) {
+                continue;
+              }
+
+              UUID subjectId;
+              try {
+                subjectId = UUID.fromString(subject.getSubjectId());
+              } catch (IllegalArgumentException ex) {
+                continue;
+              }
 
               if (Boolean.TRUE.equals(subject.getIsPassed())) {
                 completedSubjectIds.add(subjectId);
@@ -78,6 +117,8 @@ public class StudentProgressDataService {
                     .build());
               } else {
                 remainingSubjectIds.add(subjectId);
+                remainingSubjectCredits.put(subjectId,
+                    subject.getCredits() != null ? subject.getCredits() : 3);
               }
             }
           }
@@ -96,7 +137,8 @@ public class StudentProgressDataService {
           remainingCredits,
           completedSubjectIds,
           remainingSubjectIds,
-          completedSubjects
+          completedSubjects,
+          remainingSubjectCredits
       );
 
     } catch (Exception e) {
@@ -109,7 +151,8 @@ public class StudentProgressDataService {
           80,
           new ArrayList<>(),
           new ArrayList<>(),
-          new ArrayList<>()
+          new ArrayList<>(),
+          Map.of()
       );
     }
   }
@@ -124,7 +167,8 @@ public class StudentProgressDataService {
       int remainingCredits,
       List<UUID> completedSubjectIds,
       List<UUID> remainingSubjectIds,
-      List<CompletedSubjectDetail> completedSubjects
+      List<CompletedSubjectDetail> completedSubjects,
+      Map<UUID, Integer> remainingSubjectCredits
   ) {}
 
   /**

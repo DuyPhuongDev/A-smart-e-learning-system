@@ -419,13 +419,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
 
     private ClassSectionDatasetResponse toDatasetResponse(ClassSection cs) {
         String semesterCode = cs.getSemester() != null ? cs.getSemester().getSemesterCode() : null;
-        String yearCode = (cs.getSemester() != null && cs.getSemester().getAcademicYear() != null)
-                ? cs.getSemester().getAcademicYear().getYearCode() : null;
-
-        Integer semesterNumber = parseSemesterNumber(semesterCode);
-        Integer startYear = parseStartYear(yearCode);
-        Integer semKey = (startYear != null && semesterNumber != null)
-                ? startYear * 10 + semesterNumber : null;
+        Integer semKey = computeSemKey(semesterCode);
 
         // Extract curriculumSectionId from subject's first CurriculumSubject (if any)
         UUID curriculumSectionId = null;
@@ -443,36 +437,27 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                 .credits(cs.getSubject() != null ? cs.getSubject().getCredits() : null)
                 .semesterId(cs.getSemester() != null ? cs.getSemester().getId() : null)
                 .semesterCode(semesterCode)
-                .yearCode(yearCode)
-                .semesterNumber(semesterNumber)
                 .semKey(semKey)
                 .build();
     }
 
     /**
-     * Parse semester number from semesterCode, e.g. "HK1" -> 1, "HK2" -> 2.
+     * Compute semKey from semester code using the same HK(YY)(S) format as SemesterMapper.
+     * Examples: HK231 → 20231, HK242 → 20242, HK253 → 20253
      */
-    private Integer parseSemesterNumber(String semesterCode) {
-        if (semesterCode == null || semesterCode.isBlank()) return null;
-        String digits = semesterCode.replaceAll("\\D", "");
-        if (digits.isEmpty()) return null;
-        try {
-            return Integer.parseInt(digits);
-        } catch (NumberFormatException e) {
-            log.warn("Cannot parse semesterNumber from: {}", semesterCode);
+    private Integer computeSemKey(String semesterCode) {
+        if (semesterCode == null || semesterCode.length() < 5 || !semesterCode.startsWith("HK")) {
             return null;
         }
-    }
-
-    /**
-     * Parse start year from yearCode, e.g. "2023-2024" -> 2023.
-     */
-    private Integer parseStartYear(String yearCode) {
-        if (yearCode == null || yearCode.isBlank()) return null;
         try {
-            return Integer.parseInt(yearCode.split("-")[0].trim());
-        } catch (Exception e) {
-            log.warn("Cannot parse startYear from: {}", yearCode);
+            String yearPart = semesterCode.substring(2, 4);
+            String semPart = semesterCode.substring(4);
+            int yy = Integer.parseInt(yearPart);
+            int semNum = Integer.parseInt(semPart);
+            int startYear = 2000 + yy;
+            return startYear * 10 + semNum;
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            log.warn("Cannot compute semKey from semesterCode: {}", semesterCode);
             return null;
         }
     }

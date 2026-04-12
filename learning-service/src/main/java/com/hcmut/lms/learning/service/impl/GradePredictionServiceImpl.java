@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -50,7 +51,14 @@ public class GradePredictionServiceImpl implements GradePredictionService {
     double t = resolveThreshold(threshold);
     UUID currentSemesterId = getCurrentSemesterId();
 
-    // Extract features first to check if student has history
+    // Step 1: Lightweight pre-check — does the student have any graded history?
+    // Avoids expensive feature extraction for first-semester students.
+    if (!featureExtractionService.hasGradedHistory(studentId)) {
+      log.info("Student {} has no prior graded history, using SubjectSemesterMetrics", studentId);
+      return predictWithMetricsFallback(studentId, subjectId, currentSemesterId, t);
+    }
+
+    // Step 2: Student has history — extract features for ML model path.
     Map<String, Object> features = featureExtractionService.extractFeatures(
         studentId, subjectId, plannedSemesterCredits);
     log.debug("Extracted {} features", features.size());
@@ -60,32 +68,32 @@ public class GradePredictionServiceImpl implements GradePredictionService {
           formatFeaturesForLog(features));
     }
 
-    // Check if this is a first-semester student (no prior history)
-    boolean isFirstSemesterStudent = isFirstSemesterStudent(features);
-
-    if (isFirstSemesterStudent) {
-      log.info("Student {} has no prior history, using SubjectSemesterMetrics", studentId);
-
-      // Fetch SubjectSemesterMetrics for this subject and current semester
-      SubjectSemesterMetrics metrics = subjectSemesterMetricsService.getOrComputeMetrics(subjectId, currentSemesterId);
-
-      if (metrics == null || metrics.getFallbackLevel() == null || metrics.getFallbackLevel() > 1) {
-        throw new PredictionFailedException(
-            String.format("SubjectSemesterMetrics not available for first-semester student prediction: " +
-                "subjectId=%s, semesterId=%s, fallbackLevel=%s", subjectId, currentSemesterId,
-                metrics != null ? metrics.getFallbackLevel() : "null"));
-      }
-
-      PredictionResult result = predictFromSubjectMetrics(studentId, subjectId, currentSemesterId, metrics, t);
-
-      log.info(
-          "Metrics-based prediction: mean={}, std={}, P(g>={})={}", result.getRawPredictedGrade(),
-          result.getResidualStd(), t, result.getProbabilityAboveThreshold());
-
-      return gradePredictionMapper.toResponse(result);
+    // Defensive check: if all graded enrollments are in the current semester,
+    // the student effectively has no prior history for prediction purposes.
+    Integer numSemestersPrior = (Integer) features.getOrDefault("num_semesters_prior", 0);
+    if (numSemestersPrior != null && numSemestersPrior == 0) {
+      log.info("Student {} has graded enrollments but no prior semesters, using SubjectSemesterMetrics", studentId);
+      return predictWithMetricsFallback(studentId, subjectId, currentSemesterId, t);
     }
 
-    // Regular ML model path for students with history
+    // Step 3: Check subject history — only use ML model if subject has real (non-fallback) metrics.
+    // The training dataset filters out rows where subject baseline is fallback data,
+    // so the ML model was never trained on such inputs (out-of-distribution).
+    Optional<SubjectSemesterMetrics> metricsOpt = subjectSemesterMetricsService
+        .findBySubjectIdAndSemesterId(subjectId, currentSemesterId);
+
+    boolean hasSubjectHistory = metricsOpt.isPresent()
+        && !metricsOpt.get().getIsFallback()
+        && metricsOpt.get().getFallbackLevel() != null
+        && metricsOpt.get().getFallbackLevel() <= 1;
+
+    if (!hasSubjectHistory) {
+      log.info("Subject {} has no real history (fallbackLevel={}), using SubjectSemesterMetrics",
+          subjectId, metricsOpt.map(SubjectSemesterMetrics::getFallbackLevel).orElse(null));
+      return predictWithMetricsFallback(studentId, subjectId, currentSemesterId, t);
+    }
+
+    // Step 4: Both student and subject have history — use ML model.
     return runModelPrediction(studentId, subjectId, currentSemesterId, features, t);
   }
 
@@ -108,6 +116,10 @@ public class GradePredictionServiceImpl implements GradePredictionService {
 
   @Override
   public BatchGradePredictionResponse predictGradeBatch(BatchGradePredictionRequest request) {
+    // Note: Each prediction is independent. Feature extraction only uses priorEnrollments
+    // (enrollments from semesters before the current one), so subjects being predicted
+    // in the same batch are automatically excluded from relative_avg_course_grade.
+    // This is correct because batch subjects have not been studied yet.
     if (request == null || request.getPredictions() == null || request.getPredictions().isEmpty()) {
       return BatchGradePredictionResponse.builder().predictions(Collections.emptyList()).build();
     }
@@ -125,15 +137,29 @@ public class GradePredictionServiceImpl implements GradePredictionService {
   }
 
   /**
-   * Check if student has no prior enrollment history.
-   * First semester if: no prior semesters AND all GPA-related features are 0.
+   * Fallback prediction using SubjectSemesterMetrics when ML model cannot be used
+   * (first-semester student, no subject history, or insufficient data).
+   * Only accepts metrics with fallbackLevel 0 (real data) or 1 (temporal carry-forward).
    */
-  private boolean isFirstSemesterStudent(Map<String, Object> features) {
-    Integer numSemestersPrior = (Integer) features.getOrDefault("num_semesters_prior", 0);
-    Double cumulativeGradeAvg = (Double) features.getOrDefault("cumulative_grade_avg", 0.0);
-    Double previousSemGradeAvg = (Double) features.getOrDefault("previous_sem_grade_avg", 0.0);
+  private GradePredictionResponse predictWithMetricsFallback(
+      UUID studentId, UUID subjectId, UUID semesterId, double threshold) {
+    SubjectSemesterMetrics metrics = subjectSemesterMetricsService
+        .findBySubjectIdAndSemesterId(subjectId, semesterId)
+        .orElseThrow(() -> new PredictionFailedException(
+            String.format("No SubjectSemesterMetrics found for subjectId=%s, semesterId=%s. "
+                + "Run compute-all-metrics or compute-dataset first.", subjectId, semesterId)));
 
-    return numSemestersPrior != null && numSemestersPrior == 0 && cumulativeGradeAvg != null && cumulativeGradeAvg == 0.0 && previousSemGradeAvg != null && previousSemGradeAvg == 0.0;
+    if (metrics.getFallbackLevel() == null || metrics.getFallbackLevel() > 1) {
+      throw new PredictionFailedException(
+          String.format("Cannot predict grade: no reliable SubjectSemesterMetrics for " +
+              "subjectId=%s, semesterId=%s, fallbackLevel=%s", subjectId, semesterId, metrics.getFallbackLevel()));
+    }
+
+    PredictionResult result = predictFromSubjectMetrics(studentId, subjectId, semesterId, metrics, threshold);
+    log.info("Metrics-based prediction: mean={}, std={}, P(g>={})={}",
+        result.getRawPredictedGrade(), result.getResidualStd(), threshold, result.getProbabilityAboveThreshold());
+
+    return gradePredictionMapper.toResponse(result);
   }
 
   /**

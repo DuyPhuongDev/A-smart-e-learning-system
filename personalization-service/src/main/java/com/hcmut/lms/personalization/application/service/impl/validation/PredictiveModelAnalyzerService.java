@@ -18,14 +18,19 @@ public class PredictiveModelAnalyzerService {
 
   private static final double DEFAULT_STD_DEV = 0.5;
   private static final double MIN_STD_DEV_EPS = 1e-8;
+  private static final int DEFAULT_CREDITS = 3;
+  private static final int DEFAULT_MAIN_SEMESTER_CAP = 17;
 
   private final LearningServiceClient learningServiceClient;
   private final Executor taskExecutor;
 
   public Map<String, Object> analyze(
-      UUID studentId, List<UUID> remainingSubjectIds, BigDecimal currentGpa, int earnedCredits, int remainingCredits,
-      BigDecimal targetGpa) {
+      UUID studentId, List<UUID> remainingSubjectIds, Map<UUID, Integer> remainingSubjectCredits,
+      BigDecimal currentGpa, int earnedCredits, int remainingCredits,
+      BigDecimal targetGpa, Integer mainCreditCap) {
     log.info("Analyzing with predictive model for student {}", studentId);
+
+    Integer creditCap = mainCreditCap != null ? mainCreditCap : DEFAULT_MAIN_SEMESTER_CAP;
 
     try {
       List<CompletableFuture<GradePredictionResponse>> futures = new ArrayList<>();
@@ -33,7 +38,7 @@ public class PredictiveModelAnalyzerService {
         futures.add(CompletableFuture.supplyAsync(
             () -> {
               try {
-                return learningServiceClient.predictGrade(studentId, subjectId, null, null);
+                return learningServiceClient.predictGrade(studentId, subjectId, creditCap, null);
               } catch (Exception e) {
                 log.error("Failed to predict grade for subject {}: {}", subjectId, e.getMessage());
                 return null;
@@ -48,8 +53,9 @@ public class PredictiveModelAnalyzerService {
           .filter(Objects::nonNull)
           .toList();
 
-      double meanPredicted = 0.0;
-      double varianceSum = 0.0;
+      double weightedPredictedSum = 0.0;
+      double totalRemainingCredits = 0.0;
+      double varianceWeightedSum = 0.0;
       int validPredictionCount = 0;
       int nullPredictionCount = 0;
       int totalCredits = earnedCredits + remainingCredits;
@@ -58,14 +64,19 @@ public class PredictiveModelAnalyzerService {
         Double predicted = pred.getCorrectedPredictedGrade() != null ? pred.getCorrectedPredictedGrade() :
             pred.getRawPredictedGrade();
         Double stdDev = pred.getResidualStd();
+        UUID subjectId = pred.getSubjectId();
 
         if (predicted != null) {
-          meanPredicted += predicted;
-          validPredictionCount++;
+          int credits = remainingSubjectCredits.getOrDefault(subjectId, DEFAULT_CREDITS);
+          weightedPredictedSum += predicted * credits;
+          totalRemainingCredits += credits;
 
           // Some models return 0 for residual std; treat it as missing to avoid deterministic collapse.
           double effectiveStdDev = (stdDev != null && stdDev > MIN_STD_DEV_EPS) ? stdDev : DEFAULT_STD_DEV;
-          varianceSum += Math.pow(effectiveStdDev, 2);
+          // Credit-weighted variance: Var = Σ( (credits_i / totalCredits)² × σ_i² )
+          double weight = (double) credits / totalCredits;
+          varianceWeightedSum += weight * weight * effectiveStdDev * effectiveStdDev;
+          validPredictionCount++;
         } else {
           nullPredictionCount++;
         }
@@ -84,11 +95,16 @@ public class PredictiveModelAnalyzerService {
         return analysis;
       }
 
-      meanPredicted /= validPredictionCount;
+      // Credit-weighted mean of predicted grades
+      double meanPredicted = totalRemainingCredits > 0
+          ? weightedPredictedSum / totalRemainingCredits : 0.0;
 
+      // Final GPA using credit-weighted average
       double finalGpaMean =
           (currentGpa.doubleValue() * earnedCredits + meanPredicted * remainingCredits) / totalCredits;
-      double finalGpaStdDev = Math.sqrt(varianceSum) / totalCredits;
+
+      // Correct credit-weighted variance propagation
+      double finalGpaStdDev = Math.sqrt(varianceWeightedSum);
 
       double probabilityScore;
       if (finalGpaStdDev <= 0.0001) {

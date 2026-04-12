@@ -11,6 +11,7 @@ import com.hcmut.lms.personalization.application.dto.response.enums.ProbabilityM
 import com.hcmut.lms.personalization.application.dto.response.enums.ValidationCheckType;
 import com.hcmut.lms.personalization.application.service.LearningGoalService;
 import com.hcmut.lms.personalization.application.service.LearningGoalValidationService;
+import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
 import com.hcmut.lms.personalization.application.service.impl.support.IntensityParsingSupport;
 import com.hcmut.lms.personalization.application.service.impl.validation.GoalFeasibilityCheckService;
 import com.hcmut.lms.personalization.application.service.impl.validation.GoalProbabilityAnalysisService;
@@ -114,6 +115,7 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
     int remainingCredits = progressData.remainingCredits();
     List<UUID> completedSubjectIds = progressData.completedSubjectIds();
     List<UUID> remainingSubjectIds = progressData.remainingSubjectIds();
+    Map<UUID, Integer> remainingSubjectCredits = progressData.remainingSubjectCredits();
 
     CompletableFuture<FeasibilityCheckResult> feasibilityFuture = CompletableFuture.supplyAsync(
         () -> feasibilityCheckService.checkFeasibility(
@@ -136,7 +138,9 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
 
       probabilityAnalysis = probabilityAnalysisService.analyzeProbability(
           studentId, tempGoal.getSpecializationId(),
-          remainingSubjectIds, currentGpa, earnedCredits, remainingCredits, tempGoal.getTargetGpa(), totalSemesters);
+          remainingSubjectIds, remainingSubjectCredits,
+          currentGpa, earnedCredits, remainingCredits, tempGoal.getTargetGpa(),
+          totalSemesters, IntensityCreditCapSupport.mainSemesterCap(tempGoal.getPrefMainSemLearnIntensity()));
 
       probabilityScore = ((Number) probabilityAnalysis.getOrDefault("probabilityScore", 0.5)).doubleValue();
     }

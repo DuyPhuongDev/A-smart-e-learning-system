@@ -21,27 +21,6 @@ public interface SubjectSemesterMetricsService {
     int computeAndSaveAllMetrics();
 
     /**
-     * Compute metrics for a specific subject and semester.
-     * Uses 3-year window (30 semKey units) for real data.
-     * Falls back through the priority chain if no real data exists.
-     *
-     * @param subjectId The subject UUID
-     * @param semesterId The semester UUID
-     * @return Computed or fallback metrics
-     */
-    SubjectSemesterMetrics computeMetricsForSubjectSemester(UUID subjectId, UUID semesterId);
-
-    /**
-     * Get metrics for a specific subject and semester.
-     * Returns existing record if found, otherwise computes on-the-fly.
-     *
-     * @param subjectId The subject UUID
-     * @param semesterId The semester UUID
-     * @return Metrics record (existing or newly computed)
-     */
-    SubjectSemesterMetrics getOrComputeMetrics(UUID subjectId, UUID semesterId);
-
-    /**
      * Find existing metrics for a subject and semester.
      *
      * @param subjectId The subject UUID
