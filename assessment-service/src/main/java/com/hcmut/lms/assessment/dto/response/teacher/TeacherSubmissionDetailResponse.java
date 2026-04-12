@@ -17,6 +17,8 @@ public class TeacherSubmissionDetailResponse {
     private UUID assessmentId;
     private String assessmentTitle;
     private UUID studentId;
+    private String studentCode;
+    private String studentName;
     private Integer attemptNo;
     private Instant submittedAt;
     private Integer takenTime;

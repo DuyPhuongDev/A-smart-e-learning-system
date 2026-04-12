@@ -13,6 +13,8 @@ import java.util.UUID;
 @Builder
 public class TeacherGradebookRowResponse {
     private UUID studentId;
+    private String studentCode;
+    private String studentName;
     private List<TeacherGradebookCellResponse> cells;
     private BigDecimal averageScore;
 }

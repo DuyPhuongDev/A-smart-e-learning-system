@@ -14,6 +14,8 @@ import java.util.UUID;
 public class TeacherSubmissionSummaryResponse {
     private UUID attemptId;
     private UUID studentId;
+    private String studentCode;
+    private String studentName;
     private Integer attemptNo;
     private Instant submittedAt;
     private BigDecimal score;

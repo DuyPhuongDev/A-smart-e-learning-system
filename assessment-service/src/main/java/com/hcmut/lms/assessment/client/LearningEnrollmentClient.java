@@ -7,7 +7,11 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.UUID;
 
-@FeignClient(name = "learning-service", path = "/api/learning/v1/enrollment")
+@FeignClient(
+        name = "learning-service",
+        contextId = "assessmentLearningEnrollmentClient",
+        path = "/api/learning/v1/enrollment"
+)
 public interface LearningEnrollmentClient {
 
     @GetMapping("/check/{classId}")

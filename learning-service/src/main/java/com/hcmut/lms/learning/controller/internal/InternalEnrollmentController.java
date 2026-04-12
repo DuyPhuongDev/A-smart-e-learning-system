@@ -1,11 +1,16 @@
 package com.hcmut.lms.learning.controller.internal;
 
+import com.hcmut.lms.learning.dto.internal.InternalBatchClassStudentIdsRequest;
+import com.hcmut.lms.learning.dto.internal.InternalBatchClassStudentIdsResponse;
+import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
 import com.hcmut.lms.learning.service.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,6 +27,24 @@ import java.util.UUID;
 public class InternalEnrollmentController {
 
   private final EnrollmentService enrollmentService;
+
+  @GetMapping("/class/{classId}/students")
+  public ResponseEntity<List<UUID>> resolveStudentsByClass(@PathVariable UUID classId) {
+    return ResponseEntity.ok(enrollmentService.getStudentIdsByClassId(classId));
+  }
+
+  @PostMapping("/classes/students")
+  public ResponseEntity<InternalBatchClassStudentIdsResponse> resolveStudentsByClassBatch(
+      @RequestBody InternalBatchClassStudentIdsRequest request) {
+    List<InternalClassStudentIdsResponse> items =
+        enrollmentService.getStudentIdsByClassIds(request != null ? request.getClassIds() : List.of());
+    return ResponseEntity.ok(InternalBatchClassStudentIdsResponse.builder().items(items).build());
+  }
+
+  @GetMapping("/course/{courseId}/students")
+  public ResponseEntity<List<UUID>> resolveStudentsByCourse(@PathVariable UUID courseId) {
+    return ResponseEntity.ok(enrollmentService.getStudentIdsByCourseId(courseId));
+  }
 
   /**
    * Get all enrollments for a student with subject information

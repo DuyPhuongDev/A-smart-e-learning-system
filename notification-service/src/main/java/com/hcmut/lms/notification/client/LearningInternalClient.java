@@ -14,12 +14,12 @@ import java.util.UUID;
 @FeignClient(name = "learning-service")
 public interface LearningInternalClient {
 
-    @GetMapping("/api/learning/v1/enrollment/internal/class/{classId}/students")
+    @GetMapping("/api/learning/internal/enrollments/class/{classId}/students")
     List<UUID> resolveStudentsByClass(@PathVariable("classId") UUID classId);
 
-    @PostMapping("/api/learning/v1/enrollment/internal/classes/students")
+    @PostMapping("/api/learning/internal/enrollments/classes/students")
     BatchClassStudentIdsResponse resolveStudentsByClassBatch(@RequestBody BatchClassStudentIdsRequest request);
 
-    @GetMapping("/api/learning/v1/enrollment/internal/course/{courseId}/students")
+    @GetMapping("/api/learning/internal/enrollments/course/{courseId}/students")
     List<UUID> resolveStudentsByCourse(@PathVariable("courseId") UUID courseId);
 }

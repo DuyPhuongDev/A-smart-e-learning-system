@@ -21,15 +21,6 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, UUID
        @Query("SELECT DISTINCT cs FROM ClassSection cs LEFT JOIN FETCH cs.chapters WHERE cs.id = :id")
        Optional<ClassSection> findByIdWithChapters(@Param("id") UUID id);
 
-       @Query("""
-               SELECT DISTINCT cs
-               FROM ClassSection cs
-               LEFT JOIN FETCH cs.chapters ch
-               LEFT JOIN FETCH ch.lectures l
-               WHERE cs.id = :id
-               """)
-       Optional<ClassSection> findByIdWithChaptersAndLectures(@Param("id") UUID id);
-
        @Query("SELECT cs FROM ClassSection cs WHERE " +
                      "(:semesterCode IS NULL OR cs.semester.semesterCode = :semesterCode) AND " +
                      "(:teacherId IS NULL OR cs.teacherId = :teacherId)")

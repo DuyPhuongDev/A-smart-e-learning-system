@@ -421,11 +421,13 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     @Override
     @Transactional(readOnly = true)
     public ClassSectionReportMetadataResponse getClassSectionReportMetadata(UUID classId) {
-        ClassSection classSection = classSectionRepository.findByIdWithChaptersAndLectures(classId)
+        ClassSection classSection = classSectionRepository.findById(classId)
                 .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
 
+        List<Chapter> chapters = chapterRepository.findByClassSectionIdWithLectures(classId);
+
         AtomicInteger displayOrder = new AtomicInteger(1);
-        List<LectureReportMetadataResponse> lectures = classSection.getChapters().stream()
+        List<LectureReportMetadataResponse> lectures = chapters.stream()
                 .sorted(Comparator.comparing(Chapter::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
                 .flatMap(chapter -> chapter.getLectures().stream()
                         .sorted(Comparator.comparing(Lecture::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))))

@@ -2,7 +2,9 @@ package com.hcmut.lms.assessment.service.impl;
 
 import com.hcmut.lms.assessment.client.CourseManagementInternalClient;
 import com.hcmut.lms.assessment.client.LearningInternalEnrollmentClient;
+import com.hcmut.lms.assessment.client.UserManagementInternalClient;
 import com.hcmut.lms.assessment.client.dto.ClassSectionReportMetadataResponse;
+import com.hcmut.lms.assessment.client.dto.UserResponse;
 import com.hcmut.lms.assessment.domain.entity.answer.AnswerOption;
 import com.hcmut.lms.assessment.domain.entity.assessment.Assessment;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentQuestion;
@@ -96,6 +98,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
     private final FeedbackRepository feedbackRepository;
     private final CourseManagementInternalClient courseManagementInternalClient;
     private final LearningInternalEnrollmentClient learningInternalEnrollmentClient;
+    private final UserManagementInternalClient userManagementInternalClient;
     private final AssessmentEventPublisher assessmentEventPublisher;
 
     @Override
@@ -153,9 +156,12 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
             Set<UUID> pendingAttemptIds = findPendingReviewAttemptIds(
                     attemptPage.getContent().stream().map(AssessmentSubmission::getId).toList()
             );
+            Map<UUID, UserResponse> studentProfiles = loadStudentProfiles(
+                    attemptPage.getContent().stream().map(AssessmentSubmission::getStudentId).collect(Collectors.toSet())
+            );
 
             Page<TeacherSubmissionSummaryResponse> mappedPage = attemptPage.map(attempt ->
-                    toSubmissionSummary(attempt, pendingAttemptIds)
+                    toSubmissionSummary(attempt, pendingAttemptIds, studentProfiles.get(attempt.getStudentId()))
             );
             return PageResponse.fromPage(mappedPage);
         }
@@ -169,9 +175,12 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
         Set<UUID> pendingAttemptIds = findPendingReviewAttemptIds(
                 attempts.stream().map(AssessmentSubmission::getId).toList()
         );
+        Map<UUID, UserResponse> studentProfiles = loadStudentProfiles(
+                attempts.stream().map(AssessmentSubmission::getStudentId).collect(Collectors.toSet())
+        );
 
         List<TeacherSubmissionSummaryResponse> filtered = attempts.stream()
-                .map(attempt -> toSubmissionSummary(attempt, pendingAttemptIds))
+                .map(attempt -> toSubmissionSummary(attempt, pendingAttemptIds, studentProfiles.get(attempt.getStudentId())))
                 .filter(item -> normalizedStatusFilter.equals(item.getGradingStatus()))
                 .toList();
 
@@ -278,12 +287,15 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
         String gradingStatus = computeAttemptGradingStatus(
                 new ArrayList<>(submissionByQuestionId.values())
         );
+        UserResponse studentProfile = loadStudentProfile(attempt.getStudentId());
 
         return TeacherSubmissionDetailResponse.builder()
                 .attemptId(attempt.getId())
                 .assessmentId(assessment.getId())
                 .assessmentTitle(assessment.getTitle())
                 .studentId(attempt.getStudentId())
+                .studentCode(studentProfile != null ? studentProfile.getStudentCode() : null)
+                .studentName(buildDisplayName(studentProfile))
                 .attemptNo(attempt.getAttemptNo())
                 .submittedAt(attempt.getSubmitTime())
                 .takenTime(attempt.getTakenTime())
@@ -427,6 +439,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
 
         if (!pageStudentIds.isEmpty() && !assessments.isEmpty()) {
             List<UUID> assessmentIds = assessments.stream().map(Assessment::getId).toList();
+            Map<UUID, UserResponse> studentProfiles = loadStudentProfiles(new LinkedHashSet<>(pageStudentIds));
 
             List<AssessmentSubmission> submissions = assessmentSubmissionRepository
                     .findByStudentIdInAndAssessment_IdInAndStatus(
@@ -470,9 +483,12 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 } else {
                     averageScore = null;
                 }
+                UserResponse studentProfile = studentProfiles.get(studentId);
 
                 builtRows.add(TeacherGradebookRowResponse.builder()
                         .studentId(studentId)
+                        .studentCode(studentProfile != null ? studentProfile.getStudentCode() : null)
+                        .studentName(buildDisplayName(studentProfile))
                         .cells(cells)
                         .averageScore(averageScore)
                         .build());
@@ -586,7 +602,8 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
 
     private TeacherSubmissionSummaryResponse toSubmissionSummary(
             AssessmentSubmission attempt,
-            Set<UUID> pendingAttemptIds
+            Set<UUID> pendingAttemptIds,
+            UserResponse studentProfile
     ) {
         String gradingStatus = pendingAttemptIds.contains(attempt.getId())
                 ? STATUS_PENDING_REVIEW
@@ -595,11 +612,57 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
         return TeacherSubmissionSummaryResponse.builder()
                 .attemptId(attempt.getId())
                 .studentId(attempt.getStudentId())
+                .studentCode(studentProfile != null ? studentProfile.getStudentCode() : null)
+                .studentName(buildDisplayName(studentProfile))
                 .attemptNo(attempt.getAttemptNo())
                 .submittedAt(attempt.getSubmitTime())
                 .score(attempt.getScore())
                 .gradingStatus(gradingStatus)
                 .build();
+    }
+
+    private Map<UUID, UserResponse> loadStudentProfiles(Set<UUID> studentIds) {
+        if (studentIds == null || studentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<UUID, UserResponse> profiles = new HashMap<>();
+        for (UUID studentId : studentIds) {
+            UserResponse profile = loadStudentProfile(studentId);
+            if (profile != null) {
+                profiles.put(studentId, profile);
+            }
+        }
+        return profiles;
+    }
+
+    private UserResponse loadStudentProfile(UUID studentId) {
+        if (studentId == null) {
+            return null;
+        }
+
+        try {
+            return userManagementInternalClient.getUserById(studentId);
+        } catch (FeignException ex) {
+            log.warn("Unable to resolve student profile for {} (status={}): {}",
+                    studentId, ex.status(), ex.getMessage());
+            return null;
+        } catch (Exception ex) {
+            log.warn("Unable to resolve student profile for {}: {}", studentId, ex.getMessage());
+            return null;
+        }
+    }
+
+    private String buildDisplayName(UserResponse user) {
+        if (user == null) {
+            return null;
+        }
+
+        String firstName = user.getFirstName() != null ? user.getFirstName().trim() : "";
+        String lastName = user.getLastName() != null ? user.getLastName().trim() : "";
+        String fullName = (firstName + " " + lastName).trim();
+
+        return fullName.isEmpty() ? null : fullName;
     }
 
     private BigDecimal normalizeScore(BigDecimal score, BigDecimal maxPoints) {
