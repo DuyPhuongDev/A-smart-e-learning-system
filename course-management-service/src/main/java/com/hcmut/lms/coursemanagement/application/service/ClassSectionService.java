@@ -70,4 +70,10 @@ public interface ClassSectionService {
      * Used by learning-service to compute subject-level baselines.
      */
     List<ClassSectionDatasetResponse> getClassSectionsBySubjectWindow(UUID subjectId, Integer targetSemKey, Integer windowSpan);
+
+    /**
+     * Get all class section IDs managed by a teacher.
+     * Used internally by notification-service for teacher-scoped notifications.
+     */
+    List<UUID> getClassIdsByTeacherId(UUID teacherId);
 }

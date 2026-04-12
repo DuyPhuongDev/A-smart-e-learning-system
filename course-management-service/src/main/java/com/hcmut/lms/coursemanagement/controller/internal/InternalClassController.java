@@ -55,4 +55,13 @@ public class InternalClassController {
     public ResponseEntity<Integer> countNumberLecturesByClassId(@PathVariable UUID id){
         return ResponseEntity.ok(classSectionService.countNumberLecturesByClassId(id));
     }
+
+    /**
+     * Get all class section IDs managed by a teacher.
+     * Used by notification-service for teacher-scoped notifications.
+     */
+    @GetMapping("/teacher/{teacherId}/class-ids")
+    public ResponseEntity<List<UUID>> getClassIdsByTeacher(@PathVariable UUID teacherId) {
+        return ResponseEntity.ok(classSectionService.getClassIdsByTeacherId(teacherId));
+    }
 }

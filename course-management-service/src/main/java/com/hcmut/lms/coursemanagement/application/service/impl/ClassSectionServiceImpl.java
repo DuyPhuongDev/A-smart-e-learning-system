@@ -476,4 +476,11 @@ public class ClassSectionServiceImpl implements ClassSectionService {
             return null;
         }
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> getClassIdsByTeacherId(UUID teacherId) {
+        log.info("Getting class IDs for teacher: {}", teacherId);
+        return classSectionRepository.findIdsByTeacherId(teacherId);
+    }
 }
