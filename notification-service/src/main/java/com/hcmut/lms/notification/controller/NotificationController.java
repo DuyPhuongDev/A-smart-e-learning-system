@@ -6,6 +6,7 @@ import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.notification.dto.request.AdminCreateNotificationRequest;
 import com.hcmut.lms.notification.dto.request.PreferencesUpsertRequest;
 import com.hcmut.lms.notification.dto.request.RuleUpdateRequest;
+import com.hcmut.lms.notification.dto.request.TeacherCreateNotificationRequest;
 import com.hcmut.lms.notification.dto.request.TemplateUpdateRequest;
 import com.hcmut.lms.notification.dto.response.AdminNotificationCreateResponse;
 import com.hcmut.lms.notification.dto.response.AdminNotificationDetailResponse;
@@ -19,6 +20,7 @@ import com.hcmut.lms.notification.service.AdminNotificationService;
 import com.hcmut.lms.notification.service.NotificationConfigService;
 import com.hcmut.lms.notification.service.NotificationPreferenceService;
 import com.hcmut.lms.notification.service.SseNotificationBroadcaster;
+import com.hcmut.lms.notification.service.TeacherNotificationService;
 import com.hcmut.lms.notification.service.UserInboxService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +46,7 @@ import java.util.UUID;
 public class NotificationController {
 
     private final AdminNotificationService adminNotificationService;
+    private final TeacherNotificationService teacherNotificationService;
     private final UserInboxService userInboxService;
     private final NotificationPreferenceService notificationPreferenceService;
     private final NotificationConfigService notificationConfigService;
@@ -179,5 +182,56 @@ public class NotificationController {
             @RequestBody @Valid TemplateUpdateRequest request
     ) {
         return ResponseEntity.ok(notificationConfigService.updateTemplate(currentUser, code, request));
+    }
+
+    @PostMapping("/teacher")
+    public ResponseEntity<AdminNotificationCreateResponse> createTeacherNotification(
+            @CurrentUser CurrentUserInfo currentUser,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestBody @Valid TeacherCreateNotificationRequest request
+    ) {
+        return ResponseEntity.ok(teacherNotificationService.create(currentUser, request, idempotencyKey));
+    }
+
+    @GetMapping("/teacher")
+    public ResponseEntity<PageResponse<AdminNotificationListItemResponse>> getTeacherNotifications(
+            @CurrentUser CurrentUserInfo currentUser,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String channel,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(teacherNotificationService.list(
+                currentUser, status, type, channel, from, to, keyword, page, size));
+    }
+
+    @GetMapping("/teacher/{id}")
+    public ResponseEntity<AdminNotificationDetailResponse> getTeacherNotificationDetail(
+            @CurrentUser CurrentUserInfo currentUser,
+            @PathVariable("id") UUID id
+    ) {
+        return ResponseEntity.ok(teacherNotificationService.detail(currentUser, id));
+    }
+
+    @PostMapping("/teacher/{id}/send-now")
+    public ResponseEntity<Void> teacherSendNow(
+            @CurrentUser CurrentUserInfo currentUser,
+            @PathVariable("id") UUID id
+    ) {
+        teacherNotificationService.sendNow(currentUser, id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/teacher/{id}/cancel")
+    public ResponseEntity<Void> teacherCancel(
+            @CurrentUser CurrentUserInfo currentUser,
+            @PathVariable("id") UUID id
+    ) {
+        teacherNotificationService.cancel(currentUser, id);
+        return ResponseEntity.ok().build();
     }
 }

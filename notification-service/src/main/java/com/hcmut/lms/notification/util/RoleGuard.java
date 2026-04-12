@@ -13,4 +13,10 @@ public final class RoleGuard {
             throw new ForbiddenException("Admin role is required");
         }
     }
+
+    public static void requireTeacher(CurrentUserInfo userInfo) {
+        if (userInfo == null || userInfo.getRole() == null || !"TEACHER".equalsIgnoreCase(userInfo.getRole())) {
+            throw new ForbiddenException("Teacher role is required");
+        }
+    }
 }
