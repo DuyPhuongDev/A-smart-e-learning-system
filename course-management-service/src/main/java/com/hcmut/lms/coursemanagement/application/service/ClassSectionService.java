@@ -76,4 +76,9 @@ public interface ClassSectionService {
      * Report metadata for teacher report dashboards.
      */
     ClassSectionReportMetadataResponse getClassSectionReportMetadata(UUID classId);
+     /**
+     * Get all class section IDs managed by a teacher.
+     * Used internally by notification-service for teacher-scoped notifications.
+     */
+    List<UUID> getClassIdsByTeacherId(UUID teacherId);
 }

@@ -32,7 +32,7 @@ public interface CourseManagementClient {
     List<ClassResponse> getClassSectionsByIds(@RequestBody BatchClassLookupRequest request);
 
     /**
-     * Increment current students count when a student enrolls
+     * Increment current studewnts count when a student enrolls
      */
     @PostMapping("/class-sections/{id}/increment-students")
     void incrementCurrentStudents(@PathVariable("id") UUID id);
