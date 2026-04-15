@@ -17,6 +17,9 @@ public interface QuestionSubmissionRepository extends JpaRepository<QuestionSubm
     @Query("SELECT qs FROM QuestionSubmission qs JOIN FETCH qs.question WHERE qs.assessmentSubmission.id = :attemptId")
     List<QuestionSubmission> findAllByAttemptIdWithQuestion(@Param("attemptId") UUID attemptId);
 
+    @Query("SELECT qs FROM QuestionSubmission qs JOIN FETCH qs.question WHERE qs.assessmentSubmission.id IN :attemptIds")
+    List<QuestionSubmission> findAllByAttemptIdsWithQuestion(@Param("attemptIds") List<UUID> attemptIds);
+
     @Query("""
             SELECT DISTINCT qs.assessmentSubmission.id
             FROM QuestionSubmission qs

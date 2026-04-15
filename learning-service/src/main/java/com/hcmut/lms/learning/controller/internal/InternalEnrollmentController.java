@@ -7,6 +7,12 @@ import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
 import com.hcmut.lms.learning.service.EnrollmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +29,24 @@ public class InternalEnrollmentController {
 
   private final EnrollmentService enrollmentService;
 
+  @GetMapping("/class/{classId}/students")
+  public ResponseEntity<List<UUID>> resolveStudentsByClass(@PathVariable UUID classId) {
+    return ResponseEntity.ok(enrollmentService.getStudentIdsByClassId(classId));
+  }
+
+  @PostMapping("/classes/students")
+  public ResponseEntity<InternalBatchClassStudentIdsResponse> resolveStudentsByClassBatch(
+      @RequestBody InternalBatchClassStudentIdsRequest request) {
+    List<InternalClassStudentIdsResponse> items =
+        enrollmentService.getStudentIdsByClassIds(request != null ? request.getClassIds() : List.of());
+    return ResponseEntity.ok(InternalBatchClassStudentIdsResponse.builder().items(items).build());
+  }
+
+  @GetMapping("/course/{courseId}/students")
+  public ResponseEntity<List<UUID>> resolveStudentsByCourse(@PathVariable UUID courseId) {
+    return ResponseEntity.ok(enrollmentService.getStudentIdsByCourseId(courseId));
+  }
+
   /**
    * Get all enrollments for a student with subject information
    * Used by course-management-service for student progress tracking
@@ -33,23 +57,4 @@ public class InternalEnrollmentController {
     return ResponseEntity.ok(enrollmentService.getStudentEnrollmentsWithSubjects(studentId));
   }
 
-  @GetMapping("/class/{classId}/students")
-  public ResponseEntity<List<UUID>> resolveStudentsByClass(@PathVariable UUID classId) {
-    return ResponseEntity.ok(enrollmentService.getStudentIdsByClassId(classId));
-  }
-
-  @PostMapping("/classes/students")
-  public ResponseEntity<InternalBatchClassStudentIdsResponse> resolveStudentsByClassBatch(
-          @RequestBody InternalBatchClassStudentIdsRequest request
-  ) {
-    List<InternalClassStudentIdsResponse> items = enrollmentService.getStudentIdsByClassIds(
-            request != null ? request.getClassIds() : List.of()
-    );
-    return ResponseEntity.ok(InternalBatchClassStudentIdsResponse.builder().items(items).build());
-  }
-
-  @GetMapping("/course/{courseId}/students")
-  public ResponseEntity<List<UUID>> resolveStudentsByCourse(@PathVariable UUID courseId) {
-    return ResponseEntity.ok(enrollmentService.getStudentIdsByCourseId(courseId));
-  }
 }

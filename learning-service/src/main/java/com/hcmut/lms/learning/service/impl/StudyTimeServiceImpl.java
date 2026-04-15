@@ -1,31 +1,40 @@
 package com.hcmut.lms.learning.service.impl;
 
-import com.hcmut.lms.learning.client.dto.LectureResponse;
+import com.hcmut.lms.common.helper.CurrentUserInfo;
+import com.hcmut.lms.learning.client.CourseManagementClient;
+import com.hcmut.lms.learning.client.dto.ClassSectionReportMetadataResponse;
+import com.hcmut.lms.learning.client.dto.LectureReportMetadataResponse;
 import com.hcmut.lms.learning.dto.request.StudyTimeRequest;
+import com.hcmut.lms.learning.dto.response.LectureFrequencyItemResponse;
+import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
-import com.hcmut.lms.learning.entity.progress.ContentType;
 import com.hcmut.lms.learning.entity.progress.LearningProgress;
 import com.hcmut.lms.learning.entity.studytime.StudyTime;
 import com.hcmut.lms.learning.exception.BusinessException;
-import com.hcmut.lms.learning.mapper.LearningProgressMapper;
+import com.hcmut.lms.learning.exception.ForbiddenException;
+import com.hcmut.lms.learning.exception.ResourceNotFoundException;
 import com.hcmut.lms.learning.mapper.StudyTimeMapper;
 import com.hcmut.lms.learning.repository.EnrollmentRepository;
 import com.hcmut.lms.learning.repository.LearningProgressRepository;
 import com.hcmut.lms.learning.repository.StudyTimeRepository;
-import com.hcmut.lms.learning.service.EnrollmentService;
 import com.hcmut.lms.learning.service.LearningProgressService;
 import com.hcmut.lms.learning.service.StudyTimeService;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -38,7 +47,7 @@ public class StudyTimeServiceImpl implements StudyTimeService {
     private final EnrollmentRepository enrollmentRepository;
     private final LearningProgressRepository learningProgressRepository;
     private final LearningProgressService learningProgressService;
-    private final EnrollmentService enrollmentService;
+    private final CourseManagementClient courseManagementClient;
 
     @Override
     @Transactional
@@ -141,6 +150,111 @@ public class StudyTimeServiceImpl implements StudyTimeService {
     public Integer getTotalStudyTime(UUID studentId, UUID classId) {
         Integer totalSeconds = studyTimeRepository.getTotalStudyTimeByStudentAndClass(studentId, classId);
         return totalSeconds != null ? totalSeconds : 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LectureFrequencyResponse getLectureFrequencyForTeacher(UUID classId, CurrentUserInfo currentUserInfo) {
+        ClassSectionReportMetadataResponse classMetadata = getClassSectionReportMetadataOrThrow(classId);
+        assertTeacherOrAdmin(currentUserInfo, classMetadata.getTeacherId());
+
+        List<UUID> studentIds = enrollmentRepository.findDistinctStudentIdsByClassId(classId);
+        int totalStudents = studentIds.size();
+
+        Map<UUID, Long> totalSpentByLecture = new HashMap<>();
+        for (Object[] row : studyTimeRepository.sumDurationByClassGroupedByLecture(classId)) {
+            UUID lectureId = (UUID) row[0];
+            long totalSpentSeconds = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+            totalSpentByLecture.put(lectureId, totalSpentSeconds);
+        }
+
+        List<LectureReportMetadataResponse> allLectures = classMetadata.getLectures() == null
+                ? List.of()
+                : classMetadata.getLectures();
+
+        List<LectureFrequencyItemResponse> eligibleLectureRows = allLectures.stream()
+                .filter(lecture -> lecture.getEstimateTimeSpent() != null && lecture.getEstimateTimeSpent() > 0)
+                .sorted(Comparator.comparing(LectureReportMetadataResponse::getOrder, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(lecture -> {
+                    long totalSpentSeconds = totalSpentByLecture.getOrDefault(lecture.getLectureId(), 0L);
+
+                    BigDecimal ratio;
+                    if (totalStudents == 0) {
+                        ratio = BigDecimal.ZERO;
+                    } else {
+                        BigDecimal denominator = BigDecimal.valueOf((long) totalStudents)
+                                .multiply(BigDecimal.valueOf(lecture.getEstimateTimeSpent()))
+                                .multiply(BigDecimal.valueOf(60L));
+                        ratio = denominator.compareTo(BigDecimal.ZERO) == 0
+                                ? BigDecimal.ZERO
+                                : BigDecimal.valueOf(totalSpentSeconds)
+                                .divide(denominator, 6, RoundingMode.HALF_UP);
+                    }
+
+                    BigDecimal percent = ratio.multiply(BigDecimal.valueOf(100L)).setScale(2, RoundingMode.HALF_UP);
+
+                    return LectureFrequencyItemResponse.builder()
+                            .lectureId(lecture.getLectureId())
+                            .title(lecture.getTitle())
+                            .order(lecture.getOrder())
+                            .estimateTimeMinutes(lecture.getEstimateTimeSpent())
+                            .studentCount(totalStudents)
+                            .totalSpentSeconds(totalSpentSeconds)
+                            .frequencyRatio(ratio.setScale(6, RoundingMode.HALF_UP))
+                            .frequencyPercent(percent)
+                            .build();
+                })
+                .toList();
+
+        BigDecimal overallRatio = eligibleLectureRows.isEmpty()
+                ? BigDecimal.ZERO
+                : eligibleLectureRows.stream()
+                .map(LectureFrequencyItemResponse::getFrequencyRatio)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(eligibleLectureRows.size()), 6, RoundingMode.HALF_UP);
+
+        BigDecimal overallPercent = overallRatio.multiply(BigDecimal.valueOf(100L)).setScale(2, RoundingMode.HALF_UP);
+
+        return LectureFrequencyResponse.builder()
+                .classId(classId)
+                .totalStudents(totalStudents)
+                .totalLectures(allLectures.size())
+                .eligibleLectures(eligibleLectureRows.size())
+                .overallFrequencyRatio(overallRatio)
+                .overallFrequencyPercent(overallPercent)
+                .lectures(eligibleLectureRows)
+                .generatedAt(Instant.now())
+                .build();
+    }
+
+    private void assertTeacherOrAdmin(CurrentUserInfo currentUserInfo, UUID classTeacherId) {
+        if (currentUserInfo == null || currentUserInfo.getRole() == null) {
+            throw new ForbiddenException("Access denied");
+        }
+
+        String role = currentUserInfo.getRole().toUpperCase();
+        if ("ADMIN".equals(role)) {
+            return;
+        }
+
+        if (!"TEACHER".equals(role)) {
+            throw new ForbiddenException("Access denied");
+        }
+
+        if (classTeacherId == null || !classTeacherId.equals(currentUserInfo.getId())) {
+            throw new ForbiddenException("Teacher is not assigned to this class");
+        }
+    }
+
+    private ClassSectionReportMetadataResponse getClassSectionReportMetadataOrThrow(UUID classId) {
+        try {
+            return courseManagementClient.getClassSectionReportMetadata(classId);
+        } catch (FeignException ex) {
+            if (ex.status() == 404) {
+                throw new ResourceNotFoundException("ClassSection", "id", classId);
+            }
+            throw ex;
+        }
     }
 
 }
