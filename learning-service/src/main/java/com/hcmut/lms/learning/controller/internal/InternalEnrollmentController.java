@@ -57,23 +57,4 @@ public class InternalEnrollmentController {
     return ResponseEntity.ok(enrollmentService.getStudentEnrollmentsWithSubjects(studentId));
   }
 
-  @GetMapping("/class/{classId}/students")
-  public ResponseEntity<List<UUID>> resolveStudentsByClass(@PathVariable UUID classId) {
-    return ResponseEntity.ok(enrollmentService.getStudentIdsByClassId(classId));
-  }
-
-  @PostMapping("/classes/students")
-  public ResponseEntity<InternalBatchClassStudentIdsResponse> resolveStudentsByClassBatch(
-          @RequestBody InternalBatchClassStudentIdsRequest request
-  ) {
-    List<InternalClassStudentIdsResponse> items = enrollmentService.getStudentIdsByClassIds(
-            request != null ? request.getClassIds() : List.of()
-    );
-    return ResponseEntity.ok(InternalBatchClassStudentIdsResponse.builder().items(items).build());
-  }
-
-  @GetMapping("/course/{courseId}/students")
-  public ResponseEntity<List<UUID>> resolveStudentsByCourse(@PathVariable UUID courseId) {
-    return ResponseEntity.ok(enrollmentService.getStudentIdsByCourseId(courseId));
-  }
 }
