@@ -1,5 +1,7 @@
 package com.hcmut.lms.learning.controller.internal;
 
+import com.hcmut.lms.common.helper.CurrentUser;
+import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.learning.dto.internal.InternalBatchClassStudentIdsRequest;
 import com.hcmut.lms.learning.dto.internal.InternalBatchClassStudentIdsResponse;
 import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
@@ -55,6 +57,16 @@ public class InternalEnrollmentController {
   public ResponseEntity<List<StudentEnrollmentResponse>> getStudentEnrollments(
       @PathVariable UUID studentId) {
     return ResponseEntity.ok(enrollmentService.getStudentEnrollmentsWithSubjects(studentId));
+  }
+
+  /**
+   * Check if current user is enrolled in a class
+   */
+  @GetMapping("/check/{classId}")
+  public ResponseEntity<Boolean> checkEnrollment(
+          @CurrentUser CurrentUserInfo currentUser,
+          @PathVariable UUID classId) {
+    return ResponseEntity.ok(enrollmentService.isEnrolled(currentUser.getId(), classId));
   }
 
 }
