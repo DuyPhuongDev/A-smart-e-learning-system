@@ -75,6 +75,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             int page,
             int size
     ) {
+        log.info("Student get assessment list for courseId: {}, studentId: {}", courseId, studentId);
         ensureStudentEnrolled(authorizationHeader, courseId);
 
         Page<Assessment> assessmentPage = assessmentRepository.findAllByClassId(
