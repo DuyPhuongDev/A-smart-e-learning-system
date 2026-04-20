@@ -1,5 +1,6 @@
 package com.hcmut.lms.assessment.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentType;
 import com.hcmut.lms.assessment.domain.entity.assessment.GradingRule;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AssessmentResponse {
     private UUID id;
     private UUID classId;
@@ -32,4 +34,9 @@ public class AssessmentResponse {
     private int numberQuestions;
     private Instant createdAt;
     private Instant updatedAt;
+
+    /** Weight (%) this assessment contributes to the final grade.
+     *  Computed for QUIZ, MIDTERM, and FINAL types: gradingComponentWeight / countOfSameTypeAssessments.
+     *  Null for PRACTICE, EXAM, and ASSIGNMENT types. */
+    private Float gradingWeight;
 }

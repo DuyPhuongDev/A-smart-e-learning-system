@@ -5,6 +5,7 @@ import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.*;
+import com.hcmut.lms.coursemanagement.application.service.ClassGradingService;
 import com.hcmut.lms.coursemanagement.application.mapper.ClassSectionMapper;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
 import com.hcmut.lms.coursemanagement.client.UserServiceClient;
@@ -48,6 +49,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     private final ChapterRepository chapterRepository;
     private final ClassSectionMapper classSectionMapper;
     private final UserServiceClient userServiceClient;
+    private final ClassGradingService classGradingService;
 
     @Override
     public ClassSectionResponse createClassSection(CurrentUserInfo currentUser, ClassSectionRequest request) {
@@ -106,6 +108,12 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         classSection.setMaxStudents(maxStudents);
 
         ClassSection savedClassSection = classSectionRepository.save(classSection);
+
+        if (Boolean.TRUE.equals(savedClassSection.getIsOfficial())) {
+            // Teacher's own class (no subject/semester): seed default gradings in ClassSectionGrading
+            classGradingService.initDefaultGradings(savedClassSection.getId());
+        }
+        // School-official classes (isOfficial==false) inherit gradings from SubjectGrading — nothing to do
 
         log.info("Class section created successfully with id: {}", savedClassSection.getId());
         return enrichWithTeacherName(classSectionMapper.toResponseDTO(savedClassSection));

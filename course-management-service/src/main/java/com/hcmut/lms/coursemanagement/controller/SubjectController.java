@@ -3,7 +3,9 @@ package com.hcmut.lms.coursemanagement.controller;
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUser;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
+import com.hcmut.lms.coursemanagement.application.dto.request.SubjectGradingRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.SubjectRequest;
+import com.hcmut.lms.coursemanagement.application.dto.response.SubjectGradingWeightResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.SubjectResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ImportResultResponse;
 import com.hcmut.lms.coursemanagement.application.service.SubjectService;
@@ -79,5 +81,17 @@ public class SubjectController {
         ImportResultResponse result = importService
                 .importClassSectionsFromExcel(file, semesterId, currentUser.getId());
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{id}/gradings")
+    public ResponseEntity<List<SubjectGradingWeightResponse>> getGradingsForSubject(@PathVariable UUID id) {
+        return ResponseEntity.ok(subjectService.getGradingsForSubject(id));
+    }
+
+    @PutMapping("/{id}/gradings")
+    public ResponseEntity<List<SubjectGradingWeightResponse>> setGradingsForSubject(
+            @PathVariable UUID id,
+            @Valid @RequestBody List<SubjectGradingRequest> gradings) {
+        return ResponseEntity.ok(subjectService.setGradingsForSubject(id, gradings));
     }
 }

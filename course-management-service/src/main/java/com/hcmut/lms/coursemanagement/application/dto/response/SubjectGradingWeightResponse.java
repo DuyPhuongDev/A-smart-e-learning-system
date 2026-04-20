@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -14,16 +13,10 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class SubjectResponse {
-    private UUID id;
+public class SubjectGradingWeightResponse {
+    private UUID gradingId;
+    private String gradingType;
+    private Float weight;
     private String name;
-    private String code;
     private String description;
-    private Integer credits;
-    private String category;
-    private String createdAt;
-    private String updatedAt;
-    private List<SubjectGradingWeightResponse> gradings;
 }
-
-

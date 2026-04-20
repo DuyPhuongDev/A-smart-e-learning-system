@@ -95,5 +95,5 @@ class_diagram_promt.txt
 learning-service/src/main/resources/models
 
 /.claude/
-
+/docs
 .cursor/

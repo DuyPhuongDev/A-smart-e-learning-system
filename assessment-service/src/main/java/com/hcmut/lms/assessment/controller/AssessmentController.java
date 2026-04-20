@@ -4,6 +4,7 @@ import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
+import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.assessment.service.AssessmentService;
 import com.hcmut.lms.common.dto.PageResponse;
@@ -83,5 +84,10 @@ public class AssessmentController {
     public ResponseEntity<Void> publishAssessment(@PathVariable UUID id) {
         assessmentService.changeStatus(id, AssessmentStatus.PUBLISHED);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/classes/{classId}/grading-breakdown")
+    public ResponseEntity<List<GradingBreakdownResponse>> getGradingBreakdown(@PathVariable UUID classId) {
+        return ResponseEntity.ok(assessmentService.getGradingBreakdownForClass(classId));
     }
 }
