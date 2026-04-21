@@ -13,8 +13,6 @@ public interface GraduationRequirementStatusRepository extends JpaRepository<Gra
 
   List<GraduationRequirementStatus> findByStudentId(UUID studentId);
 
-  List<GraduationRequirementStatus> findByStudentIdAndIsCompleted(UUID studentId, Boolean isCompleted);
-
   Optional<GraduationRequirementStatus> findByGraduationRequirementStatusIdAndStudentId(
       UUID graduationRequirementStatusId, UUID studentId);
 }

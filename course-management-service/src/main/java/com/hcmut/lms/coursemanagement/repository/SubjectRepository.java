@@ -15,5 +15,7 @@ public interface SubjectRepository extends JpaRepository<Subject, UUID> {
     boolean existsByCode(String code);
 
     Page<Subject> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    Page<Subject> findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(String code, String name, Pageable pageable);
 }
 

@@ -49,4 +49,14 @@ public interface SubjectSemesterMetricsService {
             java.util.List<UUID> subjectIds,
             java.util.List<UUID> semesterIds);
 
+    /**
+     * Compute difficulty level for each subject based on the most recent meanGrade.
+     * meanGrade &lt; 5 → "hard", 5 ≤ meanGrade ≤ 8 → "medium", meanGrade &gt; 8 → "easy".
+     * Subjects with no metrics default to "medium".
+     *
+     * @param subjectIds List of subject UUIDs
+     * @return Map of subjectId → difficultyLevel string
+     */
+    java.util.Map<UUID, String> getBatchDifficulty(java.util.List<UUID> subjectIds);
+
 }

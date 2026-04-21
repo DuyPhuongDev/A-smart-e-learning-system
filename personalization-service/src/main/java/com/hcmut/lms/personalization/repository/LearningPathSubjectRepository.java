@@ -13,5 +13,6 @@ public interface LearningPathSubjectRepository extends JpaRepository<LearningPat
   List<LearningPathSubject> findByLearningPathId(UUID learningPathId);
 
   List<LearningPathSubject> findByLearningPathIdOrderByLearningPathSectionIdAscSubjectCodeAsc(UUID learningPathId);
-}
 
+  List<LearningPathSubject> findByLearningPathIdAndSubjectId(UUID learningPathId, UUID subjectId);
+}

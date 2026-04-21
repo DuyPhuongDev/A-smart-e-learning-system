@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -83,13 +82,27 @@ public class GoalRecommendationService {
   }
 
   private int resolveTopPriority(LearningGoal goal) {
-    Map<Integer, Integer> priorityMap = Map.of(
-        goal.getAttemptTargetGpaOrder() != null ? goal.getAttemptTargetGpaOrder() : 99, PRIORITY_GPA,
-        goal.getCompletedOnTime() != null ? goal.getCompletedOnTime() : 99, PRIORITY_TIME,
-        goal.getFocusOnTargetOccupation() != null ? goal.getFocusOnTargetOccupation() : 99, PRIORITY_KNOWLEDGE);
+    List<int[]> entries = new ArrayList<>();
+    if (goal.getAttemptTargetGpaOrder() != null) {
+      entries.add(new int[]{goal.getAttemptTargetGpaOrder(), PRIORITY_GPA});
+    }
+    if (goal.getCompletedOnTime() != null) {
+      entries.add(new int[]{goal.getCompletedOnTime(), PRIORITY_TIME});
+    }
+    if (goal.getFocusOnTargetOccupation() != null) {
+      entries.add(new int[]{goal.getFocusOnTargetOccupation(), PRIORITY_KNOWLEDGE});
+    }
 
-    int minOrder = priorityMap.keySet().stream().mapToInt(Integer::intValue).min().orElse(99);
-    return priorityMap.getOrDefault(minOrder, PRIORITY_GPA);
+    if (entries.isEmpty()) {
+      return PRIORITY_GPA;
+    }
+
+    int minOrder = entries.stream().mapToInt(e -> e[0]).min().orElse(99);
+    return entries.stream()
+        .filter(e -> e[0] == minOrder)
+        .map(e -> e[1])
+        .findFirst()
+        .orElse(PRIORITY_GPA);
   }
 
   private void addGoodRecommendations(List<RecommendationResponse> recs, int topPriority) {

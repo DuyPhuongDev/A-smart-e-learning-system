@@ -7,11 +7,12 @@ import com.hcmut.lms.personalization.application.dto.response.LearningGoalRespon
 import com.hcmut.lms.personalization.application.dto.response.PreferredSummerSemesterResponse;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface LearningGoalService {
 
-  LearningGoalResponse getCurrentLearningGoal(UUID studentId);
+  Optional<LearningGoalResponse> getCurrentLearningGoal(UUID studentId);
 
   LearningGoalResponse getLearningGoalById(UUID studentId, UUID learningGoalId);
 
@@ -26,6 +27,10 @@ public interface LearningGoalService {
   PreferredSummerSemesterResponse createPreferredSummerSemester(
       UUID studentId, UUID learningGoalId,
       CreatePreferredSummerSemesterRequest request);
+
+  List<PreferredSummerSemesterResponse> createPreferredSummerSemesters(
+      UUID studentId, UUID learningGoalId,
+      List<CreatePreferredSummerSemesterRequest> requests);
 }
 
 

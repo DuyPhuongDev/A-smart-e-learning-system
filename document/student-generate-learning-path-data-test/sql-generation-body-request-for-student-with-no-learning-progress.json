@@ -1,0 +1,14 @@
+{
+  "studentInfo": {
+    "studentCode": "2410001",
+    "email": "test.001@hcmut.edu.vn",
+    "firstName": "First Year",
+    "lastName": "001",
+    "phone": "0123456789",
+    "specializationCode": "CS",
+    "intakeYearCode": "24"
+  },
+  "gradeRecords": [
+
+  ]
+}

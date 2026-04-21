@@ -1,11 +1,13 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
+import com.hcmut.lms.coursemanagement.application.config.CurriculumFallbackConfig;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.StudentLearningProgressResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.StudentSubjectDetailResponse;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
 import com.hcmut.lms.coursemanagement.application.service.StudentProgressService;
+import com.hcmut.lms.coursemanagement.domain.entity.academicYear.AcademicYear;
 import com.hcmut.lms.coursemanagement.client.LearningServiceClient;
 import com.hcmut.lms.coursemanagement.client.UserServiceClient;
 import com.hcmut.lms.coursemanagement.client.dto.StudentEnrollmentResponse;
@@ -31,6 +33,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.hcmut.lms.coursemanagement.util.SemesterUtil.computeSemKeyFromSemesterCode;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -48,19 +52,26 @@ public class StudentProgressServiceImpl implements StudentProgressService {
   private final CurriculumSubjectPriorityRepository curriculumSubjectPriorityRepository;
   private final SubjectRepository subjectRepository;
   private final SemesterRepository semesterRepository;
+  private final AcademicYearRepository academicYearRepository;
+  private final CurriculumFallbackConfig curriculumFallbackConfig;
+  private final CurriculumSubjectAllocationService allocationService;
+  private final StudentProgressGradeUtil gradeUtil;
 
   private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   @Override
-  public StudentLearningProgressResponse getStudentLearningProgress(UUID userId) {
-    log.info("Fetching student learning progress for userId: {}", userId);
+  public StudentLearningProgressResponse getStudentLearningProgress(UUID userId, UUID specializationId) {
+    log.info("Fetching student learning progress for userId: {}, specializationId: {}", userId, specializationId);
 
     UserResponse user = userServiceClient.getUserById(userId);
     if (user == null || user.getStudentCode() == null) {
       throw new EntityNotFoundException("Student not found with userId: " + userId);
     }
 
-    if (user.getIntakeYearId() == null || user.getSpecializationId() == null) {
+    // Use provided specializationId, or fall back to user's default
+    UUID effectiveSpecializationId = specializationId != null ? specializationId : user.getSpecializationId();
+
+    if (user.getIntakeYearId() == null || effectiveSpecializationId == null) {
       throw new EntityNotFoundException("Student intake year or specialization not found for userId: " + userId);
     }
 
@@ -85,34 +96,37 @@ public class StudentProgressServiceImpl implements StudentProgressService {
           .collect(Collectors.toMap(ClassSectionResponse::getId, c -> c));
     }
 
-    // Map enrollments by subjectId - keep only the best result (highest grade, or most recent if no grade)
-    Map<UUID, StudentEnrollmentResponse> enrollmentBySubjectMap = new HashMap<>();
+    // Map enrollments by subjectId - keep ALL attempts per subject and track the best result
+    Map<UUID, List<StudentEnrollmentResponse>> enrollmentsBySubjectMap = new HashMap<>();
+    Map<UUID, StudentEnrollmentResponse> bestEnrollmentBySubjectMap = new HashMap<>();
     for (StudentEnrollmentResponse enrollment : enrollments) {
       ClassSectionResponse classSection = classMap.get(enrollment.getClassId());
       if (classSection != null && classSection.getSubjectId() != null) {
         UUID subjectId = classSection.getSubjectId();
-        StudentEnrollmentResponse existing = enrollmentBySubjectMap.get(subjectId);
+        enrollmentsBySubjectMap.computeIfAbsent(subjectId, k -> new ArrayList<>()).add(enrollment);
 
-        if (existing == null) {
-          enrollmentBySubjectMap.put(subjectId, enrollment);
-        } else {
-          // Keep the better enrollment: higher grade, or more recent if grades are equal/null
-          boolean shouldReplace = isShouldReplace(enrollment, existing);
-
-          if (shouldReplace) {
-            enrollmentBySubjectMap.put(subjectId, enrollment);
-          }
+        StudentEnrollmentResponse existingBest = bestEnrollmentBySubjectMap.get(subjectId);
+        if (existingBest == null || isShouldReplace(enrollment, existingBest, classMap)) {
+          bestEnrollmentBySubjectMap.put(subjectId, enrollment);
         }
       }
     }
 
-    Map<UUID, SubjectProgressMeta> subjectProgressMetaBySubjectId = buildSubjectProgressMetaBySubjectId(
-        enrollmentBySubjectMap,
-        classMap);
+    // Compute attemptNo per enrollment based on semester chronological order
+    Map<UUID, Integer> attemptNoByClassId = computeAttemptNumbers(enrollmentsBySubjectMap, classMap);
+
+    Map<UUID, SubjectProgressMeta> subjectProgressMetaByClassId = buildSubjectProgressMetaByClassId(
+        enrollmentsBySubjectMap, classMap);
 
     Curriculum curriculum = curriculumRepository.findBySpecializationIdAndIntakeYearIdWithDetails(
-            user.getSpecializationId(), user.getIntakeYearId())
-        .orElseThrow(() -> new EntityNotFoundException("Curriculum not found for student"));
+        effectiveSpecializationId, user.getIntakeYearId()).orElseGet(() -> {
+      UUID fallbackId = resolveFallbackIntakeYearId(
+          "no curriculum for specializationId=" + effectiveSpecializationId + " intakeYearId=" + user.getIntakeYearId(),
+          userId);
+      return curriculumRepository.findBySpecializationIdAndIntakeYearIdWithDetails(
+              effectiveSpecializationId, fallbackId)
+          .orElseThrow(() -> new EntityNotFoundException("Curriculum not found for student userId=" + userId));
+    });
 
     List<CurriculumSection> sections = curriculumSectionRepository.findBySpecializationAndIntakeYearWithSubjects(
         curriculum.getId().getSpecializationId(), curriculum.getId().getIntakeYearId());
@@ -130,13 +144,16 @@ public class StudentProgressServiceImpl implements StudentProgressService {
             s -> s.getGradingType() != null ? s.getGradingType() : SubjectGradingType.GRADED));
 
     StudentLearningProgressResponse.StudentProgramInfo programInfo = buildProgramInfo(user, curriculum);
+
+    CurriculumSubjectAllocationService.SectionAllocationResult allocationResult =
+        allocationService.allocateSubjectsToSections(
+        sections, bestEnrollmentBySubjectMap, subjectGradingTypeMap);
+
     StudentLearningProgressResponse.StudentLearningSummary summary = calculateSummary(
-        sections, enrollmentBySubjectMap, subjectGradingTypeMap);
+        sections, bestEnrollmentBySubjectMap, subjectGradingTypeMap, allocationResult);
     List<StudentLearningProgressResponse.StudentProgressSectionItem> sectionItems = buildSectionItems(
-        sections,
-        enrollmentBySubjectMap,
-        subjectGradingTypeMap,
-        subjectProgressMetaBySubjectId);
+        sections, enrollmentsBySubjectMap, bestEnrollmentBySubjectMap, subjectGradingTypeMap,
+        subjectProgressMetaByClassId, attemptNoByClassId, allocationResult);
 
     log.info("Successfully fetched student learning progress for userId: {}", userId);
 
@@ -148,22 +165,28 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         .build();
   }
 
-  private static boolean isShouldReplace(StudentEnrollmentResponse enrollment, StudentEnrollmentResponse existing) {
-    boolean shouldReplace = false;
-
+  private static boolean isShouldReplace(
+      StudentEnrollmentResponse enrollment, StudentEnrollmentResponse existing,
+      Map<UUID, ClassSectionResponse> classMap) {
     if (existing.getFinalGrade() == null && enrollment.getFinalGrade() != null) {
-      shouldReplace = true;
-    } else if (existing.getFinalGrade() != null && enrollment.getFinalGrade() != null) {
+      return true;
+    }
+    if (existing.getFinalGrade() != null && enrollment.getFinalGrade() != null) {
       if (enrollment.getFinalGrade() > existing.getFinalGrade()) {
-        shouldReplace = true;
-      } else if (enrollment.getFinalGrade().equals(existing.getFinalGrade())) {
-        // If grades are equal, prefer more recent (higher attemptNo or later completion)
-        if (enrollment.getAttemptNo() != null && existing.getAttemptNo() != null) {
-          shouldReplace = enrollment.getAttemptNo() > existing.getAttemptNo();
+        return true;
+      }
+      if (enrollment.getFinalGrade().equals(existing.getFinalGrade())) {
+        // Tiebreaker: later semester (higher semKey) is preferred
+        Integer enrollKey = classMap.get(enrollment.getClassId()) != null ? computeSemKeyFromSemesterCode(
+            classMap.get(enrollment.getClassId()).getSemesterCode()) : null;
+        Integer existingKey = classMap.get(existing.getClassId()) != null ? computeSemKeyFromSemesterCode(
+            classMap.get(existing.getClassId()).getSemesterCode()) : null;
+        if (enrollKey != null && existingKey != null) {
+          return enrollKey > existingKey;
         }
       }
     }
-    return shouldReplace;
+    return false;
   }
 
   @Override
@@ -176,7 +199,7 @@ public class StudentProgressServiceImpl implements StudentProgressService {
     }
 
     if (user.getIntakeYearId() == null) {
-      throw new EntityNotFoundException("Student intake year or specialization not found for userId: " + userId);
+      throw new EntityNotFoundException("Student intake year not found for userId: " + userId);
     }
 
     if (user.getSpecializationId() == null) {
@@ -186,10 +209,15 @@ public class StudentProgressServiceImpl implements StudentProgressService {
 
     // Fetch curriculum subject filtered by student's curriculum
     CurriculumSubject curriculumSubject = curriculumSubjectRepository.findBySubjectIdAndCurriculum(
-            subjectId,
-            user.getSpecializationId(), user.getIntakeYearId())
-        .orElseThrow(() -> new EntityNotFoundException(
-            "Subject not found with id: " + subjectId + " in curriculum " + "for specialization: " + user.getSpecializationId() + " and intake year: " + user.getIntakeYearId()));
+        subjectId,
+        user.getSpecializationId(), user.getIntakeYearId()).orElseGet(() -> {
+      UUID fallbackId = resolveFallbackIntakeYearId(
+          "no curriculum subject for specializationId=" + user.getSpecializationId() + " intakeYearId=" + user.getIntakeYearId(),
+          userId);
+      return curriculumSubjectRepository.findBySubjectIdAndCurriculum(subjectId, user.getSpecializationId(), fallbackId)
+          .orElseThrow(
+              () -> new EntityNotFoundException("Subject not found with id: " + subjectId + " in fallback curriculum"));
+    });
 
     // Fetch relations separately using the composite ID
     CurriculumSubject csWithPrerequisites = curriculumSubjectRepository.findByIdWithPrerequisites(
@@ -247,32 +275,39 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         SubjectGradingType.GRADED;
 
     // Filter enrollments for this specific subject and build attempts
-    List<StudentSubjectDetailResponse.StudentSubjectAttemptItem> attempts = enrollments.stream().filter(enrollment -> {
+    List<StudentEnrollmentResponse> subjectEnrollments = enrollments.stream().filter(enrollment -> {
       ClassSectionResponse classSection = classMap.get(enrollment.getClassId());
       return classSection != null && subjectId.equals(classSection.getSubjectId());
     }).sorted((e1, e2) -> {
-      // Sort by attemptNo ascending
-      if (e1.getAttemptNo() != null && e2.getAttemptNo() != null) {
-        return e1.getAttemptNo().compareTo(e2.getAttemptNo());
-      }
+      // Sort by semester chronological order ascending
+      ClassSectionResponse cs1 = classMap.get(e1.getClassId());
+      ClassSectionResponse cs2 = classMap.get(e2.getClassId());
+      Integer key1 = cs1 != null ? computeSemKeyFromSemesterCode(cs1.getSemesterCode()) : null;
+      Integer key2 = cs2 != null ? computeSemKeyFromSemesterCode(cs2.getSemesterCode()) : null;
+      if (key1 != null && key2 != null) return key1.compareTo(key2);
       return 0;
-    }).map(enrollment -> {
+    }).toList();
+
+    // Build attempt items with computed attemptNo based on semester order
+    List<StudentSubjectDetailResponse.StudentSubjectAttemptItem> attempts = new ArrayList<>();
+    for (int i = 0; i < subjectEnrollments.size(); i++) {
+      StudentEnrollmentResponse enrollment = subjectEnrollments.get(i);
       ClassSectionResponse classSection = classMap.get(enrollment.getClassId());
       Double grade10 = enrollment.getFinalGrade();
-      String letterGrade = grade10 != null ? convertToLetterGrade(grade10) : null;
-      Double grade4 = grade10 != null ? convertTo4Scale(grade10) : null;
-      Boolean isPassed = isStudentPassedSubject(enrollment, gradingType);
+      String letterGrade = grade10 != null ? gradeUtil.convertToLetterGrade(grade10) : null;
+      Double grade4 = grade10 != null ? gradeUtil.convertTo4Scale(grade10) : null;
+      Boolean isPassed = gradeUtil.isStudentPassedSubject(enrollment, gradingType);
 
-      return StudentSubjectDetailResponse.StudentSubjectAttemptItem.builder()
-          .attemptNo(enrollment.getAttemptNo())
+      attempts.add(StudentSubjectDetailResponse.StudentSubjectAttemptItem.builder()
+          .attemptNo(i + 1)
           .semesterLabel(classSection != null ? classSection.getSemesterCode() : null)
           .grade10(grade10)
           .letterGrade(letterGrade)
           .grade4(grade4)
           .isPassed(isPassed)
           .isApplied(null) // Will be determined by business logic
-          .build();
-    }).collect(Collectors.toList());
+          .build());
+    }
 
     // Determine which attempt is applied (best grade or most recent if passed)
     if (!attempts.isEmpty()) {
@@ -350,36 +385,55 @@ public class StudentProgressServiceImpl implements StudentProgressService {
   private StudentLearningProgressResponse.StudentProgramInfo buildProgramInfo(
       UserResponse user,
       Curriculum curriculum) {
-    Integer year = null;
+    Integer curriculumYearValue = null;
     if (curriculum.getIntakeYear() != null && curriculum.getIntakeYear().getYearCode() != null) {
       try {
         int parsedYear = Integer.parseInt(curriculum.getIntakeYear().getYearCode().trim());
-        year = parsedYear < 100 ? parsedYear + 2000 : parsedYear;
+        curriculumYearValue = parsedYear < 100 ? parsedYear + 2000 : parsedYear;
       } catch (NumberFormatException e) {
         log.warn("Failed to parse year from yearCode: {}", curriculum.getIntakeYear().getYearCode());
       }
     }
 
+    Integer studentIntakeYearValue = null;
+    if (user.getIntakeYearId() != null) {
+      studentIntakeYearValue = academicYearRepository.findById(user.getIntakeYearId())
+          .map(AcademicYear::getYearCode)
+          .map(yearCode -> {
+            try {
+              int parsedYear = Integer.parseInt(yearCode.trim());
+              return parsedYear < 100 ? parsedYear + 2000 : parsedYear;
+            } catch (NumberFormatException e) {
+              log.warn("Failed to parse intake year from yearCode: {}", yearCode);
+              return null;
+            }
+          })
+          .orElse(null);
+    }
+
     return StudentLearningProgressResponse.StudentProgramInfo.builder()
+        .specializationId(curriculum.getSpecialization().getId().toString())
         .facultyName(curriculum.getSpecialization().getDepartment().getFaculty().getName())
         .specializationName(curriculum.getSpecialization().getName())
         .specializationCode(curriculum.getSpecialization().getCode())
         .curriculumCode(curriculum.getId().getCode())
-        .curriculumYear(year)
+        .curriculumYear(curriculumYearValue)
+        .studentIntakeYear(studentIntakeYearValue)
         .studentName(user.getFullName())
         .studentCode(user.getStudentCode())
         .build();
   }
 
   private StudentLearningProgressResponse.StudentLearningSummary calculateSummary(
-      List<CurriculumSection> sections,
-      Map<UUID, StudentEnrollmentResponse> enrollmentMap, Map<UUID, SubjectGradingType> subjectGradingTypeMap) {
+      List<CurriculumSection> sections, Map<UUID, StudentEnrollmentResponse> enrollmentMap,
+      Map<UUID, SubjectGradingType> subjectGradingTypeMap,
+      CurriculumSubjectAllocationService.SectionAllocationResult allocationResult) {
 
     int earnedCredits = 0;
     int requiredCredits = 0;
     double totalWeightedGrade10 = 0.0;
     double totalWeightedGrade4 = 0.0;
-    int totalCredits = 0;
+    int gpaDenominatorCredits = 0;
 
     for (CurriculumSection section : sections) {
       if (section.getRequiredCredits() != null) {
@@ -387,95 +441,193 @@ public class StudentProgressServiceImpl implements StudentProgressService {
       }
 
       for (CurriculumSubject cs : section.getCurriculumSubjects()) {
-        StudentEnrollmentResponse enrollment = enrollmentMap.get(cs.getSubject().getId());
-        if (enrollment != null) {
-          UUID subjectId = cs.getSubject().getId();
-          SubjectGradingType gradingType = subjectGradingTypeMap.getOrDefault(subjectId, SubjectGradingType.GRADED);
-          int credits = cs.getSubject().getCredits();
+        UUID subjectId = cs.getSubject().getId();
+        if (!allocationResult.countedSubjectIds().contains(subjectId)) {
+          continue;
+        }
 
-          Boolean isPassed = isStudentPassedSubject(enrollment, gradingType);
+        StudentEnrollmentResponse enrollment = enrollmentMap.get(subjectId);
+        if (enrollment == null) {
+          continue;
+        }
 
-          if (isPassed != null && isPassed) {
-            earnedCredits += credits;
-          }
+        SubjectGradingType gradingType = subjectGradingTypeMap.getOrDefault(subjectId, SubjectGradingType.GRADED);
+        int credits = cs.getSubject().getCredits();
 
-          // Only include in GPA calculation if there's a grade
-          if (enrollment.getFinalGrade() != null) {
-            double grade10 = enrollment.getFinalGrade();
-            totalWeightedGrade10 += grade10 * credits;
-            totalWeightedGrade4 += convertTo4Scale(grade10) * credits;
-            totalCredits += credits;
-          }
+        Boolean isPassed = gradeUtil.isStudentPassedSubject(enrollment, gradingType);
+
+        if (isPassed != null && isPassed && credits > 0) {
+          earnedCredits += credits;
+        }
+
+        if (enrollment.getFinalGrade() != null && credits > 0) {
+          double grade10 = enrollment.getFinalGrade();
+          totalWeightedGrade10 += grade10 * credits;
+          totalWeightedGrade4 += gradeUtil.convertTo4Scale(grade10) * credits;
+          gpaDenominatorCredits += credits;
         }
       }
     }
 
-    // GPA = sum(grade * credits) / sum(credits)
-    double cumulativeGpa10 = totalCredits > 0 ? Math.round(totalWeightedGrade10 / totalCredits * 100.0) / 100.0 : 0.0;
-    double cumulativeGpa4 = totalCredits > 0 ? Math.round(totalWeightedGrade4 / totalCredits * 100.0) / 100.0 : 0.0;
+    int remainingCredits = requiredCredits - earnedCredits;
+
+    double cumulativeGpa10 = gpaDenominatorCredits > 0 ? Math.round(
+        totalWeightedGrade10 / gpaDenominatorCredits * 100.0) / 100.0 : 0.0;
+    double cumulativeGpa4 = gpaDenominatorCredits > 0 ? Math.round(
+        totalWeightedGrade4 / gpaDenominatorCredits * 100.0) / 100.0 : 0.0;
 
     return StudentLearningProgressResponse.StudentLearningSummary.builder()
         .earnedCredits(earnedCredits)
         .requiredCredits(requiredCredits)
+        .remainingCredits(remainingCredits)
         .cumulativeGpa10(cumulativeGpa10)
         .cumulativeGpa4(cumulativeGpa4)
         .build();
   }
 
   private List<StudentLearningProgressResponse.StudentProgressSectionItem> buildSectionItems(
-      List<CurriculumSection> sections, Map<UUID, StudentEnrollmentResponse> enrollmentMap,
-      Map<UUID, SubjectGradingType> subjectGradingTypeMap,
-      Map<UUID, SubjectProgressMeta> subjectProgressMetaBySubjectId) {
+      List<CurriculumSection> sections, Map<UUID, List<StudentEnrollmentResponse>> enrollmentsBySubjectMap,
+      Map<UUID, StudentEnrollmentResponse> bestEnrollmentBySubjectMap,
+      Map<UUID, SubjectGradingType> subjectGradingTypeMap, Map<UUID, SubjectProgressMeta> subjectProgressMetaByClassId,
+      Map<UUID, Integer> attemptNoByClassId,
+      CurriculumSubjectAllocationService.SectionAllocationResult allocationResult) {
+
+    CurriculumSection freeElectiveSection = sections.stream()
+        .filter(s -> CurriculumSubjectAllocationService.FREE_ELECTIVE_SECTION_KEY.equals(
+            CurriculumSubjectAllocationService.normalizeSectionName(s.getName())))
+        .findFirst()
+        .orElse(null);
+
+    Map<UUID, Subject> subjectById = sections.stream()
+        .flatMap(section -> section.getCurriculumSubjects().stream())
+        .map(CurriculumSubject::getSubject)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toMap(Subject::getId, s -> s, (a, b) -> a));
 
     return sections.stream().map(section -> {
-      int completedCredits = 0;
+      Integer effectiveCompleted = allocationResult.effectiveCompletedCreditsBySection().get(section.getId());
+      int completedCredits = effectiveCompleted != null ? effectiveCompleted : 0;
+      boolean isFreeElective = section == freeElectiveSection;
       int totalSectionCredits = 0;
 
       List<StudentLearningProgressResponse.StudentProgressSubjectItem> subjectItems = new ArrayList<>();
 
       for (CurriculumSubject cs : section.getCurriculumSubjects()) {
         totalSectionCredits += cs.getSubject().getCredits();
-        StudentEnrollmentResponse enrollment = enrollmentMap.get(cs.getSubject().getId());
+        UUID subjectId = cs.getSubject().getId();
 
-        Double grade10 = null;
-        String letterGrade = null;
-        Double grade4 = null;
-        Boolean isPassed = null;
+        // Skip passed subjects that were moved to free elective (excess from this section)
+        if (!isFreeElective && allocationResult.freeElectiveAcceptedExcessSubjectIds().contains(subjectId)) {
+          continue;
+        }
 
-        if (enrollment != null) {
-          UUID subjectId = cs.getSubject().getId();
-          SubjectGradingType gradingType = subjectGradingTypeMap.getOrDefault(subjectId, SubjectGradingType.GRADED);
+        List<StudentEnrollmentResponse> subjectEnrollments = enrollmentsBySubjectMap.getOrDefault(
+            subjectId, Collections.emptyList());
+        StudentEnrollmentResponse bestEnrollment = bestEnrollmentBySubjectMap.get(subjectId);
+        SubjectGradingType gradingType = subjectGradingTypeMap.getOrDefault(subjectId, SubjectGradingType.GRADED);
 
-          isPassed = isStudentPassedSubject(enrollment, gradingType);
+        if (subjectEnrollments.isEmpty()) {
+          // No attempts at all — emit one item with null grades
+          subjectItems.add(StudentLearningProgressResponse.StudentProgressSubjectItem.builder()
+              .subjectId(subjectId.toString())
+              .order(cs.getDisplayOrder())
+              .subjectCode(cs.getSubject().getCode())
+              .subjectName(cs.getSubject().getName())
+              .credits(cs.getSubject().getCredits())
+              .attemptNo(null)
+              .isHighestResult(true)
+              .build());
+        } else {
+          // Emit ALL attempts per subject, each tagged with isHighestResult
+          for (StudentEnrollmentResponse enrollment : subjectEnrollments) {
+            boolean isHighest = enrollment == bestEnrollment;
+            Boolean isPassed = gradeUtil.isStudentPassedSubject(enrollment, gradingType);
+            Double grade10 = enrollment.getFinalGrade();
+            String letterGrade = grade10 != null ? gradeUtil.convertToLetterGrade(grade10) : null;
+            Double grade4 = grade10 != null ? gradeUtil.convertTo4Scale(grade10) : null;
+            Integer computedAttemptNo = attemptNoByClassId.get(enrollment.getClassId());
+            SubjectProgressMeta meta = subjectProgressMetaByClassId.get(enrollment.getClassId());
 
-          if (enrollment.getFinalGrade() != null) {
-            grade10 = enrollment.getFinalGrade();
-            letterGrade = convertToLetterGrade(grade10);
-            grade4 = convertTo4Scale(grade10);
+            subjectItems.add(StudentLearningProgressResponse.StudentProgressSubjectItem.builder()
+                .subjectId(subjectId.toString())
+                .order(isHighest ? cs.getDisplayOrder() : null)
+                .semesterId(resolveSemesterId(meta))
+                .academicYearId(resolveAcademicYearId(meta))
+                .semesterCode(resolveSemesterCode(meta))
+                .academicYear(resolveAcademicYear(meta))
+                .semesterOrder(resolveSemesterOrder(meta))
+                .academicYearOrder(resolveAcademicYearOrder(meta))
+                .subjectCode(cs.getSubject().getCode())
+                .subjectName(cs.getSubject().getName())
+                .credits(cs.getSubject().getCredits())
+                .grade10(grade10)
+                .letterGrade(letterGrade)
+                .grade4(grade4)
+                .isPassed(isPassed)
+                .attemptNo(computedAttemptNo)
+                .isHighestResult(isHighest)
+                .build());
           }
         }
+      }
 
-        if (isPassed != null && isPassed) {
-          completedCredits += cs.getSubject().getCredits();
+      // For free elective section: add excess subjects accepted from other sections
+      if (isFreeElective && !allocationResult.freeElectiveAcceptedExcessSubjectIds().isEmpty()) {
+        for (UUID excessSubjectId : allocationResult.freeElectiveAcceptedExcessSubjectIds()) {
+          Subject subject = subjectById.get(excessSubjectId);
+          if (subject == null) {
+            continue;
+          }
+          totalSectionCredits += subject.getCredits();
+
+          List<StudentEnrollmentResponse> subjectEnrollments = enrollmentsBySubjectMap.getOrDefault(
+              excessSubjectId, Collections.emptyList());
+          StudentEnrollmentResponse bestEnrollment = bestEnrollmentBySubjectMap.get(excessSubjectId);
+          SubjectGradingType gradingType = subjectGradingTypeMap.getOrDefault(
+              excessSubjectId, SubjectGradingType.GRADED);
+
+          if (subjectEnrollments.isEmpty()) {
+            subjectItems.add(StudentLearningProgressResponse.StudentProgressSubjectItem.builder()
+                .subjectId(excessSubjectId.toString())
+                .order(null)
+                .subjectCode(subject.getCode())
+                .subjectName(subject.getName())
+                .credits(subject.getCredits())
+                .attemptNo(null)
+                .isHighestResult(true)
+                .build());
+          } else {
+            for (StudentEnrollmentResponse enrollment : subjectEnrollments) {
+              boolean isHighest = enrollment == bestEnrollment;
+              Boolean isPassed = gradeUtil.isStudentPassedSubject(enrollment, gradingType);
+              Double grade10 = enrollment.getFinalGrade();
+              String letterGrade = grade10 != null ? gradeUtil.convertToLetterGrade(grade10) : null;
+              Double grade4 = grade10 != null ? gradeUtil.convertTo4Scale(grade10) : null;
+              Integer computedAttemptNo = attemptNoByClassId.get(enrollment.getClassId());
+              SubjectProgressMeta meta = subjectProgressMetaByClassId.get(enrollment.getClassId());
+
+              subjectItems.add(StudentLearningProgressResponse.StudentProgressSubjectItem.builder()
+                  .subjectId(excessSubjectId.toString())
+                  .order(null)
+                  .semesterId(resolveSemesterId(meta))
+                  .academicYearId(resolveAcademicYearId(meta))
+                  .semesterCode(resolveSemesterCode(meta))
+                  .academicYear(resolveAcademicYear(meta))
+                  .semesterOrder(resolveSemesterOrder(meta))
+                  .academicYearOrder(resolveAcademicYearOrder(meta))
+                  .subjectCode(subject.getCode())
+                  .subjectName(subject.getName())
+                  .credits(subject.getCredits())
+                  .grade10(grade10)
+                  .letterGrade(letterGrade)
+                  .grade4(grade4)
+                  .isPassed(isPassed)
+                  .attemptNo(computedAttemptNo)
+                  .isHighestResult(isHighest)
+                  .build());
+            }
+          }
         }
-
-        subjectItems.add(StudentLearningProgressResponse.StudentProgressSubjectItem.builder()
-            .subjectId(cs.getSubject().getId().toString())
-            .order(cs.getDisplayOrder())
-            .semesterId(resolveSemesterId(subjectProgressMetaBySubjectId.get(cs.getSubject().getId())))
-            .academicYearId(resolveAcademicYearId(subjectProgressMetaBySubjectId.get(cs.getSubject().getId())))
-            .semesterCode(resolveSemesterCode(subjectProgressMetaBySubjectId.get(cs.getSubject().getId())))
-            .academicYear(resolveAcademicYear(subjectProgressMetaBySubjectId.get(cs.getSubject().getId())))
-            .semesterOrder(resolveSemesterOrder(subjectProgressMetaBySubjectId.get(cs.getSubject().getId())))
-            .academicYearOrder(resolveAcademicYearOrder(subjectProgressMetaBySubjectId.get(cs.getSubject().getId())))
-            .subjectCode(cs.getSubject().getCode())
-            .subjectName(cs.getSubject().getName())
-            .credits(cs.getSubject().getCredits())
-            .grade10(grade10)
-            .letterGrade(letterGrade)
-            .grade4(grade4)
-            .isPassed(isPassed)
-            .build());
       }
 
       return StudentLearningProgressResponse.StudentProgressSectionItem.builder()
@@ -493,95 +645,52 @@ public class StudentProgressServiceImpl implements StudentProgressService {
     }).collect(Collectors.toList());
   }
 
-  private String convertToLetterGrade(double grade) {
-    if (grade >= 9.5) return "A+";
-    if (grade >= 8.5) return "A";
-    if (grade >= 8.0) return "B+";
-    if (grade >= 7.0) return "B";
-    if (grade >= 6.5) return "C+";
-    if (grade >= 5.5) return "C";
-    if (grade >= 5.0) return "D+";
-    if (grade >= 4.0) return "D";
-    return "F";
-  }
-
-  private double convertTo4Scale(double grade) {
-    if (grade >= 8.5) return 4.0;  // A+/A: 9.5-10.0 and 8.5-9.4
-    if (grade >= 8.0) return 3.5;  // B+: 8.0-8.4
-    if (grade >= 7.0) return 3.0;  // B: 7.0-7.9
-    if (grade >= 6.5) return 2.5;  // C+: 6.5-6.9
-    if (grade >= 5.5) return 2.0;  // C: 5.5-6.4
-    if (grade >= 5.0) return 1.5;  // D+: 5.0-5.4
-    if (grade >= 4.0) return 1.0;  // D: 4.0-4.9
-    return 0.0;                     // F: < 4.0
-  }
-
   /**
-   * Determines if a student passed a subject based on the grading type.
-   *
-   * @param enrollment  The student enrollment data
-   * @param gradingType The subject's grading type
-   * @return true if the student passed, false if failed, null if not yet determined
+   * Compute attemptNo per enrollment based on semester chronological order.
+   * For each subject, enrollments are sorted by their class section's semester
+   * and assigned attempt numbers 1, 2, 3... Returns a map from classId to computed attemptNo.
    */
-  private Boolean isStudentPassedSubject(StudentEnrollmentResponse enrollment, SubjectGradingType gradingType) {
-    if (enrollment == null) {
-      return null;
+  private Map<UUID, Integer> computeAttemptNumbers(
+      Map<UUID, List<StudentEnrollmentResponse>> enrollmentsBySubjectMap,
+      Map<UUID, ClassSectionResponse> classMap) {
+    Map<UUID, Integer> attemptNoByClassId = new HashMap<>();
+    for (var entry : enrollmentsBySubjectMap.entrySet()) {
+      List<StudentEnrollmentResponse> sorted = entry.getValue().stream().sorted(Comparator.comparingInt(e -> {
+        ClassSectionResponse cs = classMap.get(e.getClassId());
+        Integer key = cs != null ? computeSemKeyFromSemesterCode(cs.getSemesterCode()) : null;
+        return key != null ? key : Integer.MAX_VALUE;
+      })).toList();
+      for (int i = 0; i < sorted.size(); i++) {
+        attemptNoByClassId.put(sorted.get(i).getClassId(), i + 1);
+      }
     }
-
-    switch (gradingType) {
-      case GRADED:
-        // For graded subjects, use grade >= 4.0
-        return enrollment.getFinalGrade() != null ? enrollment.getFinalGrade() >= 4.0 : null;
-
-      case PASS_FAIL:
-        // For pass/fail subjects, use isPassed from enrollment
-        return enrollment.getIsPassed();
-
-      case BOTH:
-        // For both types: isPassed is true OR grade >= 5.0
-        Boolean isPassed = enrollment.getIsPassed();
-        Double grade = enrollment.getFinalGrade();
-
-        if (isPassed != null && isPassed) {
-          return true;
-        }
-        if (grade != null && grade >= 5.0) {
-          return true;
-        }
-        // If we have either value and neither condition passed, return false
-        if (isPassed != null || grade != null) {
-          return false;
-        }
-        return null;
-
-      default:
-        // Default to graded logic
-        return enrollment.getFinalGrade() != null ? enrollment.getFinalGrade() >= 4.0 : null;
-    }
+    return attemptNoByClassId;
   }
 
-  private Map<UUID, SubjectProgressMeta> buildSubjectProgressMetaBySubjectId(
-      Map<UUID, StudentEnrollmentResponse> enrollmentBySubjectMap,
-      Map<UUID, ClassSectionResponse> classMap) {
-    Map<UUID, UUID> semesterIdBySubjectId = new HashMap<>();
-    for (Map.Entry<UUID, StudentEnrollmentResponse> entry : enrollmentBySubjectMap.entrySet()) {
-      ClassSectionResponse classSection = classMap.get(entry.getValue().getClassId());
-      if (classSection != null && classSection.getSemesterId() != null) {
-        semesterIdBySubjectId.put(entry.getKey(), classSection.getSemesterId());
+  private Map<UUID, SubjectProgressMeta> buildSubjectProgressMetaByClassId(
+      Map<UUID, List<StudentEnrollmentResponse>> enrollmentsBySubjectMap, Map<UUID, ClassSectionResponse> classMap) {
+    // Collect semesterId for each classId across ALL enrollments
+    Map<UUID, UUID> semesterIdByClassId = new HashMap<>();
+    for (var entry : enrollmentsBySubjectMap.entrySet()) {
+      for (StudentEnrollmentResponse enrollment : entry.getValue()) {
+        ClassSectionResponse classSection = classMap.get(enrollment.getClassId());
+        if (classSection != null && classSection.getSemesterId() != null) {
+          semesterIdByClassId.put(enrollment.getClassId(), classSection.getSemesterId());
+        }
       }
     }
 
-    if (semesterIdBySubjectId.isEmpty()) {
+    if (semesterIdByClassId.isEmpty()) {
       return Collections.emptyMap();
     }
 
-    Map<UUID, Semester> semesterById = semesterRepository.findAllById(semesterIdBySubjectId.values())
+    Map<UUID, Semester> semesterById = semesterRepository.findAllById(semesterIdByClassId.values())
         .stream()
         .collect(Collectors.toMap(Semester::getId, semester -> semester));
 
-    List<Semester> orderedSemesters = semesterById.values().stream()
-        .sorted(Comparator
-            .comparing(Semester::getStartDate, Comparator.nullsLast(Comparator.naturalOrder()))
+    List<Semester> orderedSemesters = semesterById.values()
+        .stream()
+        .sorted(Comparator.comparing(Semester::getStartDate, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(Semester::getSemesterCode, Comparator.nullsLast(String::compareTo))
             .thenComparing(Semester::getId))
         .toList();
@@ -596,22 +705,22 @@ public class StudentProgressServiceImpl implements StudentProgressService {
       if (semester.getAcademicYear() == null || semester.getAcademicYear().getId() == null) {
         continue;
       }
-      academicYearOrderById.computeIfAbsent(semester.getAcademicYear().getId(), ignored -> academicYearOrderById.size() + 1);
+      academicYearOrderById.computeIfAbsent(
+          semester.getAcademicYear().getId(), ignored -> academicYearOrderById.size() + 1);
     }
 
+    // Build result keyed by classId (each enrollment gets its own metadata)
     Map<UUID, SubjectProgressMeta> result = new HashMap<>();
-    for (Map.Entry<UUID, UUID> entry : semesterIdBySubjectId.entrySet()) {
+    for (var entry : semesterIdByClassId.entrySet()) {
       Semester semester = semesterById.get(entry.getValue());
       if (semester == null || semester.getAcademicYear() == null || semester.getAcademicYear().getId() == null) {
         continue;
       }
-      result.put(entry.getKey(), new SubjectProgressMeta(
-          semester.getId(),
-          semester.getAcademicYear().getId(),
-          semester.getSemesterCode(),
-          extractAcademicYearDisplay(semester.getAcademicYear().getYearCode()),
-          semesterOrderById.get(semester.getId()),
-          academicYearOrderById.get(semester.getAcademicYear().getId())));
+      result.put(
+          entry.getKey(), new SubjectProgressMeta(
+              semester.getId(), semester.getAcademicYear().getId(), semester.getSemesterCode(),
+              extractAcademicYearDisplay(semester.getAcademicYear().getYearCode()),
+              semesterOrderById.get(semester.getId()), academicYearOrderById.get(semester.getAcademicYear().getId())));
     }
 
     return result;
@@ -648,13 +757,18 @@ public class StudentProgressServiceImpl implements StudentProgressService {
     return yearCode.trim();
   }
 
-  private record SubjectProgressMeta(
-      UUID semesterId,
-      UUID academicYearId,
-      String semesterCode,
-      String academicYear,
-      Integer semesterOrder,
-      Integer academicYearOrder
-  ) {
+
+  private record SubjectProgressMeta(UUID semesterId, UUID academicYearId, String semesterCode, String academicYear,
+                                     Integer semesterOrder, Integer academicYearOrder) {
+  }
+
+  private UUID resolveFallbackIntakeYearId(String reason, UUID userId) {
+    log.warn(
+        "Falling back to default intake year code '{}' for userId={}: {}",
+        curriculumFallbackConfig.getFallbackIntakeYearCode(), userId, reason);
+    return academicYearRepository.findByYearCode(curriculumFallbackConfig.getFallbackIntakeYearCode())
+        .map(AcademicYear::getId)
+        .orElseThrow(() -> new EntityNotFoundException(
+            "Fallback academic year not found with yearCode=" + curriculumFallbackConfig.getFallbackIntakeYearCode()));
   }
 }

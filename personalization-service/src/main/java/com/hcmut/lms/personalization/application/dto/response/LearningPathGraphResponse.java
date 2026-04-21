@@ -1,5 +1,6 @@
 package com.hcmut.lms.personalization.application.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,9 +12,10 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class LearningPathGraphResponse {
 
-  private List<PrerequisiteGraphNodeResponse> nodes;
-  private List<PrerequisiteGraphEdgeResponse> edges;
+  private List<List<PrerequisiteChainNodeResponse>> chains;
+  private List<List<PrerequisiteChainNodeResponse>> parallelGroups;
+  private List<List<PrerequisiteChainNodeResponse>> recommendationChains;
 }
-

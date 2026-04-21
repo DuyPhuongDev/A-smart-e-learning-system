@@ -1,6 +1,7 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.coursemanagement.application.config.CurriculumFallbackConfig;
 import com.hcmut.lms.coursemanagement.application.dto.request.CurriculumRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.CurriculumFullResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.CurriculumResponse;
@@ -39,6 +40,7 @@ public class CurriculumServiceImpl implements CurriculumService {
   private final CurriculumSectionRepository curriculumSectionRepository;
   private final CurriculumSubjectRepository curriculumSubjectRepository;
   private final CurriculumSubjectPriorityRepository curriculumSubjectPriorityRepository;
+  private final CurriculumFallbackConfig curriculumFallbackConfig;
 
   @Override
   public CurriculumResponse createCurriculum(CurriculumRequest request) {
@@ -188,8 +190,19 @@ public class CurriculumServiceImpl implements CurriculumService {
         .toList();
 
     if (matches.isEmpty()) {
+      Integer fallbackYear = resolveFallbackIntakeYear();
+      log.warn("No curriculum found for specializationId={}, intakeYear={}. Falling back to intake year {}",
+          specializationId, intakeYear, fallbackYear);
+      matches = curriculumRepository.findByIdSpecializationId(specializationId)
+          .stream()
+          .filter(curriculum -> matchesIntakeYear(curriculum, fallbackYear))
+          .toList();
+    }
+
+    if (matches.isEmpty()) {
       throw new EntityNotFoundException(
-          "Curriculum not found for specializationId=" + specializationId + " and intakeYear=" + intakeYear);
+          "Curriculum not found for specializationId=" + specializationId + " and intakeYear=" + intakeYear
+              + " (including fallback)");
     }
 
     if (matches.size() > 1) {
@@ -356,6 +369,23 @@ public class CurriculumServiceImpl implements CurriculumService {
       }
     }
     return false;
+  }
+
+  private Integer resolveFallbackIntakeYear() {
+    return academicYearRepository.findByYearCode(curriculumFallbackConfig.getFallbackIntakeYearCode())
+        .map(ay -> {
+          if (ay.getStartDate() != null) {
+            return ay.getStartDate().getYear();
+          }
+          try {
+            int parsed = Integer.parseInt(ay.getYearCode().trim());
+            return parsed < 100 ? parsed + 2000 : parsed;
+          } catch (NumberFormatException e) {
+            throw new EntityNotFoundException("Cannot parse fallback yearCode: " + ay.getYearCode());
+          }
+        })
+        .orElseThrow(() -> new EntityNotFoundException(
+            "Fallback academic year not found with yearCode=" + curriculumFallbackConfig.getFallbackIntakeYearCode()));
   }
 }
 

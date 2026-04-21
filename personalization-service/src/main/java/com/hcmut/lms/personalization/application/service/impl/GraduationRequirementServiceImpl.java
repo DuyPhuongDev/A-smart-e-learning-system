@@ -55,8 +55,7 @@ public class GraduationRequirementServiceImpl implements GraduationRequirementSe
     GraduationRequirementResponse requirement = findActiveRequirement(activeRequirements, status.getGraduationRequirementId());
 
     status.setIsCompleted(request.getIsCompleted());
-    status.setCompletionSemesterId(
-        Boolean.TRUE.equals(request.getIsCompleted()) ? request.getCompletionSemesterId() : null);
+    status.setCompletionSemesterId(request.getCompletionSemesterId());
 
     GraduationRequirementStatus savedStatus = graduationRequirementStatusRepository.save(status);
 

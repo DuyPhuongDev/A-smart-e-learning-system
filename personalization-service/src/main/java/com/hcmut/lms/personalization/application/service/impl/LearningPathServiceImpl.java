@@ -1,22 +1,18 @@
 package com.hcmut.lms.personalization.application.service.impl;
 
-import com.hcmut.lms.personalization.application.dto.request.CompareLearningPathsRequest;
-import com.hcmut.lms.personalization.application.dto.request.OptimizeLearningPathRequest;
+import com.hcmut.lms.personalization.application.dto.record.CurriculumContext;
+import com.hcmut.lms.personalization.application.dto.record.CurriculumEnrichmentData;
+import com.hcmut.lms.personalization.application.dto.request.SubjectChangeDto;
 import com.hcmut.lms.personalization.application.dto.request.UpdateLearningPathRequest;
 import com.hcmut.lms.personalization.application.dto.response.*;
-import com.hcmut.lms.personalization.application.mapper.LearningPathMapper;
 import com.hcmut.lms.personalization.application.service.LearningPathService;
 import com.hcmut.lms.personalization.application.service.impl.learning_path.LearningPathGenerationService;
-import com.hcmut.lms.personalization.application.service.impl.support.AcademicCalendarDisplaySupport;
 import com.hcmut.lms.personalization.client.CourseManagementClient;
-import com.hcmut.lms.personalization.client.dto.CurriculumResolutionResponse;
-import com.hcmut.lms.personalization.client.dto.SemesterResponse;
-import com.hcmut.lms.personalization.client.dto.StudentLearningProgressResponse;
+import com.hcmut.lms.personalization.client.dto.*;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.LearningGoal;
 import com.hcmut.lms.personalization.domain.entity.learningPath.LearningPath;
 import com.hcmut.lms.personalization.domain.entity.learningPath.LearningPathSection;
 import com.hcmut.lms.personalization.domain.entity.learningPath.LearningPathSubject;
-import com.hcmut.lms.personalization.domain.entity.learningPath.PrerequisiteNode;
 import com.hcmut.lms.personalization.repository.LearningGoalRepository;
 import com.hcmut.lms.personalization.repository.LearningPathRepository;
 import com.hcmut.lms.personalization.repository.LearningPathSectionRepository;
@@ -27,8 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,64 +38,45 @@ public class LearningPathServiceImpl implements LearningPathService {
   private final LearningPathSectionRepository learningPathSectionRepository;
   private final LearningPathSubjectRepository learningPathSubjectRepository;
   private final LearningPathGenerationService learningPathGenerationService;
-  private final LearningPathMapper learningPathMapper;
+  private final LearningPathResponseAssembler assembler;
 
   @Override
   @Transactional(readOnly = true)
   public LearningPathResponse getActiveLearningPath(UUID studentId) {
-    return learningPathRepository.findTopByStudentIdAndIsActiveTrueOrderByUpdatedAtDesc(studentId)
-        .map(path -> toPathResponse(path, studentId))
+    LearningPath path = learningPathRepository.findTopByStudentIdAndIsActiveTrueOrderByUpdatedAtDesc(studentId)
         .orElseThrow(() -> new EntityNotFoundException("Active learning path not found for studentId=" + studentId));
+    return assembler.toPathResponse(path, studentId);
   }
 
   @Override
   @Transactional(readOnly = true)
   public LearningPathResponse getLearningPathById(UUID studentId, UUID learningPathId) {
-    return toPathResponse(getOwnedPath(studentId, learningPathId), studentId);
+    return assembler.toPathResponse(getOwnedPath(studentId, learningPathId), studentId);
   }
 
   @Override
   public LearningPathResponse createLearningPath(UUID studentId) {
     log.info("Creating learning path for studentId={}", studentId);
 
-    LearningGoal learningGoal = learningGoalRepository.findTopByStudentIdAndIsActiveTrueOrderByCreatedAtDesc(studentId)
-        .orElseThrow(() -> new EntityNotFoundException("Active learning goal not found for studentId=" + studentId));
-
-    UUID specializationId;
-    try {
-      specializationId = UUID.fromString(learningGoal.getSpecializationId());
-    } catch (Exception ex) {
-      throw new IllegalArgumentException("Invalid specializationId in active learning goal");
-    }
-
-    StudentLearningProgressResponse progress = courseManagementClient.getStudentProgress(studentId);
-    Integer intakeYear = progress != null && progress.getProgramInfo() != null ? progress.getProgramInfo()
-        .getCurriculumYear() : null;
-    if (intakeYear == null) {
-      throw new EntityNotFoundException("Cannot determine intake year for studentId=" + studentId);
-    }
-
-    CurriculumResolutionResponse curriculum = courseManagementClient.resolveCurriculum(specializationId, intakeYear);
-    if (curriculum == null || curriculum.getCode() == null || curriculum.getCode().isBlank()) {
+    CurriculumContext ctx = resolveCurriculumContext(studentId);
+    if (ctx.curriculum() == null || ctx.curriculum().getCode() == null || ctx.curriculum().getCode().isBlank()) {
       throw new EntityNotFoundException(
-          "Curriculum not found for specializationId=" + specializationId + " and intakeYear=" + intakeYear);
+          "Curriculum not found for specializationId=" + ctx.specializationId());
     }
 
     learningPathRepository.deactivateActiveByStudentId(studentId);
 
-    // Generate learning path using the generation service
     LearningPath path = learningPathGenerationService.generateLearningPath(
-        studentId, learningGoal.getLearningGoalId(), curriculum.getCode(), learningGoal);
+        studentId, ctx.goal().getLearningGoalId(), ctx.curriculum().getCode(), ctx.goal(), ctx.progress());
 
     log.info("Learning path created successfully with id={}", path.getLearningPathId());
-    return toPathResponse(path, studentId);
+    return assembler.toPathResponse(path, studentId);
   }
 
   @Override
   public LearningPathResponse updateLearningPath(
-      UUID studentId, UUID learningPathId,
-      UpdateLearningPathRequest request) {
-    LearningPath path = getOwnedPath(studentId, learningPathId);
+      UUID studentId, UUID learningPathId, UpdateLearningPathRequest request) {
+    LearningPath path = getActiveOwnedPath(studentId, learningPathId);
 
     if (request.getTotalCredits() != null) {
       path.setTotalCredits(request.getTotalCredits());
@@ -117,17 +92,20 @@ public class LearningPathServiceImpl implements LearningPathService {
     }
 
     LearningPath saved = learningPathRepository.save(path);
-    return toPathResponse(saved, studentId);
+    return assembler.toPathResponse(saved, studentId);
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<LearningPathSectionResponse> getSections(UUID studentId, UUID learningPathId) {
     getOwnedPath(studentId, learningPathId);
-    Map<UUID, SectionDisplayInfo> sectionDisplayInfo = buildSectionDisplayInfo(studentId);
+    LearningGoal goal = learningGoalRepository.findTopByStudentIdAndIsActiveTrueOrderByCreatedAtDesc(studentId).orElse(null);
+    StudentLearningProgressResponse progress = assembler.fetchProgressForStudent(studentId, goal);
+    List<SemesterResponse> allSemesters = assembler.fetchAllSemestersSafely();
+    Map<UUID, LearningPathResponseAssembler.SectionDisplayInfo> sectionDisplayInfo = assembler.buildSectionDisplayInfo(studentId, progress, allSemesters);
     return learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(learningPathId)
         .stream()
-        .map(section -> toSectionResponse(section, sectionDisplayInfo))
+        .map(section -> assembler.toSectionResponse(section, sectionDisplayInfo))
         .toList();
   }
 
@@ -135,341 +113,193 @@ public class LearningPathServiceImpl implements LearningPathService {
   @Transactional(readOnly = true)
   public List<LearningPathSubjectResponse> getSubjects(UUID studentId, UUID learningPathId) {
     getOwnedPath(studentId, learningPathId);
-    return loadSubjectsBySemesterOrder(learningPathId).stream().map(this::toSubjectResponse).toList();
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public List<LearningPathOptimizationCandidateResponse> optimize(
-      UUID studentId, UUID learningPathId,
-      OptimizeLearningPathRequest request) {
-
-    LearningPath path = getOwnedPath(studentId, learningPathId);
-
-    LearningPathOptimizationCandidateResponse candidate = LearningPathOptimizationCandidateResponse.builder()
-        .strategy(request.getStrategy())
-        .title("Optimization preview")
-        .description("Auto-generated candidate based on current learning path metrics")
-        .projectedRiskLevel(path.getRiskLevel() != null ? path.getRiskLevel() : "medium")
-        .projectedPredictedGpa(path.getPredictedGpa() != null ? path.getPredictedGpa().doubleValue() : null)
-        .projectedTotalSemesters(path.getEstimatedDurationSemesters())
-        .changes(Collections.emptyList())
-        .build();
-
-    return List.of(candidate);
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public List<LearningPathValidationConflictResponse> validate(UUID studentId, UUID learningPathId) {
-    getOwnedPath(studentId, learningPathId);
-
-    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
-        learningPathId);
-
-    Map<UUID, Integer> creditsBySection = new HashMap<>();
-    for (LearningPathSubject subject : learningPathSubjectRepository.findByLearningPathId(learningPathId)) {
-      creditsBySection.merge(subject.getLearningPathSectionId(), subject.getCredits(), Integer::sum);
-    }
-
-    List<LearningPathValidationConflictResponse> conflicts = new ArrayList<>();
-    for (LearningPathSection section : sections) {
-      int credits = creditsBySection.getOrDefault(section.getLearningPathSectionId(), 0);
-      if (credits > 25) {
-        conflicts.add(LearningPathValidationConflictResponse.builder()
-            .conflictType("credit-limit")
-            .semesterOrder(section.getSemesterOrder())
-            .description("Total credits exceed recommended limit")
-            .suggestedResolution("Move one elective to another semester")
-            .relatedSubjectIds(Collections.emptyList())
-            .build());
-      }
-    }
-
-    return conflicts;
-  }
-
-  @Override
-  @Transactional(readOnly = true)
-  public List<LearningPathChangeRecordResponse> getChanges(UUID studentId, UUID learningPathId) {
-    getOwnedPath(studentId, learningPathId);
-    return Collections.emptyList();
+    List<LearningPathSubject> subjects = assembler.loadSubjectsBySemesterOrder(learningPathId);
+    LearningGoal goal = learningGoalRepository.findTopByStudentIdAndIsActiveTrueOrderByCreatedAtDesc(studentId).orElse(null);
+    StudentLearningProgressResponse progress = assembler.fetchProgressForStudent(studentId, goal);
+    CurriculumEnrichmentData curriculumData = assembler.buildCurriculumEnrichmentData(progress, goal);
+    Map<UUID, String> difficultyMap = assembler.fetchBatchDifficultyByIds(
+        subjects.stream().map(LearningPathSubject::getSubjectId).distinct().toList());
+    return subjects.stream().map(subject -> assembler.toSubjectResponse(subject, curriculumData.subjectMap(), difficultyMap)).toList();
   }
 
   @Override
   @Transactional(readOnly = true)
   public LearningPathGraphResponse getGraph(UUID studentId, UUID learningPathId) {
     getOwnedPath(studentId, learningPathId);
-
     List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
         learningPathId);
-    Map<UUID, Integer> semesterOrderBySection = sections.stream()
-        .collect(
-            Collectors.toMap(LearningPathSection::getLearningPathSectionId, LearningPathSection::getSemesterOrder));
-
+    Map<UUID, Integer> semesterOrderBySection = assembler.buildSemesterOrderBySection(sections);
     List<LearningPathSubject> subjects = learningPathSubjectRepository.findByLearningPathId(learningPathId);
-    Map<UUID, LearningPathSubject> subjectById = subjects.stream()
-        .collect(Collectors.toMap(LearningPathSubject::getSubjectId, s -> s, (left, right) -> left));
-
-    List<PrerequisiteGraphNodeResponse> nodes = subjects.stream()
-        .map(subject -> PrerequisiteGraphNodeResponse.builder()
-            .id(subject.getSubjectId())
-            .label(subject.getSubjectCode() + " - " + subject.getSubjectName())
-            .semesterOrder(semesterOrderBySection.get(subject.getLearningPathSectionId()))
-            .build())
-        .toList();
-
-    List<PrerequisiteGraphEdgeResponse> edges = new ArrayList<>();
-    for (LearningPathSubject subject : subjects) {
-      for (PrerequisiteNodeResponse prerequisite : toPrerequisiteResponses(subject.getPrerequisitesGraph())) {
-        if (Boolean.TRUE.equals(
-            prerequisite.getRequired()) && prerequisite.getSubjectId() != null && subjectById.containsKey(
-            prerequisite.getSubjectId())) {
-          edges.add(PrerequisiteGraphEdgeResponse.builder()
-              .source(prerequisite.getSubjectId())
-              .target(subject.getSubjectId())
-              .build());
-        }
-      }
-    }
-
-    return LearningPathGraphResponse.builder().nodes(nodes).edges(edges).build();
+    LearningGoal goal = learningGoalRepository.findTopByStudentIdAndIsActiveTrueOrderByCreatedAtDesc(studentId).orElse(null);
+    StudentLearningProgressResponse progress = assembler.fetchProgressForStudent(studentId, goal);
+    CurriculumEnrichmentData curriculumData = assembler.buildCurriculumEnrichmentData(progress, goal);
+    List<SemesterResponse> allSemesters = assembler.fetchAllSemestersSafely();
+    var sectionDisplayInfo = assembler.buildSectionDisplayInfo(studentId, progress, allSemesters);
+    return assembler.buildGraph(subjects, semesterOrderBySection, curriculumData.subjectMap(),
+        sections, sectionDisplayInfo, assembler.findCurrentSemesterId(allSemesters));
   }
 
   @Override
-  @Transactional(readOnly = true)
-  public LearningPathComparisonResultResponse compare(UUID studentId, CompareLearningPathsRequest request) {
-    LearningPath baselinePath = getOwnedPath(studentId, request.getBaselineLearningPathId());
-    LearningPath targetPath = getOwnedPath(studentId, request.getTargetLearningPathId());
+  public LearningPathResponse updateLearningPathSubjects(UUID studentId, UUID learningPathId, List<SubjectChangeDto> changes) {
+    LearningPath path = getActiveOwnedPath(studentId, learningPathId);
+    List<LearningPathSubject> allSubjects = learningPathSubjectRepository.findByLearningPathId(learningPathId);
+    Map<UUID, List<LearningPathSubject>> subjectsBySubjectId = allSubjects.stream()
+        .collect(Collectors.groupingBy(LearningPathSubject::getSubjectId));
+    Set<UUID> existingSubjectIds = allSubjects.stream()
+        .filter(s -> !Boolean.TRUE.equals(s.getIsCompleted()))
+        .map(LearningPathSubject::getSubjectId)
+        .collect(Collectors.toSet());
 
-    LearningPathComparisonResultResponse.LearningPathComparisonMetrics baseline = toComparisonMetrics(baselinePath);
-    LearningPathComparisonResultResponse.LearningPathComparisonMetrics candidate = toComparisonMetrics(targetPath);
-
-    LearningPathComparisonResultResponse.LearningPathComparisonDeltas deltas =
-        LearningPathComparisonResultResponse.LearningPathComparisonDeltas.builder()
-        .totalSemesters(nullSafe(targetPath.getEstimatedDurationSemesters()) - nullSafe(
-            baselinePath.getEstimatedDurationSemesters()))
-        .avgCreditsPerSemester(round(candidate.getAvgCreditsPerSemester() - baseline.getAvgCreditsPerSemester()))
-        .predictedGpa(round(candidate.getPredictedGpa() - baseline.getPredictedGpa()))
-        .build();
-
-    return LearningPathComparisonResultResponse.builder()
-        .baselinePathId(baselinePath.getLearningPathId())
-        .baseline(baseline)
-        .candidate(candidate)
-        .deltas(deltas)
-        .build();
-  }
-
-  private LearningPath getOwnedPath(UUID studentId, UUID learningPathId) {
-    return learningPathRepository.findByLearningPathIdAndStudentIdAndIsActiveTrue(learningPathId, studentId)
-        .orElseThrow(() -> new EntityNotFoundException("Learning path not found with id: " + learningPathId));
-  }
-
-  private LearningPathResponse toPathResponse(LearningPath path, UUID studentId) {
-    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
-        path.getLearningPathId());
-    Map<UUID, SectionDisplayInfo> sectionDisplayInfo = buildSectionDisplayInfo(studentId);
-    List<LearningPathSectionResponse> sectionResponses = sections.stream()
-        .map(section -> toSectionResponse(section, sectionDisplayInfo))
+    List<UUID> addSubjectIds = changes.stream()
+        .filter(c -> "ADD".equalsIgnoreCase(c.getAction()))
+        .map(SubjectChangeDto::getSubjectId)
         .toList();
-    Map<UUID, Integer> semesterOrderBySection = sections.stream()
-        .collect(
-            Collectors.toMap(LearningPathSection::getLearningPathSectionId, LearningPathSection::getSemesterOrder));
+    Map<UUID, String> addDifficultyMap = assembler.fetchBatchDifficultyByIds(addSubjectIds);
 
-    List<LearningPathSubject> subjects = loadSubjectsBySemesterOrder(path.getLearningPathId());
-    List<LearningPathSubjectResponse> subjectResponses = subjects.stream().map(this::toSubjectResponse).toList();
+    List<LearningPathSubject> subjectsToSave = new ArrayList<>();
+    List<LearningPathSubject> subjectsToRemove = new ArrayList<>();
 
-    LearningPathGraphResponse graph = buildGraph(subjects, semesterOrderBySection);
-    List<LearningPathValidationConflictResponse> validationConflicts = buildValidationConflicts(sections, subjects);
-
-    LearningPathResponse response = learningPathMapper.toPathResponse(path);
-    response.setSections(sectionResponses);
-    response.setSubjects(subjectResponses);
-    response.setGraph(graph);
-    response.setValidationConflicts(validationConflicts);
-    return response;
-  }
-
-  private LearningPathSectionResponse toSectionResponse(
-      LearningPathSection section,
-      Map<UUID, SectionDisplayInfo> sectionDisplayInfo) {
-    LearningPathSectionResponse response = learningPathMapper.toSectionResponse(section);
-    SectionDisplayInfo displayInfo = sectionDisplayInfo.get(section.getSemesterId());
-    if (displayInfo != null) {
-      response.setAcademicYear(displayInfo.academicYear());
-      response.setSemester(displayInfo.semester());
-    }
-    return response;
-  }
-
-  private Map<UUID, SectionDisplayInfo> buildSectionDisplayInfo(UUID studentId) {
-    Map<UUID, SectionDisplayInfo> displayBySemesterId = new HashMap<>();
-
-    List<SemesterResponse> remainingSemesters = courseManagementClient.getRemainingSemesters(studentId);
-    if (remainingSemesters != null) {
-      for (SemesterResponse semester : remainingSemesters) {
-        if (semester.getId() == null) {
-          continue;
-        }
-        displayBySemesterId.put(semester.getId(),
-            new SectionDisplayInfo(
-                AcademicCalendarDisplaySupport.academicYearFromCode(semester.getAcademicYearCode()),
-                AcademicCalendarDisplaySupport.semesterFromCode(semester.getSemesterCode())));
-      }
-    }
-
-    StudentLearningProgressResponse progress = courseManagementClient.getStudentProgress(studentId);
-    if (progress != null && progress.getSections() != null) {
-      for (StudentLearningProgressResponse.StudentProgressSectionItem sectionItem : progress.getSections()) {
-        if (sectionItem.getSubjects() == null) {
-          continue;
-        }
-        for (StudentLearningProgressResponse.StudentProgressSubjectItem subjectItem : sectionItem.getSubjects()) {
-          UUID semesterId = parseUuid(subjectItem.getSemesterId());
-          if (semesterId == null) {
-            continue;
+    for (SubjectChangeDto change : changes) {
+      switch (change.getAction().toUpperCase()) {
+        case "ADD" -> {
+          if (existingSubjectIds.contains(change.getSubjectId())) {
+            throw new IllegalArgumentException("Subject already exists in learning path: " + change.getSubjectCode());
           }
-          displayBySemesterId.putIfAbsent(
-              semesterId,
-              new SectionDisplayInfo(
-                  AcademicCalendarDisplaySupport.academicYearFromCode(subjectItem.getAcademicYear()),
-                  AcademicCalendarDisplaySupport.semesterFromCode(subjectItem.getSemesterCode())));
+          if (change.getTargetSectionId() == null) {
+            throw new IllegalArgumentException("Target section must be specified when adding a subject");
+          }
+          String difficulty = addDifficultyMap.getOrDefault(change.getSubjectId(), "medium");
+          LearningPathSubject newSubject = LearningPathSubject.builder()
+              .learningPathId(learningPathId)
+              .learningPathSectionId(change.getTargetSectionId())
+              .curriculumSubjectId(change.getCurriculumSubjectId())
+              .subjectId(change.getSubjectId())
+              .subjectCode(change.getSubjectCode() != null ? change.getSubjectCode() : "")
+              .subjectName(change.getSubjectName() != null ? change.getSubjectName() : "")
+              .credits(change.getCredits() != null ? change.getCredits() : 0)
+              .difficultyLevel(difficulty)
+              .isCompleted(false)
+              .prerequisitesGraph(List.of())
+              .build();
+          subjectsToSave.add(newSubject);
+          existingSubjectIds.add(change.getSubjectId());
         }
+        case "REMOVE" -> {
+          List<LearningPathSubject> toRemove = subjectsBySubjectId.getOrDefault(change.getSubjectId(), List.of())
+              .stream()
+              .filter(s -> !Boolean.TRUE.equals(s.getIsCompleted()))
+              .toList();
+          if (toRemove.isEmpty()) {
+            throw new IllegalArgumentException("Subject not found in learning path: " + change.getSubjectId());
+          }
+          subjectsToRemove.addAll(toRemove);
+          existingSubjectIds.remove(change.getSubjectId());
+        }
+        case "MOVE" -> {
+          if (change.getTargetSectionId() == null) {
+            throw new IllegalArgumentException("Target section must be specified when moving a subject");
+          }
+          List<LearningPathSubject> toMove = subjectsBySubjectId.getOrDefault(change.getSubjectId(), List.of())
+              .stream()
+              .filter(s -> !Boolean.TRUE.equals(s.getIsCompleted()))
+              .toList();
+          if (toMove.isEmpty()) {
+            throw new IllegalArgumentException("Subject not found in learning path: " + change.getSubjectId());
+          }
+          for (LearningPathSubject subject : toMove) {
+            subject.setLearningPathSectionId(change.getTargetSectionId());
+            subjectsToSave.add(subject);
+          }
+        }
+        default -> throw new IllegalArgumentException("Invalid action: " + change.getAction());
       }
     }
 
-    return displayBySemesterId;
-  }
-
-
-  private UUID parseUuid(String value) {
-    if (value == null || value.isBlank()) {
-      return null;
+    if (!subjectsToRemove.isEmpty()) {
+      learningPathSubjectRepository.deleteAll(subjectsToRemove);
     }
-    try {
-      return UUID.fromString(value);
-    } catch (IllegalArgumentException ex) {
-      return null;
-    }
-  }
-
-  private record SectionDisplayInfo(String academicYear, String semester) {
-  }
-
-  private LearningPathSubjectResponse toSubjectResponse(LearningPathSubject subject) {
-    LearningPathSubjectResponse response = learningPathMapper.toSubjectResponse(subject);
-    response.setPrerequisitesGraph(toPrerequisiteResponses(subject.getPrerequisitesGraph()));
-    return response;
-  }
-
-  private List<LearningPathSubject> loadSubjectsBySemesterOrder(UUID learningPathId) {
-    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathIdOrderByAcademicYearOrderAscSemesterOrderAsc(
-        learningPathId);
-    Map<UUID, Integer> semesterOrderBySection = sections.stream()
-        .collect(
-            Collectors.toMap(LearningPathSection::getLearningPathSectionId, LearningPathSection::getSemesterOrder));
-
-    return learningPathSubjectRepository.findByLearningPathId(learningPathId)
-        .stream()
-        .sorted(Comparator.comparingInt(
-                (LearningPathSubject s) -> semesterOrderBySection.getOrDefault(
-                    s.getLearningPathSectionId(),
-                    Integer.MAX_VALUE))
-            .thenComparingInt(s -> s.getStudyOrder() != null ? s.getStudyOrder() : Integer.MAX_VALUE)
-            .thenComparing(LearningPathSubject::getSubjectCode))
-        .toList();
-  }
-
-  private List<PrerequisiteNodeResponse> toPrerequisiteResponses(List<PrerequisiteNode> prerequisitesGraph) {
-    if (prerequisitesGraph == null || prerequisitesGraph.isEmpty()) {
-      return Collections.emptyList();
-    }
-    return prerequisitesGraph.stream()
-        .map(node -> PrerequisiteNodeResponse.builder()
-            .subjectId(node.getSubjectId())
-            .subjectCode(node.getSubjectCode())
-            .subjectName(node.getSubjectName())
-            .required(node.getRequired())
-            .build())
-        .toList();
-  }
-
-  private LearningPathGraphResponse buildGraph(
-      List<LearningPathSubject> subjects,
-      Map<UUID, Integer> semesterOrderBySection) {
-    Map<UUID, LearningPathSubject> subjectById = subjects.stream()
-        .collect(Collectors.toMap(LearningPathSubject::getSubjectId, s -> s, (left, right) -> left));
-
-    List<PrerequisiteGraphNodeResponse> nodes = subjects.stream()
-        .map(subject -> PrerequisiteGraphNodeResponse.builder()
-            .id(subject.getSubjectId())
-            .label(subject.getSubjectCode() + " - " + subject.getSubjectName())
-            .semesterOrder(semesterOrderBySection.get(subject.getLearningPathSectionId()))
-            .build())
-        .toList();
-
-    List<PrerequisiteGraphEdgeResponse> edges = new ArrayList<>();
-    for (LearningPathSubject subject : subjects) {
-      for (PrerequisiteNodeResponse prerequisite : toPrerequisiteResponses(subject.getPrerequisitesGraph())) {
-        if (Boolean.TRUE.equals(
-            prerequisite.getRequired()) && prerequisite.getSubjectId() != null && subjectById.containsKey(
-            prerequisite.getSubjectId())) {
-          edges.add(PrerequisiteGraphEdgeResponse.builder()
-              .source(prerequisite.getSubjectId())
-              .target(subject.getSubjectId())
-              .build());
-        }
-      }
+    if (!subjectsToSave.isEmpty()) {
+      learningPathSubjectRepository.saveAll(subjectsToSave);
     }
 
-    return LearningPathGraphResponse.builder().nodes(nodes).edges(edges).build();
+    recalculateSectionCredits(learningPathId);
+    return assembler.toPathResponse(path, studentId);
   }
 
-  private List<LearningPathValidationConflictResponse> buildValidationConflicts(
-      List<LearningPathSection> sections,
-      List<LearningPathSubject> subjects) {
+  private void recalculateSectionCredits(UUID learningPathId) {
+    List<LearningPathSection> sections = learningPathSectionRepository.findByLearningPathId(learningPathId);
+    List<LearningPathSubject> subjects = learningPathSubjectRepository.findByLearningPathId(learningPathId);
+
     Map<UUID, Integer> creditsBySection = new HashMap<>();
     for (LearningPathSubject subject : subjects) {
       creditsBySection.merge(subject.getLearningPathSectionId(), subject.getCredits(), Integer::sum);
     }
 
-    List<LearningPathValidationConflictResponse> conflicts = new ArrayList<>();
     for (LearningPathSection section : sections) {
-      int credits = creditsBySection.getOrDefault(section.getLearningPathSectionId(), 0);
-      if (credits > 25) {
-        conflicts.add(LearningPathValidationConflictResponse.builder()
-            .conflictType("credit-limit")
-            .semesterOrder(section.getSemesterOrder())
-            .description("Total credits exceed recommended limit")
-            .suggestedResolution("Move one elective to another semester")
-            .relatedSubjectIds(Collections.emptyList())
-            .build());
-      }
+      section.setTotalCredits(creditsBySection.getOrDefault(section.getLearningPathSectionId(), 0));
     }
-
-    return conflicts;
+    learningPathSectionRepository.saveAll(sections);
   }
 
-  private LearningPathComparisonResultResponse.LearningPathComparisonMetrics toComparisonMetrics(LearningPath path) {
-    int totalSemesters = nullSafe(path.getEstimatedDurationSemesters());
-    int totalCredits = nullSafe(path.getTotalCredits());
-    double avgCredits = totalSemesters == 0 ? 0.0 : round((double) totalCredits / totalSemesters);
 
-    return LearningPathComparisonResultResponse.LearningPathComparisonMetrics.builder()
-        .totalSemesters(path.getEstimatedDurationSemesters())
-        .avgCreditsPerSemester(avgCredits)
-        .predictedGpa(path.getPredictedGpa() != null ? path.getPredictedGpa().doubleValue() : 0.0)
-        .riskLevel(path.getRiskLevel())
-        .build();
+
+  private CurriculumContext resolveCurriculumContext(UUID studentId) {
+    LearningGoal goal = learningGoalRepository.findTopByStudentIdAndIsActiveTrueOrderByCreatedAtDesc(studentId)
+        .orElseThrow(() -> new EntityNotFoundException("Active learning goal not found for studentId=" + studentId));
+    UUID specializationId;
+    try {
+      specializationId = UUID.fromString(goal.getSpecializationId());
+    } catch (Exception ex) {
+      throw new IllegalArgumentException("Invalid specializationId in active learning goal");
+    }
+    StudentLearningProgressResponse progress = courseManagementClient.getStudentProgress(studentId, specializationId);
+    Integer intakeYear = progress != null && progress.getProgramInfo() != null
+        ? progress.getProgramInfo().getCurriculumYear() : null;
+    CurriculumResolutionResponse curriculum = courseManagementClient.resolveCurriculum(specializationId, intakeYear);
+    return new CurriculumContext(goal, specializationId, progress, curriculum);
   }
 
-  private int nullSafe(Integer value) {
-    return value == null ? 0 : value;
+  @Override
+  @Transactional(readOnly = true)
+  public List<LearningPathSubjectResponse> searchSubjects(UUID studentId, UUID learningPathId, String keyword) {
+    getActiveOwnedPath(studentId, learningPathId);
+
+    List<LearningPathSubject> pathSubjects = learningPathSubjectRepository.findByLearningPathId(learningPathId);
+    Set<UUID> pathSubjectIds = pathSubjects.stream().map(LearningPathSubject::getSubjectId).collect(Collectors.toSet());
+
+    var searchResults = courseManagementClient.searchSubjects(keyword != null ? keyword : "");
+
+    var filteredResults = searchResults.stream()
+        .filter(s -> !pathSubjectIds.contains(s.getId()))
+        .limit(10)
+        .toList();
+
+    Map<UUID, String> difficultyMap = assembler.fetchBatchDifficultyByIds(filteredResults.stream().map(
+        SubjectResponse::getId).toList());
+
+    return filteredResults.stream()
+        .map(s -> LearningPathSubjectResponse.builder()
+            .learningPathSubjectId(null)
+            .learningPathId(learningPathId)
+            .learningPathSectionId(null)
+            .subjectId(s.getId())
+            .subjectCode(s.getCode() != null ? s.getCode() : "")
+            .subjectName(s.getName() != null ? s.getName() : "")
+            .credits(s.getCredits() != null ? s.getCredits() : 0)
+            .difficultyLevel(difficultyMap.getOrDefault(s.getId(), "medium"))
+            .isCompleted(false)
+            .prerequisitesGraph(List.of())
+            .build())
+        .toList();
   }
 
-  private double round(double value) {
-    return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
+  private LearningPath getActiveOwnedPath(UUID studentId, UUID learningPathId) {
+    return learningPathRepository.findByLearningPathIdAndStudentIdAndIsActiveTrue(learningPathId, studentId)
+        .orElseThrow(() -> new EntityNotFoundException("Active learning path not found with id: " + learningPathId));
+  }
+
+  private LearningPath getOwnedPath(UUID studentId, UUID learningPathId) {
+    return learningPathRepository.findByLearningPathIdAndStudentId(learningPathId, studentId)
+        .orElseThrow(() -> new EntityNotFoundException("Learning path not found with id: " + learningPathId));
   }
 }
-

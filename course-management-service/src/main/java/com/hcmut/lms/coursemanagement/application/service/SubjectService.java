@@ -30,6 +30,12 @@ public interface SubjectService {
      * including those with no enrollment data.
      */
     List<UUID> getAllSubjectIds();
+
+    /**
+     * Search subjects by name or code.
+     * Returns a list of matching subjects (max 10).
+     */
+    List<SubjectResponse> searchSubjects(String keyword);
 }
 
 

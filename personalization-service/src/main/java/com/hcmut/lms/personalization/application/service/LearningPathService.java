@@ -1,7 +1,6 @@
 package com.hcmut.lms.personalization.application.service;
 
-import com.hcmut.lms.personalization.application.dto.request.CompareLearningPathsRequest;
-import com.hcmut.lms.personalization.application.dto.request.OptimizeLearningPathRequest;
+import com.hcmut.lms.personalization.application.dto.request.SubjectChangeDto;
 import com.hcmut.lms.personalization.application.dto.request.UpdateLearningPathRequest;
 import com.hcmut.lms.personalization.application.dto.response.*;
 
@@ -18,19 +17,13 @@ public interface LearningPathService {
 
   LearningPathResponse updateLearningPath(UUID studentId, UUID learningPathId, UpdateLearningPathRequest request);
 
+  LearningPathResponse updateLearningPathSubjects(UUID studentId, UUID learningPathId, List<SubjectChangeDto> changes);
+
   List<LearningPathSectionResponse> getSections(UUID studentId, UUID learningPathId);
 
   List<LearningPathSubjectResponse> getSubjects(UUID studentId, UUID learningPathId);
 
-  List<LearningPathOptimizationCandidateResponse> optimize(
-      UUID studentId, UUID learningPathId, OptimizeLearningPathRequest request);
-
-  List<LearningPathValidationConflictResponse> validate(UUID studentId, UUID learningPathId);
-
-  List<LearningPathChangeRecordResponse> getChanges(UUID studentId, UUID learningPathId);
-
   LearningPathGraphResponse getGraph(UUID studentId, UUID learningPathId);
 
-  LearningPathComparisonResultResponse compare(UUID studentId, CompareLearningPathsRequest request);
+  List<LearningPathSubjectResponse> searchSubjects(UUID studentId, UUID learningPathId, String keyword);
 }
-

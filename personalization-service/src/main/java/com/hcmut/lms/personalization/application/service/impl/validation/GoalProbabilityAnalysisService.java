@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -14,10 +15,7 @@ import java.util.UUID;
 @Slf4j
 public class GoalProbabilityAnalysisService {
 
-    private final HistoricalDataAnalyzerService historicalDataAnalyzer;
     private final PredictiveModelAnalyzerService predictiveModelAnalyzer;
-
-    private static final int MIN_CREDITS_FOR_PREDICTIVE = 30;
 
     public Map<String, Object> analyzeProbability(
         UUID studentId,
@@ -33,25 +31,25 @@ public class GoalProbabilityAnalysisService {
     ) {
         log.info("Analyzing probability for student {}", studentId);
 
-        if (earnedCredits >= MIN_CREDITS_FOR_PREDICTIVE && !remainingSubjectIds.isEmpty()) {
-            log.info("Using predictive model analyzer (earned credits: {})", earnedCredits);
-            return predictiveModelAnalyzer.analyze(
-                studentId,
-                remainingSubjectIds,
-                remainingSubjectCredits,
-                currentGpa,
-                earnedCredits,
-                remainingCredits,
-                targetGpa,
-                mainCreditCap
-            );
-        } else {
-            log.info("Using historical data analyzer (earned credits: {})", earnedCredits);
-            return historicalDataAnalyzer.analyze(
-                specializationId,
-                targetGpa,
-                remainingSemesters
-            );
+        if (remainingSubjectIds.isEmpty()) {
+            log.info("No remaining subjects, probability is not applicable");
+            Map<String, Object> analysis = new HashMap<>();
+            analysis.put("method", "skipped");
+            analysis.put("probabilityScore", null);
+            analysis.put("note", "No remaining subjects to predict");
+            return analysis;
         }
+
+        log.info("Using predictive model analyzer (earned credits: {})", earnedCredits);
+        return predictiveModelAnalyzer.analyze(
+            studentId,
+            remainingSubjectIds,
+            remainingSubjectCredits,
+            currentGpa,
+            earnedCredits,
+            remainingCredits,
+            targetGpa,
+            mainCreditCap
+        );
     }
 }

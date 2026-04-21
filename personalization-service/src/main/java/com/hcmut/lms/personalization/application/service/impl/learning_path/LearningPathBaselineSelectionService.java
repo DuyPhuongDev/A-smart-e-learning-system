@@ -2,6 +2,7 @@ package com.hcmut.lms.personalization.application.service.impl.learning_path;
 
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SubjectCandidate;
 import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
+import com.hcmut.lms.personalization.application.service.impl.support.SubjectCreditUtil;
 import com.hcmut.lms.personalization.application.service.impl.validation.StudentProgressDataService;
 import com.hcmut.lms.personalization.client.LearningServiceClient;
 import com.hcmut.lms.personalization.client.dto.*;
@@ -23,9 +24,6 @@ import java.util.stream.Collectors;
 public class LearningPathBaselineSelectionService {
 
   private static final String FREE_ELECTIVE_SECTION_KEY = normalizeSectionName("Tự chọn tự do");
-  private static final Set<String> SPECIALIZED_SECTION_KEYS = Set.of(
-      normalizeSectionName("Chuyên ngành"),
-      normalizeSectionName("Chuyên ngành (Nhóm C)"));
 
   private final LearningServiceClient learningServiceClient;
   private final SubjectOccupationValuationRepository subjectOccupationValuationRepository;
@@ -53,7 +51,7 @@ public class LearningPathBaselineSelectionService {
             .subjectId(subject.getSubjectId())
             .subjectCode(subject.getSubjectCode())
             .subjectName(subject.getSubjectName())
-            .credits(safeCredits(subject.getCredits()))
+            .credits(SubjectCreditUtil.safeCredits(subject.getCredits()))
             .isRequired(subject.getIsRequired())
             .sectionId(section.getSectionId())
             .sectionName(section.getSectionName())
@@ -81,6 +79,7 @@ public class LearningPathBaselineSelectionService {
 
     Map<UUID, Double> completedGradeBySubjectId = progressData.completedSubjects()
         .stream()
+        .filter(s -> Boolean.TRUE.equals(s.isHighestResult()))
         .collect(Collectors.toMap(
             StudentProgressDataService.CompletedSubjectDetail::subjectId,
             this::resolveCompletedGradeScore, Math::max));
@@ -106,11 +105,11 @@ public class LearningPathBaselineSelectionService {
 
       int countedCredits = completedInSection.stream()
           .filter(subject -> countedCompleted.contains(subject.getSubjectId()))
-          .mapToInt(subject -> safeCredits(subject.getCredits()))
+          .mapToInt(subject -> SubjectCreditUtil.safeCredits(subject.getCredits()))
           .sum();
       int overflowCredits = completedInSection.stream()
           .filter(subject -> !countedCompleted.contains(subject.getSubjectId()))
-          .mapToInt(subject -> safeCredits(subject.getCredits()))
+          .mapToInt(subject -> SubjectCreditUtil.safeCredits(subject.getCredits()))
           .sum();
 
       countedCompletedCreditsBySection.put(sectionId, countedCredits);
@@ -129,14 +128,13 @@ public class LearningPathBaselineSelectionService {
         .orElse(null);
 
     Set<UUID> selectedSubjectIds = new HashSet<>();
-    List<SubjectCandidate> selected = new ArrayList<>();
 
     // 0-credit subjects are mandatory milestones in the generated plan.
     List<SubjectCandidate> mandatoryZeroCredit = candidates.stream()
-        .filter(candidate -> safeCredits(candidate) == 0)
-        .sorted(Comparator.comparingInt(this::safePriority1).thenComparingInt(this::safePriority2))
+        .filter(candidate -> SubjectCreditUtil.safeCredits(candidate) == 0)
+        .sorted(Comparator.comparingInt(SubjectCreditUtil::safePriority1).thenComparingInt(SubjectCreditUtil::safePriority2))
         .toList();
-    selected.addAll(mandatoryZeroCredit);
+    List<SubjectCandidate> selected = new ArrayList<>(mandatoryZeroCredit);
     mandatoryZeroCredit.stream().map(SubjectCandidate::getSubjectId).forEach(selectedSubjectIds::add);
 
     // Pick normal sections first. Free elective is processed last to avoid duplicate picks.
@@ -154,7 +152,7 @@ public class LearningPathBaselineSelectionService {
       List<SubjectCandidate> sectionCandidates = uncompletedBySection.getOrDefault(sectionId, Collections.emptyList())
           .stream()
           .filter(candidate -> !selectedSubjectIds.contains(candidate.getSubjectId()))
-          .filter(candidate -> safeCredits(candidate) > 0)
+          .filter(candidate -> SubjectCreditUtil.safeCredits(candidate) > 0)
           .toList();
 
       List<SubjectCandidate> picked = selectCandidatesForCredits(sectionCandidates, neededCredits, scoreBySubjectId);
@@ -168,19 +166,12 @@ public class LearningPathBaselineSelectionService {
           freeSection, countedCompletedCreditsBySection, transferredCreditsBySection);
 
       if (neededCredits > 0) {
-        Set<UUID> specializedSectionIds = curriculumSections.stream()
-            .filter(section -> SPECIALIZED_SECTION_KEYS.contains(normalizeSectionName(section.getSectionName())))
-            .map(CurriculumFullResponse.CurriculumSectionFull::getSectionId)
-            .collect(Collectors.toSet());
-
         List<SubjectCandidate> freePool = new ArrayList<>();
         for (SubjectCandidate candidate : candidates) {
           if (selectedSubjectIds.contains(candidate.getSubjectId())) {
             continue;
           }
-          boolean fromFree = Objects.equals(candidate.getSectionId(), freeSection.getSectionId());
-          boolean fromSpecialized = specializedSectionIds.contains(candidate.getSectionId());
-          if ((fromFree || fromSpecialized) && safeCredits(candidate) > 0) {
+          if (SubjectCreditUtil.safeCredits(candidate) > 0) {
             freePool.add(candidate);
           }
         }
@@ -190,12 +181,59 @@ public class LearningPathBaselineSelectionService {
       }
     }
 
-    int effectiveCompletedCredits = countedCompletedCreditsBySection.values()
-        .stream()
-        .mapToInt(Integer::intValue)
-        .sum() + transferredCreditsBySection.values().stream().mapToInt(Integer::intValue).sum();
+    ensurePrerequisiteClosure(selected, candidates, selectedSubjectIds, completedSubjectIds);
 
-    return new BaselineSelectionResult(selected, effectiveCompletedCredits);
+    return new BaselineSelectionResult(selected);
+  }
+
+  /**
+   * Adds any candidate subjects that are prerequisites or parallels of already-selected
+   * subjects but were not included in the initial selection. Without this closure step the
+   * scheduler cannot place subjects whose dependencies are missing from the candidate set.
+   */
+  private void ensurePrerequisiteClosure(
+      List<SubjectCandidate> selected,
+      List<SubjectCandidate> allUncompletedCandidates,
+      Set<UUID> selectedSubjectIds,
+      Set<UUID> completedIds) {
+
+    Map<UUID, SubjectCandidate> candidateById = allUncompletedCandidates.stream()
+        .collect(Collectors.toMap(SubjectCandidate::getSubjectId, c -> c));
+
+    Set<UUID> toAdd = new HashSet<>();
+    boolean changed = true;
+    while (changed) {
+      changed = false;
+      for (SubjectCandidate subject : selected) {
+        List<CurriculumFullResponse.SubjectRelation> prereqs =
+            subject.getPrerequisites() != null ? subject.getPrerequisites() : List.of();
+        for (CurriculumFullResponse.SubjectRelation prereq : prereqs) {
+          UUID prereqId = prereq.getSubjectId();
+          if (prereqId != null && !completedIds.contains(prereqId) && !selectedSubjectIds.contains(prereqId) && candidateById.containsKey(prereqId)) {
+            toAdd.add(prereqId);
+          }
+        }
+        List<CurriculumFullResponse.SubjectRelation> parallels =
+            subject.getParallels() != null ? subject.getParallels() : List.of();
+        for (CurriculumFullResponse.SubjectRelation parallel : parallels) {
+          UUID parallelId = parallel.getSubjectId();
+          if (parallelId != null && !completedIds.contains(parallelId) && !selectedSubjectIds.contains(parallelId) && candidateById.containsKey(parallelId)) {
+            toAdd.add(parallelId);
+          }
+        }
+      }
+      if (!toAdd.isEmpty()) {
+        for (UUID id : toAdd) {
+          SubjectCandidate candidate = candidateById.get(id);
+          if (candidate != null && !selectedSubjectIds.contains(id)) {
+            selected.add(candidate);
+            selectedSubjectIds.add(id);
+          }
+        }
+        changed = true;
+        toAdd.clear();
+      }
+    }
   }
 
   private int resolveNeededCredits(
@@ -224,12 +262,13 @@ public class LearningPathBaselineSelectionService {
         .getRequiredCredits() : 0;
     int freeCompleted = countedCompletedCreditsBySection.getOrDefault(freeElectiveSectionId, 0);
     int freeDeficit = Math.max(0, freeRequired - freeCompleted);
-    if (freeDeficit <= 0) {
+    if (freeDeficit == 0) {
       return Collections.emptyMap();
     }
 
+    // Overflow from ALL sections (except free elective itself) can transfer
     int transferable = curriculumSections.stream()
-        .filter(section -> SPECIALIZED_SECTION_KEYS.contains(normalizeSectionName(section.getSectionName())))
+        .filter(section -> !FREE_ELECTIVE_SECTION_KEY.equals(normalizeSectionName(section.getSectionName())))
         .mapToInt(section -> overflowCompletedCreditsBySection.getOrDefault(section.getSectionId(), 0))
         .sum();
 
@@ -253,7 +292,7 @@ public class LearningPathBaselineSelectionService {
     states.put(0, CreditSelectionState.empty());
 
     for (CurriculumFullResponse.CurriculumSubjectFull subject : completedSubjects) {
-      int credits = safeCredits(subject.getCredits());
+      int credits = SubjectCreditUtil.safeCredits(subject.getCredits());
       if (credits <= 0) {
         continue;
       }
@@ -290,12 +329,12 @@ public class LearningPathBaselineSelectionService {
     states.put(0, CreditSelectionState.empty());
 
     for (SubjectCandidate candidate : sectionCandidates) {
-      int credits = safeCredits(candidate);
+      int credits = SubjectCreditUtil.safeCredits(candidate);
       if (credits <= 0) {
         continue;
       }
       double score = scoreBySubjectId.getOrDefault(candidate.getSubjectId(), 0.0);
-      double priorityPenalty = (safePriority1(candidate) * 0.001) + (safePriority2(candidate) * 0.0001);
+      double priorityPenalty = (SubjectCreditUtil.safePriority1(candidate) * 0.001) + (SubjectCreditUtil.safePriority2(candidate) * 0.0001);
       double finalScore = score - priorityPenalty;
 
       Map<Integer, CreditSelectionState> nextStates = new HashMap<>(states);
@@ -323,7 +362,7 @@ public class LearningPathBaselineSelectionService {
 
     return sectionCandidates.stream()
         .filter(candidate -> selectedIds.contains(candidate.getSubjectId()))
-        .sorted(Comparator.comparingInt(this::safePriority1).thenComparingInt(this::safePriority2))
+        .sorted(Comparator.comparingInt(SubjectCreditUtil::safePriority1).thenComparingInt(SubjectCreditUtil::safePriority2))
         .toList();
   }
 
@@ -340,7 +379,7 @@ public class LearningPathBaselineSelectionService {
           candidates, goal.getTargetOccupationCode()) : buildAverageOccupationScoreMap(candidates);
     }
 
-    int mainCreditCap = IntensityCreditCapSupport.mainSemesterCap(goal.getPrefMainSemLearnIntensity());
+    int mainCreditCap = IntensityCreditCapSupport.mainSemesterCapStrict(goal.getPrefMainSemLearnIntensity());
     return buildPredictedGradeScoreMap(candidates, goal.getStudentId(), mainCreditCap);
   }
 
@@ -352,13 +391,7 @@ public class LearningPathBaselineSelectionService {
   }
 
   private double resolveCompletedGradeScore(StudentProgressDataService.CompletedSubjectDetail detail) {
-    if (detail.grade4() != null) {
-      return detail.grade4();
-    }
-    if (detail.grade10() != null) {
-      return detail.grade10() / 2.5;
-    }
-    return 0.0;
+    return detail.grade4() != null ? detail.grade4() : 0.0;
   }
 
   private Map<UUID, Double> buildOccupationScoreMap(List<SubjectCandidate> electives, String occupationCode) {
@@ -430,22 +463,6 @@ public class LearningPathBaselineSelectionService {
     }
   }
 
-  private int safeCredits(Integer credits) {
-    return credits != null ? credits : 0;
-  }
-
-  private int safeCredits(SubjectCandidate candidate) {
-    return candidate.getCredits() != null ? candidate.getCredits() : 0;
-  }
-
-  private int safePriority1(SubjectCandidate candidate) {
-    return candidate.getPriority1() != null ? candidate.getPriority1() : 999;
-  }
-
-  private int safePriority2(SubjectCandidate candidate) {
-    return candidate.getPriority2() != null ? candidate.getPriority2() : 99;
-  }
-
   private static String normalizeSectionName(String sectionName) {
     if (sectionName == null) {
       return "";
@@ -454,7 +471,7 @@ public class LearningPathBaselineSelectionService {
     return normalized.trim().toLowerCase(Locale.ROOT);
   }
 
-  public record BaselineSelectionResult(List<SubjectCandidate> candidates, int effectiveCompletedCredits) {
+  public record BaselineSelectionResult(List<SubjectCandidate> candidates) {
   }
 
   private record CreditSelectionState(Set<UUID> subjectIds, double score) {

@@ -94,6 +94,8 @@ class_diagram_promt.txt
 *.env
 learning-service/src/main/resources/models
 
+# Claude AI
 /.claude/
+CLAUDE.md
 
 .cursor/

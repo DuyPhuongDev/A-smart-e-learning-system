@@ -1,10 +1,13 @@
 package com.hcmut.lms.personalization.application.service.impl.learning_path;
 
+import com.hcmut.lms.personalization.application.dto.response.enums.LearningIntensity;
 import com.hcmut.lms.personalization.application.dto.response.enums.SummerLearningIntensity;
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService;
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SemesterSlot;
 import com.hcmut.lms.personalization.application.service.impl.LearningPathSchedulingService.SubjectCandidate;
 import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
+import com.hcmut.lms.personalization.application.service.impl.support.SemesterClassifier;
+import com.hcmut.lms.personalization.application.service.impl.support.SubjectCreditUtil;
 import com.hcmut.lms.personalization.application.service.impl.validation.CreditTimeValidatorService;
 import com.hcmut.lms.personalization.application.service.impl.validation.PrerequisiteChainValidatorService;
 import com.hcmut.lms.personalization.application.service.impl.validation.SemesterCalculationService;
@@ -14,6 +17,7 @@ import com.hcmut.lms.personalization.application.service.impl.validation.model.P
 import com.hcmut.lms.personalization.client.CourseManagementClient;
 import com.hcmut.lms.personalization.client.dto.CurriculumFullResponse;
 import com.hcmut.lms.personalization.client.dto.SemesterResponse;
+import com.hcmut.lms.personalization.client.dto.StudentLearningProgressResponse;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.LearningGoal;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.PreferredSummerSemester;
 import com.hcmut.lms.personalization.domain.entity.learningPath.LearningPath;
@@ -23,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,12 +53,14 @@ public class LearningPathGenerationService {
   @Transactional
   public LearningPath generateLearningPath(
       UUID studentId, UUID learningGoalId, String curriculumCode,
-      LearningGoal learningGoal) {
+      LearningGoal learningGoal,
+      StudentLearningProgressResponse preFetchedProgress) {
     log.info("Generating learning path for studentId={}, curriculumCode={}", studentId, curriculumCode);
 
     CurriculumFullResponse curriculum = courseManagementClient.getCurriculumFull(curriculumCode);
+    UUID specializationId = learningGoal.getSpecializationId() != null ? UUID.fromString(learningGoal.getSpecializationId()) : null;
     StudentProgressDataService.StudentProgressData progressData = studentProgressDataService.getStudentProgressData(
-        studentId);
+        studentId, specializationId, preFetchedProgress);
 
     LearningPathBaselineSelectionService.BaselineSelectionResult baselineSelection =
         learningPathBaselineSelectionService.buildBaselinePath(
@@ -64,42 +71,75 @@ public class LearningPathGenerationService {
         semesterCalculationService.calculateAvailableSemesters(
         studentId, learningGoal.getExpectedCompletedSemester());
 
-    // Reuse the already-sorted semester list from the calculation service
-    // to avoid a second API call and guarantee sorted order for the scheduler.
+    // Reuse sorted semesters from calculation service to avoid duplicate API call.
     List<SemesterResponse> remainingSemesters = availability.sortedRemainingSemesters();
 
-    int mainCreditCap = IntensityCreditCapSupport.mainSemesterCap(learningGoal.getPrefMainSemLearnIntensity());
+    int mainCreditCap = IntensityCreditCapSupport.mainSemesterCapStrict(learningGoal.getPrefMainSemLearnIntensity());
     Map<UUID, Integer> preferredSummerCapBySemesterId = resolvePreferredSummerCaps(learningGoal);
 
+    validateLearningGoalForScheduling(learningGoal, preferredSummerCapBySemesterId, remainingSemesters);
+
+    int plannedSummerSemCount = learningGoal.getPlannedSummerSemCount();
+
     List<SemesterSlot> schedule = learningPathSchedulingService.scheduleSubjects(
-        candidates, availability,
-        remainingSemesters, mainCreditCap, preferredSummerCapBySemesterId,
+        candidates, remainingSemesters,
+        mainCreditCap, preferredSummerCapBySemesterId, plannedSummerSemCount,
         new HashSet<>(progressData.completedSubjectIds()));
 
-    // Remove empty semester slots (no subjects assigned) — higher intensity packs
-    // subjects into earlier semesters, leaving trailing empty slots that should not
-    // be persisted as learning path sections.
-    schedule = schedule.stream()
-        .filter(slot -> slot.getSubjects() != null && !slot.getSubjects().isEmpty())
-        .toList();
+    // Calculate risk level BEFORE filtering empty slots so that light-intensity
+    // paths with many empty semesters are not penalised by inflated averages.
+    String riskLevel = calculateRiskLevel(schedule);
 
-    ValidationResult validationResult = validateSchedule(learningGoal, candidates, schedule, progressData);
+    // Filter out empty trailing slots created by high-intensity scheduling.
+    schedule = schedule.stream().filter(slot -> slot.getSubjects() != null && !slot.getSubjects().isEmpty()).toList();
+
+    ValidationResult validationResult = validateSchedule(learningGoal, candidates, schedule, progressData, riskLevel);
 
     if (!validationResult.isFeasible()) {
       log.warn("Generated path is not feasible: {}", validationResult.getReason());
       throw new IllegalStateException("Cannot generate feasible learning path: " + validationResult.getReason());
     }
 
+    // Compute past semesters for the full academic timeline
+    List<SemesterResponse> allSemesters = courseManagementClient.getAllSemesters();
+    List<SemesterResponse> pastSemesters = computePastSemesters(allSemesters, progressData.studentIntakeYear());
+
+    // Use the pre-filtered risk level instead of recalculating on trimmed schedule
     return learningPathPersistenceService.buildAndPersistLearningPath(
-        studentId, learningGoalId, curriculumCode, schedule, validationResult.getRiskLevel(), progressData,
-        baselineSelection.effectiveCompletedCredits());
+        studentId, learningGoalId, curriculumCode,
+        schedule, riskLevel, progressData, progressData.earnedCredits(),
+        pastSemesters);
+  }
+
+  /**
+   * Computes the list of past semesters from the student's intake year to today.
+   * Semesters are sorted by semKey for chronological order.
+   * Returns empty list if studentIntakeYear is null or no past semesters exist.
+   */
+  private List<SemesterResponse> computePastSemesters(List<SemesterResponse> allSemesters, Integer studentIntakeYear) {
+    if (studentIntakeYear == null || allSemesters == null || allSemesters.isEmpty()) {
+      return List.of();
+    }
+    LocalDate today = LocalDate.now();
+    return allSemesters.stream()
+        .filter(s -> s.getSemKey() != null)
+        .filter(s -> s.getSemKey() / 10 >= studentIntakeYear)
+        .filter(s -> {
+          if (s.getEndDate() == null) {
+            return false;
+          }
+          try {
+            LocalDate endDate = LocalDate.parse(s.getEndDate());
+            return endDate.isBefore(today);
+          } catch (Exception e) {
+            return false;
+          }
+        })
+        .sorted(Comparator.comparing(SemesterResponse::getSemKey, Comparator.nullsLast(Integer::compareTo)))
+        .toList();
   }
 
   private Map<UUID, Integer> resolvePreferredSummerCaps(LearningGoal goal) {
-    if (goal == null || goal.getLearningGoalId() == null) {
-      return Collections.emptyMap();
-    }
-
     List<PreferredSummerSemester> preferredSummerSemesters =
         preferredSummerSemesterRepository.findByLearningGoalLearningGoalIdOrderBySemesterIdAsc(
         goal.getLearningGoalId());
@@ -113,15 +153,68 @@ public class LearningPathGenerationService {
         continue;
       }
       SummerLearningIntensity intensity = preferredSemester.getLearningIntensity();
-      int cap = IntensityCreditCapSupport.summerSemesterCap(intensity);
+      int cap = IntensityCreditCapSupport.summerSemesterCapStrict(intensity);
       caps.put(preferredSemester.getSemesterId(), cap);
     }
     return caps;
   }
 
+  /**
+   * Validates that the learning goal has all required data for scheduling.
+   * Throws IllegalArgumentException if any required field is missing or inconsistent.
+   */
+  private void validateLearningGoalForScheduling(
+      LearningGoal goal, Map<UUID, Integer> preferredSummerCapBySemesterId,
+      List<SemesterResponse> remainingSemesters) {
+
+    if (goal.getPrefMainSemLearnIntensity() == null) {
+      throw new IllegalArgumentException(
+          "prefMainSemLearnIntensity is required for learning path generation but was null");
+    }
+    if (goal.getPlannedSummerSemCount() == null) {
+      throw new IllegalArgumentException("plannedSummerSemCount is required for learning path generation but was null");
+    }
+
+    int plannedCount = goal.getPlannedSummerSemCount();
+
+    if (plannedCount > 0) {
+      if (preferredSummerCapBySemesterId.size() != plannedCount) {
+        throw new IllegalArgumentException(
+            "plannedSummerSemCount is " + plannedCount + " but " + preferredSummerCapBySemesterId.size() + " " +
+                "preferred summer semester entries exist. Each planned summer semester must have a preferred " +
+                "intensity.");
+      }
+
+      // Verify each preferred summer semester references a remaining summer semester
+      Set<UUID> remainingSummerIds = remainingSemesters.stream()
+          .filter(SemesterClassifier::isSummerSemester)
+          .map(SemesterResponse::getId)
+          .collect(Collectors.toSet());
+
+      for (UUID semesterId : preferredSummerCapBySemesterId.keySet()) {
+        if (!remainingSummerIds.contains(semesterId)) {
+          throw new IllegalArgumentException(
+              "Preferred summer semester " + semesterId + " does not correspond to a remaining summer semester");
+        }
+      }
+
+      if (remainingSummerIds.size() < plannedCount) {
+        throw new IllegalArgumentException(
+            "plannedSummerSemCount is " + plannedCount + " but only " + remainingSummerIds.size() + " summer " +
+                "semesters are available");
+      }
+    } else {
+      if (!preferredSummerCapBySemesterId.isEmpty()) {
+        throw new IllegalArgumentException(
+            "plannedSummerSemCount is 0 but " + preferredSummerCapBySemesterId.size() + " preferred summer semester " +
+                "entries exist. Remove them or set plannedSummerSemCount > 0.");
+      }
+    }
+  }
+
   private ValidationResult validateSchedule(
-      LearningGoal goal, List<SubjectCandidate> candidates,
-      List<SemesterSlot> schedule, StudentProgressDataService.StudentProgressData progressData) {
+      LearningGoal goal, List<SubjectCandidate> candidates, List<SemesterSlot> schedule,
+      StudentProgressDataService.StudentProgressData progressData, String riskLevel) {
 
     Set<UUID> scheduledIds = schedule.stream()
         .flatMap(slot -> slot.getSubjects().stream())
@@ -153,49 +246,48 @@ public class LearningPathGenerationService {
       return new ValidationResult(false, chainResult.reason(), "high");
     }
 
-    int remainingCredits = candidates.stream().mapToInt(this::safeCredits).sum();
+    int remainingCredits = schedule.stream()
+        .flatMap(slot -> slot.getSubjects().stream())
+        .mapToInt(SubjectCreditUtil::safeCredits)
+        .sum();
 
     CreditTimeCheckResult creditTimeResult = creditTimeValidatorService.validate(
-        goal, remainingCredits,
-        progressData.earnedCredits());
+        goal, remainingCredits);
 
     if (!creditTimeResult.passed()) {
       return new ValidationResult(false, creditTimeResult.reason(), "high");
     }
 
-    return new ValidationResult(true, "Lộ trình khả thi", calculateRiskLevel(schedule));
+    return new ValidationResult(true, "Lộ trình khả thi", riskLevel);
   }
 
   private String calculateRiskLevel(List<SemesterSlot> schedule) {
-    int overloadedSemesters = (int) schedule.stream().filter(s -> s.getTotalCredits() > 19).count();
-    double avgCredits = schedule.stream().mapToInt(SemesterSlot::getTotalCredits).average().orElse(0.0);
+    // Only use main (non-summer) semesters for average credit calculation
+    // to avoid summer semesters with few credits diluting the average.
+    double avgMainCredits = schedule.stream()
+        .filter(s -> !Boolean.TRUE.equals(s.getIsSummer()))
+        .mapToInt(SemesterSlot::getTotalCredits)
+        .average()
+        .orElse(0.0);
 
-    if (overloadedSemesters > 2 || avgCredits > 18) {
+    // Count overloaded semesters, using Heavy cap as the overload threshold
+    int summerOverloadThreshold = IntensityCreditCapSupport.summerSemesterCapStrict(SummerLearningIntensity.Heavy);
+    int mainOverloadThreshold = IntensityCreditCapSupport.mainSemesterCapStrict(LearningIntensity.Heavy);
+    int overloadedSemesters = (int) schedule.stream().filter(s -> {
+      int threshold = Boolean.TRUE.equals(s.getIsSummer()) ? summerOverloadThreshold : mainOverloadThreshold;
+      return s.getTotalCredits() > threshold;
+    }).count();
+
+    int standardCap = IntensityCreditCapSupport.mainSemesterCapStrict(LearningIntensity.Standard);
+    int heavyCap = IntensityCreditCapSupport.mainSemesterCapStrict(LearningIntensity.Heavy);
+    if (overloadedSemesters > 2 || avgMainCredits > (standardCap + heavyCap) / 2.0) {
       return "high";
     }
-    if (overloadedSemesters > 0 || avgCredits > 16) {
+    if (overloadedSemesters > 0 || avgMainCredits > standardCap) {
       return "medium";
     }
     return "low";
   }
-
-  private int safeCredits(SubjectCandidate candidate) {
-    Integer credits = candidate.getCredits();
-    if (credits == null) {
-      return 0;
-    }
-    if (credits < 0) {
-      throw new IllegalStateException(
-          "Invalid subject credits while validating schedule: subjectId="
-              + candidate.getSubjectId()
-              + ", subjectCode="
-              + candidate.getSubjectCode()
-              + ", credits="
-              + credits);
-    }
-    return credits;
-  }
-
 
   private record ValidationResult(boolean isFeasible, String reason, String riskLevel) {
     public String getRiskLevel() {

@@ -532,4 +532,40 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
 
   private record SemesterGlobalStats(double median, double mean, int sampleCount, int semKey) {
   }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<UUID, String> getBatchDifficulty(List<UUID> subjectIds) {
+    if (subjectIds == null || subjectIds.isEmpty()) {
+      return Map.of();
+    }
+
+    // Find the most recent metrics for each subject (highest semKey)
+    Map<UUID, SubjectSemesterMetrics> latestBySubject = new HashMap<>();
+    for (UUID subjectId : subjectIds) {
+      List<SubjectSemesterMetrics> history = metricsRepository.findBySubjectIdOrderByCreatedAtAsc(subjectId);
+      if (!history.isEmpty()) {
+        SubjectSemesterMetrics latest = history.getLast();
+        latestBySubject.put(subjectId, latest);
+      }
+    }
+
+    Map<UUID, String> result = new HashMap<>();
+    for (UUID subjectId : subjectIds) {
+      SubjectSemesterMetrics metrics = latestBySubject.get(subjectId);
+      if (metrics == null) {
+        result.put(subjectId, "medium");
+      } else {
+        double meanGrade = metrics.getMeanGrade();
+        if (meanGrade < 5.0) {
+          result.put(subjectId, "hard");
+        } else if (meanGrade <= 8.0) {
+          result.put(subjectId, "medium");
+        } else {
+          result.put(subjectId, "easy");
+        }
+      }
+    }
+    return result;
+  }
 }

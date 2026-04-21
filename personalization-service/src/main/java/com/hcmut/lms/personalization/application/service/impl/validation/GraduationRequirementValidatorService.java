@@ -49,9 +49,16 @@ public class GraduationRequirementValidatorService {
         if (update == null) {
           return status;
         }
-        status.setIsCompleted(update.getIsCompleted());
-        status.setCompletionSemesterId(update.getCompletionSemesterId());
-        return status;
+        GraduationRequirementStatus copy = GraduationRequirementStatus.builder()
+            .graduationRequirementStatusId(status.getGraduationRequirementStatusId())
+            .studentId(status.getStudentId())
+            .graduationRequirementId(status.getGraduationRequirementId())
+            .isCompleted(update.getIsCompleted())
+            .completionSemesterId(update.getCompletionSemesterId())
+            .build();
+        copy.setCreatedAt(status.getCreatedAt());
+        copy.setUpdatedAt(status.getUpdatedAt());
+        return copy;
       }).toList();
     }
 

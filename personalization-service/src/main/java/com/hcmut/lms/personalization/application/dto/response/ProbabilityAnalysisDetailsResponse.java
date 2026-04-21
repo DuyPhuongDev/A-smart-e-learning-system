@@ -1,6 +1,7 @@
 package com.hcmut.lms.personalization.application.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,7 +14,7 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ProbabilityAnalysisDetailsResponse {
 
-  private Double probabilityScore;
+  private BigDecimal probabilityScore;
 
   private String note;
 
