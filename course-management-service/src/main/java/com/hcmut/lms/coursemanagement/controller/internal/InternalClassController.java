@@ -1,6 +1,7 @@
 package com.hcmut.lms.coursemanagement.controller.internal;
 
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
+import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionReportMetadataResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassStatusResponse;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
@@ -54,5 +55,18 @@ public class InternalClassController {
     @GetMapping("/{id}/count-lecture")
     public ResponseEntity<Integer> countNumberLecturesByClassId(@PathVariable UUID id){
         return ResponseEntity.ok(classSectionService.countNumberLecturesByClassId(id));
+    }
+
+    @GetMapping("/{id}/report-metadata")
+    public ResponseEntity<ClassSectionReportMetadataResponse> getClassSectionReportMetadata(@PathVariable("id") UUID id) {
+        return ResponseEntity.ok(classSectionService.getClassSectionReportMetadata(id));
+    }
+    /**
+     * Get all class section IDs managed by a teacher.
+     * Used by notification-service for teacher-scoped notifications.
+     */
+    @GetMapping("/teacher/{teacherId}/class-ids")
+    public ResponseEntity<List<UUID>> getClassIdsByTeacher(@PathVariable UUID teacherId) {
+        return ResponseEntity.ok(classSectionService.getClassIdsByTeacherId(teacherId));
     }
 }

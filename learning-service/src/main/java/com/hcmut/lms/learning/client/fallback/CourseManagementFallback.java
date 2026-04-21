@@ -5,6 +5,7 @@ import com.hcmut.lms.learning.client.dto.BatchClassDatasetLookupRequest;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.client.dto.ClassSectionReportMetadataResponse;
 import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
 import com.hcmut.lms.learning.client.dto.LectureResponse;
 import com.hcmut.lms.learning.client.dto.SemesterResponse;
@@ -52,6 +53,12 @@ public class CourseManagementFallback implements CourseManagementClient {
     @Override
     public LectureResponse getLectureById(UUID id) {
         log.error("CourseManagement service unavailable. Unable to get lecture by ID");
+        throw new ServiceUnavailableException("Course management service is unavailable");
+    }
+
+    @Override
+    public ClassSectionReportMetadataResponse getClassSectionReportMetadata(UUID id) {
+        log.error("CourseManagement service unavailable. Unable to get class section report metadata");
         throw new ServiceUnavailableException("Course management service is unavailable");
     }
 

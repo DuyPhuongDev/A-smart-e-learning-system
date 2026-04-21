@@ -111,6 +111,12 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, UUID
        List<ClassSection> findBySubjectIdWithAcademicYear(@Param("subjectId") UUID subjectId);
 
        /**
+        * Find all class section IDs managed by a teacher
+        */
+       @Query("SELECT cs.id FROM ClassSection cs WHERE cs.teacherId = :teacherId")
+       List<UUID> findIdsByTeacherId(@Param("teacherId") UUID teacherId);
+
+       /**
         * Check if class code exists
         */
        boolean existsByCode(String code);

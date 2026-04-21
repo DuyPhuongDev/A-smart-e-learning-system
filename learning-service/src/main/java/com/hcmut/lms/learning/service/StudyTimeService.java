@@ -1,8 +1,10 @@
 package com.hcmut.lms.learning.service;
 
 import com.hcmut.lms.learning.dto.request.StudyTimeRequest;
+import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
+import com.hcmut.lms.common.helper.CurrentUserInfo;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -29,4 +31,6 @@ public interface StudyTimeService {
      * Get total study time in seconds for current user in a class
      */
     Integer getTotalStudyTime(UUID studentId, UUID classId);
+
+    LectureFrequencyResponse getLectureFrequencyForTeacher(UUID classId, CurrentUserInfo currentUserInfo);
 }

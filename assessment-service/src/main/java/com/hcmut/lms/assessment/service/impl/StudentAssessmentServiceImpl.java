@@ -1,6 +1,6 @@
 package com.hcmut.lms.assessment.service.impl;
 
-import com.hcmut.lms.assessment.client.LearningEnrollmentClient;
+import com.hcmut.lms.assessment.client.LearningInternalEnrollmentClient;
 import com.hcmut.lms.assessment.domain.entity.answer.AnswerOption;
 import com.hcmut.lms.assessment.domain.entity.answer.EssayAcceptedFileType;
 import com.hcmut.lms.assessment.domain.entity.assessment.Assessment;
@@ -61,7 +61,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     private final EssaySubmissionRepository essaySubmissionRepository;
     private final CodingSubmissionRepository codingSubmissionRepository;
     private final SubmissionTestCaseResultRepository submissionTestCaseResultRepository;
-    private final LearningEnrollmentClient learningEnrollmentClient;
+    private final LearningInternalEnrollmentClient learningInternalEnrollmentClient;
     private final AssessmentExecutionService assessmentExecutionService;
     private final CppJudgeService cppJudgeService;
     private final AssessmentEventPublisher assessmentEventPublisher;
@@ -75,6 +75,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             int page,
             int size
     ) {
+        log.info("Student get assessment list for courseId: {}, studentId: {}", courseId, studentId);
         ensureStudentEnrolled(authorizationHeader, courseId);
 
         Page<Assessment> assessmentPage = assessmentRepository.findAllByClassId(
@@ -1009,7 +1010,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         }
 
         try {
-            Boolean enrolled = learningEnrollmentClient.checkEnrollment(authorizationHeader, classId);
+            Boolean enrolled = learningInternalEnrollmentClient.checkEnrollment(authorizationHeader, classId);
             if (!Boolean.TRUE.equals(enrolled)) {
                 throw new ForbiddenException("Student is not enrolled in this course");
             }

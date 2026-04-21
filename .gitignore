@@ -99,3 +99,5 @@ learning-service/src/main/resources/models
 CLAUDE.md
 
 .cursor/
+docs/
+.m2/

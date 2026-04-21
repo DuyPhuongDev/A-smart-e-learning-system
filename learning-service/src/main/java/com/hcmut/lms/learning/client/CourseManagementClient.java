@@ -4,6 +4,7 @@ import com.hcmut.lms.learning.client.dto.BatchClassDatasetLookupRequest;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.client.dto.ClassSectionReportMetadataResponse;
 import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
 import com.hcmut.lms.learning.client.dto.LectureResponse;
 import com.hcmut.lms.learning.client.dto.SemesterResponse;
@@ -31,7 +32,7 @@ public interface CourseManagementClient {
     List<ClassResponse> getClassSectionsByIds(@RequestBody BatchClassLookupRequest request);
 
     /**
-     * Increment current students count when a student enrolls
+     * Increment current studewnts count when a student enrolls
      */
     @PostMapping("/class-sections/{id}/increment-students")
     void incrementCurrentStudents(@PathVariable("id") UUID id);
@@ -47,6 +48,9 @@ public interface CourseManagementClient {
 
     @GetMapping("/lectures/{id}")
     LectureResponse getLectureById(@PathVariable UUID id);
+
+    @GetMapping("/class-sections/{id}/report-metadata")
+    ClassSectionReportMetadataResponse getClassSectionReportMetadata(@PathVariable("id") UUID id);
 
     /**
      * Batch fetch class section metadata with credits and semester key for dataset computation.

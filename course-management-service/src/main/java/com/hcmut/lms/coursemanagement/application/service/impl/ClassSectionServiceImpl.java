@@ -33,11 +33,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.hcmut.lms.coursemanagement.util.SemesterUtil.computeSemKeyFromSemesterCode;
 
-@Service
+  @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
@@ -110,9 +111,9 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     return enrichWithTeacherName(classSectionMapper.toResponseDTO(savedClassSection));
   }
 
-  @Override
-  public ClassSectionResponse updateClassSection(UUID id, ClassSectionRequest request) {
-    log.info("Updating class section with id: {}", id);
+    @Override
+    public ClassSectionResponse updateClassSection(UUID id, ClassSectionRequest request) {
+        log.info("Updating class section with id: {}", id);
 
     ClassSection classSection = classSectionRepository.findById(id)
         .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + id));
@@ -407,7 +408,36 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         .toList();
   }
 
-  private ClassSectionDatasetResponse toDatasetResponse(ClassSection cs) {
+    @Override
+    @Transactional(readOnly = true)
+    public ClassSectionReportMetadataResponse getClassSectionReportMetadata(UUID classId) {
+      ClassSection classSection = classSectionRepository.findById(classId)
+          .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+
+      List<Chapter> chapters = chapterRepository.findByClassSectionIdWithLectures(classId);
+
+      AtomicInteger displayOrder = new AtomicInteger(1);
+      List<LectureReportMetadataResponse> lectures = chapters.stream()
+          .sorted(Comparator.comparing(Chapter::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
+          .flatMap(chapter -> chapter.getLectures().stream()
+              .sorted(Comparator.comparing(Lecture::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))))
+          .map(lecture -> LectureReportMetadataResponse.builder()
+              .lectureId(lecture.getId())
+              .title(lecture.getTitle())
+              .order(displayOrder.getAndIncrement())
+              .estimateTimeSpent(lecture.getEstimateTimeSpent())
+              .build())
+          .toList();
+
+      return ClassSectionReportMetadataResponse.builder()
+          .classId(classSection.getId())
+          .teacherId(classSection.getTeacherId())
+          .lectures(lectures)
+          .build();
+    }
+
+
+    private ClassSectionDatasetResponse toDatasetResponse(ClassSection cs) {
     String semesterCode = cs.getSemester() != null ? cs.getSemester().getSemesterCode() : null;
     Integer semKey = computeSemKeyFromSemesterCode(semesterCode);
 
@@ -430,4 +460,11 @@ public class ClassSectionServiceImpl implements ClassSectionService {
         .semKey(semKey)
         .build();
   }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> getClassIdsByTeacherId(UUID teacherId) {
+      log.info("Getting class IDs for teacher: {}", teacherId);
+      return classSectionRepository.findIdsByTeacherId(teacherId);
+    }
 }
