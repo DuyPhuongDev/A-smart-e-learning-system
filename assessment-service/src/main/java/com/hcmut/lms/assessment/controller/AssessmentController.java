@@ -5,18 +5,24 @@ import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
+import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
+import com.hcmut.lms.assessment.dto.response.QuestionImportResultResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.assessment.service.AssessmentService;
+import com.hcmut.lms.assessment.service.QuestionImportService;
+import com.hcmut.lms.assessment.service.TestCaseImportService;
 import com.hcmut.lms.common.dto.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +33,7 @@ import java.util.UUID;
 public class AssessmentController {
 
     private final AssessmentService assessmentService;
+    private final QuestionImportService questionImportService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -94,7 +101,7 @@ public class AssessmentController {
     }
 
     @PostMapping("/{id}/create-question")
-    public ResponseEntity<List<QuestionResponse>> createQuestionForAssessment(@PathVariable UUID id, @Valid @RequestBody AssessmentQuestionRequest request) {
+    public ResponseEntity<QuestionResponse> createQuestionForAssessment(@PathVariable UUID id, @Valid @RequestBody AssessmentQuestionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(assessmentService.createQuestionsForAssessment(id, request));
 
@@ -105,5 +112,25 @@ public class AssessmentController {
                                                                        @PathVariable UUID questionId,
                                                                        @Valid @RequestBody AssessmentQuestionRequest request) {
         return ResponseEntity.ok(assessmentService.updateQuestionsForAssessment(id, questionId, request));
+    }
+
+    @PutMapping("/{id}/questions/{questionId}/re-order")
+    public ResponseEntity<Void> reorderQuestionsInAssessment(@PathVariable UUID id, @PathVariable UUID questionId, @Valid @RequestBody ReorderRequest request) {
+        assessmentService.reorderQuestionsInAssessment(id, questionId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    @PostMapping(value = "/{id}/questions/import/mcq", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<QuestionImportResultResponse> importMcqQuestions(@PathVariable UUID id, @RequestPart("file") MultipartFile file) {
+        QuestionImportResultResponse result = questionImportService.importMcqQuestions(file, id , false);
+        return ResponseEntity.ok(result);
+    }
+
+
+    @PostMapping(value = "/{id}/questions/import/essay", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<QuestionImportResultResponse> importEssayQuestions(@PathVariable UUID id, @RequestPart("file") MultipartFile file) {
+        QuestionImportResultResponse result = questionImportService.importEssayQuestions(file, id , false);
+        return ResponseEntity.ok(result);
     }
 }

@@ -19,4 +19,6 @@ public interface AssessmentQuestionRepository extends JpaRepository<AssessmentQu
     void deleteByAssessmentIdAndQuestionId(UUID assessmentId, UUID questionId);
 
     boolean existsByAssessment_IdAndQuestion_Id(UUID assessmentId, UUID questionId);
+
+    int countByAssessment_Id(UUID assessmentId);
 }

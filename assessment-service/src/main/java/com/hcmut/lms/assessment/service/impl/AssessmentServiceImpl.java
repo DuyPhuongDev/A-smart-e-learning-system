@@ -10,6 +10,7 @@ import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
+import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
@@ -230,28 +231,34 @@ public class AssessmentServiceImpl implements AssessmentService {
 
     @Override
     @Transactional
-    public List<QuestionResponse> createQuestionsForAssessment(UUID assessmentId, AssessmentQuestionRequest request) {
+    public QuestionResponse  createQuestionsForAssessment(UUID assessmentId, AssessmentQuestionRequest request) {
         Assessment assessment = findAssessmentById(assessmentId);
 
         Question question = questionService.makeQuestion(request.getQuestion());
 
-        questionRepository.save(question);
+        Question savedQuestion = questionRepository.save(question);
 
         AssessmentQuestion assessmentQuestion = AssessmentQuestion.builder()
                         .assessment(assessment)
                                 .question(question)
-                                        .orderIndex(request.getOrderIndex())
                                                 .point(request.getPoint())
                                                         .build();
+        if (request.getOrderIndex() > -1) {
+            assessmentQuestion.setOrderIndex(request.getOrderIndex());
+        }else {
+            int index = assessmentQuestionRepository.countByAssessment_Id(assessmentId);
+            assessmentQuestion.setOrderIndex(index);
+        }
 
         assessment.getAssessmentQuestions().add(assessmentQuestion);
-        return assessmentRepository.save(assessment).getAssessmentQuestions()
-                .stream().map( i ->{
-                   QuestionResponse questionResponse = questionMapper.toResponse((Question) Hibernate.unproxy(i.getQuestion()));
-                   questionResponse.setOrderIndex(i.getOrderIndex());
-                   questionResponse.setPoint(i.getPoint());
-                   return questionResponse;
-                }).toList();
+
+        assessmentRepository.save(assessment);
+
+        QuestionResponse questionResponse = questionMapper.toResponse(savedQuestion);
+        questionResponse.setOrderIndex(assessmentQuestion.getOrderIndex());
+        questionResponse.setPoint(assessmentQuestion.getPoint());
+        return questionResponse;
+
     }
 
     @Override
@@ -270,6 +277,65 @@ public class AssessmentServiceImpl implements AssessmentService {
         questionResponse.setOrderIndex(request.getOrderIndex());
         questionResponse.setPoint(request.getPoint());
         return questionResponse;
+    }
+
+    @Override
+    @Transactional
+    public void reorderQuestionsInAssessment(UUID assessmentId, UUID questionId, ReorderRequest request) {
+        AssessmentQuestion current = assessmentQuestionRepository
+                .findByQuestionIdAndAssessmentId(questionId, assessmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assessment Question not found"));
+
+        List<AssessmentQuestion> questions = assessmentQuestionRepository
+                .findByAssessmentIdOrderByIndex(assessmentId);
+
+        if (questions.isEmpty()) {
+            throw new ResourceNotFoundException("No questions found in assessment");
+        }
+
+        int oldIndex = current.getOrderIndex();
+        int newIndex = request.getNewOrderIndex();
+
+        if (newIndex < 0 || newIndex >= questions.size()) {
+            throw new IllegalArgumentException("Target order index is out of range");
+        }
+
+        if (oldIndex == newIndex) {
+            return;
+        }
+
+        // Move current out of the way first to avoid unique/index conflicts
+        current.setOrderIndex(-1);
+        assessmentQuestionRepository.saveAndFlush(current);
+
+        if (newIndex < oldIndex) {
+            // Moving up:
+            // shift [newIndex, oldIndex - 1] right by 1
+            for (AssessmentQuestion q : questions) {
+                int idx = q.getOrderIndex();
+                if (!q.getId().equals(current.getId()) && idx >= newIndex && idx < oldIndex) {
+                    q.setOrderIndex(idx + 1);
+                }
+            }
+        } else {
+            // Moving down:
+            // shift [oldIndex + 1, newIndex] left by 1
+            for (AssessmentQuestion q : questions) {
+                int idx = q.getOrderIndex();
+                if (!q.getId().equals(current.getId()) && idx > oldIndex && idx <= newIndex) {
+                    q.setOrderIndex(idx - 1);
+                }
+            }
+        }
+
+        assessmentQuestionRepository.saveAll(
+                questions.stream()
+                        .filter(q -> !q.getId().equals(current.getId()))
+                        .toList()
+        );
+
+        current.setOrderIndex(newIndex);
+        assessmentQuestionRepository.save(current);
     }
 
     private Assessment findAssessmentById(UUID id) {
