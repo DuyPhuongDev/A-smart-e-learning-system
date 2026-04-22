@@ -7,7 +7,7 @@ import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentQuestion;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentType;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
-import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
+import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
@@ -15,18 +15,17 @@ import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
-import com.hcmut.lms.assessment.exception.UnsupportedQuestionTypeException;
-import com.hcmut.lms.assessment.handler.QuestionHandler;
 import com.hcmut.lms.assessment.mapper.AssessmentMapper;
 import com.hcmut.lms.assessment.mapper.QuestionMapper;
 import com.hcmut.lms.assessment.repository.AssessmentQuestionRepository;
 import com.hcmut.lms.assessment.repository.AssessmentRepository;
-import com.hcmut.lms.assessment.repository.QuestionBankRepository;
 import com.hcmut.lms.assessment.repository.QuestionRepository;
 import com.hcmut.lms.assessment.service.AssessmentService;
+import com.hcmut.lms.assessment.service.QuestionService;
 import com.hcmut.lms.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +51,7 @@ public class AssessmentServiceImpl implements AssessmentService {
     private final QuestionMapper questionMapper;
     private final AssessmentEventPublisher assessmentEventPublisher;
     private final CourseManagementInternalClient courseManagementInternalClient;
+    private final QuestionService questionService;
 
     @Override
     public AssessmentResponse createAssessment(AssessmentRequest request) {
@@ -64,9 +64,7 @@ public class AssessmentServiceImpl implements AssessmentService {
     @Transactional(readOnly = true)
     public AssessmentResponse getAssessment(UUID id) {
         Assessment assessment = findAssessmentById(id);
-        AssessmentResponse response = assessmentMapper.toResponse(assessment);
-        enrichWithGradingWeight(response, assessment);
-        return response;
+        return assessmentMapper.toResponse(assessment);
     }
 
     @Override
@@ -85,15 +83,9 @@ public class AssessmentServiceImpl implements AssessmentService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<AssessmentResponse> listByClass(UUID classId, Pageable pageable) {
-        Map<String, Float> weightByType = buildGradingWeightMap(classId);
-
         return PageResponse.fromPage(
                 assessmentRepository.findAllByClassId(classId, pageable)
-                        .map(assessment -> {
-                            AssessmentResponse response = assessmentMapper.toResponse(assessment);
-                            applyGradingWeight(response, assessment, weightByType);
-                            return response;
-                        }));
+                        .map(assessmentMapper::toResponse));
     }
 
     @Override
@@ -121,14 +113,12 @@ public class AssessmentServiceImpl implements AssessmentService {
         });
 
         assessmentRepository.save(assessment);
-        rebalancePoints(assessmentId);
     }
 
     @Override
     public void removeQuestion(UUID assessmentId, UUID questionId) {
         findAssessmentById(assessmentId);
         assessmentQuestionRepository.deleteByAssessmentIdAndQuestionId(assessmentId, questionId);
-        rebalancePoints(assessmentId);
     }
 
     @Override
@@ -238,55 +228,53 @@ public class AssessmentServiceImpl implements AssessmentService {
         return result;
     }
 
+    @Override
+    @Transactional
+    public List<QuestionResponse> createQuestionsForAssessment(UUID assessmentId, AssessmentQuestionRequest request) {
+        Assessment assessment = findAssessmentById(assessmentId);
+
+        Question question = questionService.makeQuestion(request.getQuestion());
+
+        questionRepository.save(question);
+
+        AssessmentQuestion assessmentQuestion = AssessmentQuestion.builder()
+                        .assessment(assessment)
+                                .question(question)
+                                        .orderIndex(request.getOrderIndex())
+                                                .point(request.getPoint())
+                                                        .build();
+
+        assessment.getAssessmentQuestions().add(assessmentQuestion);
+        return assessmentRepository.save(assessment).getAssessmentQuestions()
+                .stream().map( i ->{
+                   QuestionResponse questionResponse = questionMapper.toResponse((Question) Hibernate.unproxy(i.getQuestion()));
+                   questionResponse.setOrderIndex(i.getOrderIndex());
+                   questionResponse.setPoint(i.getPoint());
+                   return questionResponse;
+                }).toList();
+    }
+
+    @Override
+    @Transactional
+    public QuestionResponse updateQuestionsForAssessment(UUID id, UUID questionId, AssessmentQuestionRequest request) {
+        // update question
+        Question updatedQuestion = questionService.updateQuestion(questionId, request.getQuestion());
+        // update config
+        AssessmentQuestion assessmentQuestion = assessmentQuestionRepository.findByQuestionIdAndAssessmentId(questionId, id).orElseThrow(() -> new ResourceNotFoundException("Assessment Question not found"));
+
+        assessmentQuestion.setOrderIndex(request.getOrderIndex());
+        assessmentQuestion.setPoint(request.getPoint());
+        assessmentQuestionRepository.save(assessmentQuestion);
+
+        QuestionResponse questionResponse = questionMapper.toResponse(updatedQuestion);
+        questionResponse.setOrderIndex(request.getOrderIndex());
+        questionResponse.setPoint(request.getPoint());
+        return questionResponse;
+    }
+
     private Assessment findAssessmentById(UUID id) {
+        log.info("Finding assessment with id {}", id);
         return assessmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Assessment", id));
-    }
-
-    private void rebalancePoints(UUID assessmentId) {
-        List<AssessmentQuestion> questions = assessmentQuestionRepository.findByAssessmentIdOrderByIndex(assessmentId);
-        int total = questions.size();
-        if (total == 0) return;
-
-        BigDecimal pointPerQuestion = BigDecimal.ONE.divide(
-                BigDecimal.valueOf(total), new MathContext(5));
-        questions.forEach(aq -> aq.setPoint(pointPerQuestion));
-        assessmentQuestionRepository.saveAll(questions);
-    }
-
-    private void enrichWithGradingWeight(AssessmentResponse response, Assessment assessment) {
-        Map<String, Float> weightByType = buildGradingWeightMap(assessment.getClassId());
-        applyGradingWeight(response, assessment, weightByType);
-    }
-
-    private void applyGradingWeight(AssessmentResponse response, Assessment assessment,
-                                     Map<String, Float> weightByType) {
-        AssessmentType type = assessment.getAssessmentType();
-        if (type == null || type == AssessmentType.PRACTICE || type == AssessmentType.QUIZ) return;
-
-        Float totalWeight = weightByType.get(type.name());
-        if (totalWeight == null) return;
-
-        long count = assessmentRepository.countByClassIdAndAssessmentType(assessment.getClassId(), type);
-        if (count > 0) {
-            response.setGradingWeight(totalWeight / count);
-        }
-    }
-
-    private Map<String, Float> buildGradingWeightMap(UUID classId) {
-        try {
-            List<ClassGradingWeightDto> weights = courseManagementInternalClient.getGradingWeights(classId);
-            if (weights != null) {
-                return weights.stream()
-                        .filter(w -> w.getGradingType() != null)
-                        .collect(Collectors.toMap(
-                                w -> w.getGradingType().toUpperCase(),
-                                ClassGradingWeightDto::getWeight,
-                                (a, b) -> a));
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch grading weights for class {}: {}", classId, e.getMessage());
-        }
-        return Map.of();
     }
 }

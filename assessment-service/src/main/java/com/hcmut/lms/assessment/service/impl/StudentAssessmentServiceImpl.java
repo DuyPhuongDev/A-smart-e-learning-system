@@ -42,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -1038,7 +1038,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             throw new BadRequestException("Assessment is not open");
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (assessment.getStartTime() != null && now.isBefore(assessment.getStartTime())) {
             throw new BadRequestException("Assessment has not started yet");
         }
@@ -1052,7 +1052,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         if (assessment.getAssessmentStatus() != AssessmentStatus.PUBLISHED) {
             return false;
         }
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (assessment.getStartTime() != null && now.isBefore(assessment.getStartTime())) {
             return false;
         }
@@ -1071,7 +1071,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     private void ensureAttemptWritable(AssessmentSubmission attempt) {
         Assessment assessment = attempt.getAssessment();
 
-        if (assessment.getCloseTime() != null && LocalDateTime.now().isAfter(assessment.getCloseTime())) {
+        if (assessment.getCloseTime() != null && Instant.now().isAfter(assessment.getCloseTime())) {
             throw new BadRequestException("Assessment has already closed");
         }
 
@@ -1117,7 +1117,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     }
 
     private BigDecimal defaultPoint(Question question) {
-        return question.getPoint() != null ? question.getPoint() : BigDecimal.ZERO;
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal nonNull(BigDecimal value) {

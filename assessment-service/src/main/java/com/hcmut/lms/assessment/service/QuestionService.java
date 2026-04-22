@@ -1,5 +1,6 @@
 package com.hcmut.lms.assessment.service;
 
+import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
 import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
@@ -15,11 +16,15 @@ public interface QuestionService {
 
     QuestionResponse getQuestion(UUID id);
 
-    QuestionResponse updateQuestion(UUID id, QuestionRequest request);
+    Question updateQuestion(UUID id, QuestionRequest request);
 
     void deleteQuestion(UUID id);
 
     PageResponse<QuestionResponse> listQuestions(UUID bankId, QuestionType questionType, Pageable pageable);
 
     List<QuestionResponse> listQuestionsInAssessment(UUID assessmentId);
+
+    Question makeQuestion(QuestionRequest request);
+
+
 }

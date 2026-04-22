@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,6 +18,6 @@ public class TeacherAssessmentSummaryResponse {
     private GradingRule gradingRule;
     private Integer maxAttempts;
     private Integer timeLimit;
-    private LocalDateTime startTime;
-    private LocalDateTime closeTime;
+    private Instant startTime;
+    private Instant closeTime;
 }

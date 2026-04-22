@@ -8,7 +8,11 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "assessment_questions")
+@Table(name = "assessment_questions", uniqueConstraints = {
+        @UniqueConstraint(
+                columnNames = {"assessment_id", "question_id"}
+        )
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,6 +31,6 @@ public class AssessmentQuestion extends BaseEntity {
     @Column(name = "order_index")
     private int orderIndex;
 
-    @Column(name = "point", precision = 8, scale = 5)
+    @Column(name = "point", precision = 5, scale = 3)
     private BigDecimal point;
 }

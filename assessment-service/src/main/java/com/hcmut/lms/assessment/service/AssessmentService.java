@@ -1,6 +1,7 @@
 package com.hcmut.lms.assessment.service;
 
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
+import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
@@ -33,4 +34,9 @@ public interface AssessmentService {
     void changeStatus(UUID id, AssessmentStatus status);
 
     List<GradingBreakdownResponse> getGradingBreakdownForClass(UUID classId);
+
+    List<QuestionResponse> createQuestionsForAssessment(UUID assessmentId, AssessmentQuestionRequest request);
+
+    QuestionResponse updateQuestionsForAssessment(UUID id, UUID questionId, AssessmentQuestionRequest request);
+
 }

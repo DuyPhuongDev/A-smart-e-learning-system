@@ -36,7 +36,6 @@ public class McqQuestionHandler implements QuestionHandler {
         McqQuestion question = McqQuestion.builder()
                 .questionType(QuestionType.MCQ)
                 .difficultLevel(req.getDifficultLevel())
-                .point(req.getPoint())
                 .required(req.isRequired())
                 .allowMultiAnswer(req.isAllowMultiAnswer())
                 .content(req.getContent())
@@ -56,13 +55,13 @@ public class McqQuestionHandler implements QuestionHandler {
         McqQuestion mcq = (McqQuestion) existing;
 
         if (req.getDifficultLevel() != null) mcq.setDifficultLevel(req.getDifficultLevel());
-        if (req.getPoint() != null) mcq.setPoint(req.getPoint());
         mcq.setRequired(req.isRequired());
         mcq.setAllowMultiAnswer(req.isAllowMultiAnswer());
         mcq.setShuffleOption(req.isShuffleOption());
+        mcq.setContent(req.getContent());
+
 
         if (req.getAnswerOptions() != null) {
-            mcq.getAnswerOptions().clear();
             req.getAnswerOptions().forEach(o -> mcq.addOption(buildOption(o)));
         }
         return mcq;
@@ -92,6 +91,7 @@ public class McqQuestionHandler implements QuestionHandler {
         });
     }
 
+    /// need handler again
     @Override
     public GradingResult grade(Question question, SubmissionDto submission) {
         McqQuestion mcq = (McqQuestion) question;
@@ -103,7 +103,6 @@ public class McqQuestionHandler implements QuestionHandler {
                 .map(AnswerOption::getId)
                 .collect(Collectors.toSet());
 
-        BigDecimal maxPoints = mcq.getPoint() != null ? mcq.getPoint() : BigDecimal.ZERO;
         long correctSelected = selected.stream().filter(correctIds::contains).count();
         boolean fullyCorrect = selected.equals(correctIds);
 
@@ -112,12 +111,13 @@ public class McqQuestionHandler implements QuestionHandler {
 
         if (fullyCorrect) {
             status = GradingStatus.CORRECT;
-            earned = maxPoints;
+//            earned = maxPoints;
         } else if (correctSelected > 0 && mcq.isAllowMultiAnswer()) {
             status = GradingStatus.PARTIAL;
-            earned = maxPoints
-                    .multiply(BigDecimal.valueOf(correctSelected))
-                    .divide(BigDecimal.valueOf(correctIds.size()), 2, RoundingMode.HALF_UP);
+//            earned = maxPoints
+//                    .multiply(BigDecimal.valueOf(correctSelected))
+//                    .divide(BigDecimal.valueOf(correctIds.size()), 2, RoundingMode.HALF_UP);
+            earned = BigDecimal.ZERO;
         } else {
             status = GradingStatus.INCORRECT;
             earned = BigDecimal.ZERO;
@@ -125,8 +125,8 @@ public class McqQuestionHandler implements QuestionHandler {
 
         return GradingResult.builder()
                 .questionId(question.getId())
-                .earnedPoints(earned)
-                .maxPoints(maxPoints)
+                .earnedPoints(BigDecimal.ZERO)
+                .maxPoints(BigDecimal.ZERO)
                 .status(status)
                 .detail(String.format("Selected %d/%d correct options.", correctSelected, correctIds.size()))
                 .build();

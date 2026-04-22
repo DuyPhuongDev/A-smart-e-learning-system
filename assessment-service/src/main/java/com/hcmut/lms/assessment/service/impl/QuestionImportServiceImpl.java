@@ -202,10 +202,10 @@ public class QuestionImportServiceImpl implements QuestionImportService {
             McqQuestionRequest request = new McqQuestionRequest();
             request.setQuestionType(QuestionType.MCQ);
             request.setDifficultLevel(difficultLevel);
-            request.setPoint(point);
+//            request.setPoint(point);
             request.setContent(content);
             request.setRequired(required);
-            request.setQuestionBankId(questionBankId);
+//            request.setQuestionBankId(questionBankId);
             request.setAllowMultiAnswer(allowMultiAnswer);
             request.setShuffleOption(shuffleOption);
             request.setAnswerOptions(answerOptions);
@@ -274,10 +274,10 @@ public class QuestionImportServiceImpl implements QuestionImportService {
             EssayQuestionRequest request = new EssayQuestionRequest();
             request.setQuestionType(QuestionType.ESSAY);
             request.setDifficultLevel(difficultLevel);
-            request.setPoint(point);
+//            request.setPoint(point);
             request.setContent(content);
             request.setRequired(required);
-            request.setQuestionBankId(questionBankId);
+//            request.setQuestionBankId(questionBankId);
             request.setSampleAnswer(sampleAnswer);
             request.setMaxFileSize(maxFileSize);
             request.setAcceptedFileTypes(acceptedFileTypes);

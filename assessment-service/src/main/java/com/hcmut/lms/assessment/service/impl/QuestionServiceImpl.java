@@ -1,21 +1,21 @@
 package com.hcmut.lms.assessment.service.impl;
 
-import com.hcmut.lms.assessment.domain.entity.assessment.Assessment;
+import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentQuestion;
+import com.hcmut.lms.assessment.domain.entity.question.McqQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
-import com.hcmut.lms.assessment.domain.entity.questionBank.QuestionBank;
 import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
 import com.hcmut.lms.assessment.exception.UnsupportedQuestionTypeException;
 import com.hcmut.lms.assessment.handler.QuestionHandler;
 import com.hcmut.lms.assessment.mapper.QuestionMapper;
-import com.hcmut.lms.assessment.repository.AssessmentRepository;
-import com.hcmut.lms.assessment.repository.QuestionBankRepository;
+import com.hcmut.lms.assessment.repository.AnswerOptionRepository;
+import com.hcmut.lms.assessment.repository.AssessmentQuestionRepository;
 import com.hcmut.lms.assessment.repository.QuestionRepository;
 import com.hcmut.lms.assessment.service.QuestionService;
 import com.hcmut.lms.common.dto.PageResponse;
-import jakarta.persistence.EntityNotFoundException;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,9 +33,9 @@ public class QuestionServiceImpl implements QuestionService {
 
     private final QuestionRepository questionRepository;
     private final QuestionMapper questionMapper;
-    private final QuestionBankRepository questionBankRepository;
     private final Map<QuestionType, QuestionHandler> handlerRegistry;
-    private final AssessmentRepository assessmentRepository;
+    private final AssessmentQuestionRepository assessmentQuestionRepository;
+    private final AnswerOptionRepository answerOptionRepository;
 
     /**
      * Spring injects all QuestionHandler beans;
@@ -43,14 +43,14 @@ public class QuestionServiceImpl implements QuestionService {
      */
     public QuestionServiceImpl(List<QuestionHandler> handlers,
                                QuestionRepository questionRepository,
-                               QuestionBankRepository questionBankRepository,
-                               QuestionMapper questionMapper,
-                               AssessmentRepository assessmentRepository
+                               AssessmentQuestionRepository assessmentQuestionRepository,
+                               AnswerOptionRepository answerOptionRepository,
+                               QuestionMapper questionMapper
     ) {
         this.questionRepository = questionRepository;
         this.questionMapper = questionMapper;
-        this.questionBankRepository = questionBankRepository;
-        this.assessmentRepository = assessmentRepository;
+        this.answerOptionRepository = answerOptionRepository;
+        this.assessmentQuestionRepository = assessmentQuestionRepository;
         this.handlerRegistry = handlers.stream()
                 .collect(Collectors.toMap(QuestionHandler::getSupportedType, Function.identity()));
     }
@@ -58,13 +58,6 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     public QuestionResponse createQuestion(QuestionRequest request) {
         Question question = resolve(request.getQuestionType()).create(request);
-        // validate questionBank
-        if(request.getQuestionBankId() != null) {
-            QuestionBank questionBank = questionBankRepository.findById(request.getQuestionBankId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Question bank not found"));
-
-            question.getBanks().add(questionBank);
-        }
 
         return questionMapper.toResponse(questionRepository.save(question));
     }
@@ -76,10 +69,15 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public QuestionResponse updateQuestion(UUID id, QuestionRequest request) {
+    public Question updateQuestion(UUID id, QuestionRequest request) {
         Question existing = findById(id);
+        if (existing instanceof McqQuestion mcq) {
+            answerOptionRepository.deleteByQuestionId(mcq.getId());
+            answerOptionRepository.flush();
+            mcq.getAnswerOptions().clear();
+        }
         Question updated = resolve(existing.getQuestionType()).update(existing, request);
-        return questionMapper.toResponse(questionRepository.save(updated));
+        return questionRepository.save(updated);
     }
 
     @Override
@@ -106,8 +104,18 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     public List<QuestionResponse> listQuestionsInAssessment(UUID assessmentId) {
-        List<Question> questions = questionRepository.findAllByAssessmentId(assessmentId);
-        return  questions.stream().map(questionMapper::toResponse).toList();
+        List<AssessmentQuestion> assessmentQuestions = assessmentQuestionRepository.findByAssessmentIdOrderByIndex(assessmentId);
+        return  assessmentQuestions.stream().map( i ->{
+            QuestionResponse questionResponse = questionMapper.toResponse((Question) Hibernate.unproxy(i.getQuestion()));
+            questionResponse.setOrderIndex( i.getOrderIndex());
+            questionResponse.setPoint(i.getPoint());
+            return questionResponse;
+        }).toList();
+    }
+
+    @Override
+    public Question makeQuestion(QuestionRequest request) {
+        return resolve(request.getQuestionType()).create(request);
     }
 
     private QuestionHandler resolve(QuestionType type) {

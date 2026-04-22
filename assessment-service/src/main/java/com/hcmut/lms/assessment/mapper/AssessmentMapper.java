@@ -16,7 +16,6 @@ public interface AssessmentMapper {
     Assessment toEntity(AssessmentRequest request);
 
     @Mapping(target = "numberQuestions", expression = "java(assessment.getAssessmentQuestions().size())")
-    @Mapping(target = "gradingWeight", ignore = true)
     AssessmentResponse toResponse(Assessment assessment);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

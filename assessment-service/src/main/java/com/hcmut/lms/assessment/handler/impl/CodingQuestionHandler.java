@@ -48,7 +48,6 @@ public class CodingQuestionHandler implements QuestionHandler {
         CodingQuestion question = CodingQuestion.builder()
                 .questionType(QuestionType.CODING)
                 .difficultLevel(req.getDifficultLevel())
-                .point(req.getPoint())
                 .required(req.isRequired())
                 .content(req.getContent())
                 .banks(new HashSet<>())
@@ -70,9 +69,10 @@ public class CodingQuestionHandler implements QuestionHandler {
         CodingQuestionRequest req = (CodingQuestionRequest) request;
         CodingQuestion coding = (CodingQuestion) existing;
 
+
         if (req.getDifficultLevel() != null) coding.setDifficultLevel(req.getDifficultLevel());
-        if (req.getPoint() != null) coding.setPoint(req.getPoint());
         coding.setRequired(req.isRequired());
+        coding.setContent(req.getContent());
         if (req.getProblemDescription() != null) coding.setProblemDescription(req.getProblemDescription());
         if (req.getExecutionTimeLimit() > 0) coding.setExecutionTimeLimit(req.getExecutionTimeLimit());
         if (req.getExecutionMemoryLimit() > 0) coding.setExecutionMemoryLimit(req.getExecutionMemoryLimit());
@@ -119,7 +119,7 @@ public class CodingQuestionHandler implements QuestionHandler {
     public GradingResult grade(Question question, SubmissionDto submission) {
         CodingQuestion codingQuestion = (CodingQuestion) question;
         CodingSubmissionDto codingSubmission = (CodingSubmissionDto) submission;
-        BigDecimal maxPoints = question.getPoint() != null ? question.getPoint() : BigDecimal.ZERO;
+        BigDecimal maxPoints =  BigDecimal.ZERO;
 
         if (codingSubmission.getCode() == null || codingSubmission.getCode().isBlank()) {
             return GradingResult.builder()

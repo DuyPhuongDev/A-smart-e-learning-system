@@ -37,7 +37,6 @@ public class EssayQuestionHandler implements QuestionHandler {
         EssayQuestion question = EssayQuestion.builder()
                 .questionType(QuestionType.ESSAY)
                 .difficultLevel(req.getDifficultLevel())
-                .point(req.getPoint())
                 .banks(new HashSet<>())
                 .required(req.isRequired())
                 .content(req.getContent())
@@ -58,11 +57,10 @@ public class EssayQuestionHandler implements QuestionHandler {
         EssayQuestion essay = (EssayQuestion) existing;
 
         if (req.getDifficultLevel() != null) essay.setDifficultLevel(req.getDifficultLevel());
-        if (req.getPoint() != null) essay.setPoint(req.getPoint());
         essay.setRequired(req.isRequired());
         if (req.getSampleAnswer() != null) essay.setSampleAnswer(req.getSampleAnswer());
         if (req.getMaxFileSize() > 0) essay.setMaxFileSize(req.getMaxFileSize());
-
+        essay.setContent(req.getContent());
         if (req.getAcceptedFileTypes() != null) {
             essay.getAcceptedFileTypes().clear();
             req.getAcceptedFileTypes().forEach(ft ->
@@ -104,9 +102,10 @@ public class EssayQuestionHandler implements QuestionHandler {
         }
     }
 
+    // need handler
     @Override
     public GradingResult grade(Question question, SubmissionDto submission) {
-        BigDecimal maxPoints = question.getPoint() != null ? question.getPoint() : BigDecimal.ZERO;
+        BigDecimal maxPoints =  BigDecimal.ZERO;
 
         return GradingResult.builder()
                 .questionId(question.getId())

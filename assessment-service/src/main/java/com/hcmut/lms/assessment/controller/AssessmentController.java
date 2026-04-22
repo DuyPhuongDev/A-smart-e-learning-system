@@ -1,8 +1,10 @@
 package com.hcmut.lms.assessment.controller;
 
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
+import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
+import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
@@ -89,5 +91,19 @@ public class AssessmentController {
     @GetMapping("/classes/{classId}/grading-breakdown")
     public ResponseEntity<List<GradingBreakdownResponse>> getGradingBreakdown(@PathVariable UUID classId) {
         return ResponseEntity.ok(assessmentService.getGradingBreakdownForClass(classId));
+    }
+
+    @PostMapping("/{id}/create-question")
+    public ResponseEntity<List<QuestionResponse>> createQuestionForAssessment(@PathVariable UUID id, @Valid @RequestBody AssessmentQuestionRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(assessmentService.createQuestionsForAssessment(id, request));
+
+    }
+
+    @PutMapping("/{id}/questions/{questionId}")
+    public ResponseEntity<QuestionResponse> updateQuestionInAssessment(@PathVariable UUID id,
+                                                                       @PathVariable UUID questionId,
+                                                                       @Valid @RequestBody AssessmentQuestionRequest request) {
+        return ResponseEntity.ok(assessmentService.updateQuestionsForAssessment(id, questionId, request));
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -36,9 +37,9 @@ public class AssessmentDeadlineReminderScheduler {
             return;
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime from = now.plusMinutes(minutesBefore);
-        LocalDateTime to = from.plusMinutes(windowMinutes);
+        Instant now = Instant.now();
+        Instant from = now.plusSeconds(minutesBefore * 60);
+        Instant to = from.plusSeconds(windowMinutes*60);
 
         List<Assessment> dueAssessments = assessmentRepository.findByAssessmentStatusAndCloseTimeBetween(
                 AssessmentStatus.PUBLISHED,
