@@ -1,6 +1,8 @@
 package com.hcmut.lms.assessment.service.impl;
 
+import com.hcmut.lms.assessment.domain.entity.answer.EssayAcceptedFileType;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentQuestion;
+import com.hcmut.lms.assessment.domain.entity.question.EssayQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.McqQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
@@ -12,6 +14,7 @@ import com.hcmut.lms.assessment.handler.QuestionHandler;
 import com.hcmut.lms.assessment.mapper.QuestionMapper;
 import com.hcmut.lms.assessment.repository.AnswerOptionRepository;
 import com.hcmut.lms.assessment.repository.AssessmentQuestionRepository;
+import com.hcmut.lms.assessment.repository.EssayAcceptFileTypeRepository;
 import com.hcmut.lms.assessment.repository.QuestionRepository;
 import com.hcmut.lms.assessment.service.QuestionService;
 import com.hcmut.lms.common.dto.PageResponse;
@@ -36,6 +39,7 @@ public class QuestionServiceImpl implements QuestionService {
     private final Map<QuestionType, QuestionHandler> handlerRegistry;
     private final AssessmentQuestionRepository assessmentQuestionRepository;
     private final AnswerOptionRepository answerOptionRepository;
+    private final EssayAcceptFileTypeRepository essayAcceptFileTypeRepository;
 
     /**
      * Spring injects all QuestionHandler beans;
@@ -45,12 +49,14 @@ public class QuestionServiceImpl implements QuestionService {
                                QuestionRepository questionRepository,
                                AssessmentQuestionRepository assessmentQuestionRepository,
                                AnswerOptionRepository answerOptionRepository,
+                               EssayAcceptFileTypeRepository essayAcceptFileTypeRepository,
                                QuestionMapper questionMapper
     ) {
         this.questionRepository = questionRepository;
         this.questionMapper = questionMapper;
         this.answerOptionRepository = answerOptionRepository;
         this.assessmentQuestionRepository = assessmentQuestionRepository;
+        this.essayAcceptFileTypeRepository = essayAcceptFileTypeRepository;
         this.handlerRegistry = handlers.stream()
                 .collect(Collectors.toMap(QuestionHandler::getSupportedType, Function.identity()));
     }
@@ -75,6 +81,10 @@ public class QuestionServiceImpl implements QuestionService {
             answerOptionRepository.deleteByQuestionId(mcq.getId());
             answerOptionRepository.flush();
             mcq.getAnswerOptions().clear();
+        }else if(existing instanceof EssayQuestion essay) {
+            essayAcceptFileTypeRepository.deleteAllByEssayQuestion_Id(essay.getId());
+            essayAcceptFileTypeRepository.flush();
+            essay.getAcceptedFileTypes().clear();
         }
         Question updated = resolve(existing.getQuestionType()).update(existing, request);
         return questionRepository.save(updated);

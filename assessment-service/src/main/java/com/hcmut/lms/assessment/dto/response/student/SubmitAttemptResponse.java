@@ -24,6 +24,7 @@ public class SubmitAttemptResponse {
     private Integer takenTime;
     private BigDecimal score;
     private BigDecimal maxScore;
+    private BigDecimal actualScore;
     private String gradingStatus;
     private List<SubmitQuestionResultResponse> questionResults;
 }

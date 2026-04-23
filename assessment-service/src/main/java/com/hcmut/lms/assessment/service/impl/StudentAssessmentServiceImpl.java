@@ -6,6 +6,7 @@ import com.hcmut.lms.assessment.domain.entity.answer.EssayAcceptedFileType;
 import com.hcmut.lms.assessment.domain.entity.assessment.Assessment;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentQuestion;
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
+import com.hcmut.lms.assessment.domain.entity.assessment.GradingRule;
 import com.hcmut.lms.assessment.domain.entity.question.CodingQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.EssayQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.McqQuestion;
@@ -323,6 +324,8 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         attempt.setSubmitTime(Instant.now());
         attempt.setTakenTime(computeTakenTimeInSeconds(attempt));
         attempt.setScore(totalScore);
+        BigDecimal actualScore = totalScore.multiply(BigDecimal.TEN).divide(maxScore, RoundingMode.HALF_UP);
+        attempt.setActualScore(actualScore);
         assessmentSubmissionRepository.save(attempt);
 
         if (!hasPendingReview) {
@@ -337,6 +340,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .submittedAt(attempt.getSubmitTime())
                 .takenTime(attempt.getTakenTime())
                 .score(totalScore)
+                .actualScore(actualScore)
                 .maxScore(maxScore)
                 .gradingStatus(hasPendingReview ? "PENDING_REVIEW" : "GRADED")
                 .questionResults(questionResults)
@@ -550,7 +554,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .collect(Collectors.toMap(s -> s.getQuestion().getId(), s -> s, (a, b) -> a));
 
         List<SubmitQuestionResultResponse> questionResults = new ArrayList<>();
-        BigDecimal maxScore = BigDecimal.TEN;
+        BigDecimal maxScore = BigDecimal.ZERO;
         boolean hasPendingReview = false;
 
         for (AssessmentQuestion aq : assessmentQuestions) {
@@ -595,6 +599,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .submittedAt(attempt.getSubmitTime())
                 .takenTime(attempt.getTakenTime())
                 .score(nonNull(attempt.getScore()))
+                .actualScore(nonNull(attempt.getActualScore()))
                 .maxScore(maxScore)
                 .gradingStatus(hasPendingReview ? "PENDING_REVIEW" : "GRADED")
                 .questionResults(questionResults)
@@ -615,6 +620,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .attemptNo(attempt.getAttemptNo())
                 .status(attempt.getStatus())
                 .score(nonNull(attempt.getScore()))
+                .actualScore(nonNull(attempt.getActualScore()))
                 .startedAt(attempt.getCreatedAt())
                 .submittedAt(attempt.getSubmitTime())
                 .takenTime(attempt.getTakenTime())
@@ -628,11 +634,8 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             Set<UUID> pendingReviewAttemptIds
     ) {
         int attemptsUsed = submissions.size();
-        BigDecimal bestScore = submissions.stream()
-                .map(AssessmentSubmission::getScore)
-                .filter(Objects::nonNull)
-                .max(Comparator.naturalOrder())
-                .orElse(null);
+        // score must abide by grading rule
+        BigDecimal bestScore = calcBestScore(submissions, assessment.getGradingRule());
 
         boolean hasInProgress = submissions.stream()
                 .anyMatch(s -> s.getStatus() == AssessmentSubmissionStatus.IN_PROGRESS);
@@ -1129,5 +1132,50 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 attemptIds,
                 QuestionSubmissionStatus.PENDING_REVIEW
         ));
+    }
+
+    private BigDecimal calcBestScore(List<AssessmentSubmission> submissions, GradingRule gradingRule) {
+        if (submissions.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        return switch (gradingRule) {
+            case FIRST_ATTEMPT -> submissions.stream()
+                    .min(Comparator.comparing(AssessmentSubmission::getSubmitTime))
+                    .map(AssessmentSubmission::getActualScore)
+                    .orElse(BigDecimal.ZERO);
+
+            case HIGH_SCORE -> submissions.stream()
+                    .max(Comparator.comparing(AssessmentSubmission::getActualScore))
+                    .map(AssessmentSubmission::getActualScore)
+                    .orElse(BigDecimal.ZERO);
+
+            case LAST_ATTEMPT -> submissions.stream()
+                    .max(Comparator.comparing(AssessmentSubmission::getSubmitTime))
+                    .map(AssessmentSubmission::getActualScore)
+                    .orElse(BigDecimal.ZERO);
+
+            case AVG_SCORE -> {
+                List<BigDecimal> scores = submissions.stream()
+                        .map(AssessmentSubmission::getActualScore)
+                        .filter(Objects::nonNull)
+                        .toList();
+
+                if (scores.isEmpty()) {
+                    yield BigDecimal.ZERO;
+                }
+
+                BigDecimal sum = scores.stream()
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                yield sum.divide(
+                        BigDecimal.valueOf(scores.size()),
+                        2, // scale
+                        RoundingMode.HALF_UP
+                );
+            }
+
+            default -> BigDecimal.ZERO;
+        };
     }
 }

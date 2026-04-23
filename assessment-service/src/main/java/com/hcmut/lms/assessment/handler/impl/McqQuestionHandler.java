@@ -117,7 +117,6 @@ public class McqQuestionHandler implements QuestionHandler {
             earned = maxPoints
                     .multiply(BigDecimal.valueOf(correctSelected))
                     .divide(BigDecimal.valueOf(correctIds.size()), 2, RoundingMode.HALF_UP);
-            earned = BigDecimal.ZERO;
         } else {
             status = GradingStatus.INCORRECT;
             earned = BigDecimal.ZERO;

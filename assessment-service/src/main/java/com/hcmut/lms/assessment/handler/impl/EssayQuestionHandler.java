@@ -62,7 +62,6 @@ public class EssayQuestionHandler implements QuestionHandler {
         if (req.getMaxFileSize() > 0) essay.setMaxFileSize(req.getMaxFileSize());
         essay.setContent(req.getContent());
         if (req.getAcceptedFileTypes() != null) {
-            essay.getAcceptedFileTypes().clear();
             req.getAcceptedFileTypes().forEach(ft ->
                     essay.addAcceptedFileType(EssayAcceptedFileType.builder().fileType(ft).build()));
         }
