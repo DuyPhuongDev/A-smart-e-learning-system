@@ -93,7 +93,7 @@ public class McqQuestionHandler implements QuestionHandler {
 
     /// need handler again
     @Override
-    public GradingResult grade(Question question, SubmissionDto submission) {
+    public GradingResult grade(Question question, SubmissionDto submission, BigDecimal maxPoints) {
         McqQuestion mcq = (McqQuestion) question;
         McqSubmissionDto sub = (McqSubmissionDto) submission;
 
@@ -111,12 +111,12 @@ public class McqQuestionHandler implements QuestionHandler {
 
         if (fullyCorrect) {
             status = GradingStatus.CORRECT;
-//            earned = maxPoints;
+            earned = maxPoints;
         } else if (correctSelected > 0 && mcq.isAllowMultiAnswer()) {
             status = GradingStatus.PARTIAL;
-//            earned = maxPoints
-//                    .multiply(BigDecimal.valueOf(correctSelected))
-//                    .divide(BigDecimal.valueOf(correctIds.size()), 2, RoundingMode.HALF_UP);
+            earned = maxPoints
+                    .multiply(BigDecimal.valueOf(correctSelected))
+                    .divide(BigDecimal.valueOf(correctIds.size()), 2, RoundingMode.HALF_UP);
             earned = BigDecimal.ZERO;
         } else {
             status = GradingStatus.INCORRECT;
@@ -125,8 +125,8 @@ public class McqQuestionHandler implements QuestionHandler {
 
         return GradingResult.builder()
                 .questionId(question.getId())
-                .earnedPoints(BigDecimal.ZERO)
-                .maxPoints(BigDecimal.ZERO)
+                .earnedPoints(earned)
+                .maxPoints(maxPoints)
                 .status(status)
                 .detail(String.format("Selected %d/%d correct options.", correctSelected, correctIds.size()))
                 .build();

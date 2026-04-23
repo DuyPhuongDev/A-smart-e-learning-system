@@ -116,10 +116,9 @@ public class CodingQuestionHandler implements QuestionHandler {
     }
 
     @Override
-    public GradingResult grade(Question question, SubmissionDto submission) {
+    public GradingResult grade(Question question, SubmissionDto submission,  BigDecimal maxPoints) {
         CodingQuestion codingQuestion = (CodingQuestion) question;
         CodingSubmissionDto codingSubmission = (CodingSubmissionDto) submission;
-        BigDecimal maxPoints =  BigDecimal.ZERO;
 
         if (codingSubmission.getCode() == null || codingSubmission.getCode().isBlank()) {
             return GradingResult.builder()

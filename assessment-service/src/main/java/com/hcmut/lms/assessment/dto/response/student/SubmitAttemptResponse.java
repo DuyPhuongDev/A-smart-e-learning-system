@@ -1,5 +1,6 @@
 package com.hcmut.lms.assessment.dto.response.student;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.hcmut.lms.assessment.domain.entity.submission.AssessmentSubmissionStatus;
 import lombok.*;
 
@@ -13,6 +14,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SubmitAttemptResponse {
     private UUID attemptId;
     private UUID assessmentId;

@@ -13,6 +13,7 @@ import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
 import com.hcmut.lms.assessment.domain.entity.submission.*;
 import com.hcmut.lms.assessment.dto.request.student.*;
+import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingResponse;
 import com.hcmut.lms.assessment.dto.response.student.*;
 import com.hcmut.lms.assessment.exception.BadRequestException;
@@ -21,6 +22,7 @@ import com.hcmut.lms.assessment.exception.ForbiddenException;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
 import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
 import com.hcmut.lms.assessment.handler.dto.*;
+import com.hcmut.lms.assessment.mapper.AssessmentMapper;
 import com.hcmut.lms.assessment.repository.*;
 import com.hcmut.lms.assessment.service.AssessmentExecutionService;
 import com.hcmut.lms.assessment.service.StudentAssessmentService;
@@ -65,6 +67,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     private final AssessmentExecutionService assessmentExecutionService;
     private final CppJudgeService cppJudgeService;
     private final AssessmentEventPublisher assessmentEventPublisher;
+    private final AssessmentMapper assessmentMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -255,8 +258,8 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         boolean hasPendingReview = false;
 
         for (AssessmentQuestion aq : assessmentQuestions) {
+            maxScore = maxScore.add(defaultPoint(aq));
             Question question = resolveConcreteQuestion(aq.getQuestion());
-            maxScore = maxScore.add(defaultPoint(question));
             if (question instanceof CodingQuestion codingQuestion) {
                 validateCodingQuestionConfiguration(codingQuestion);
             }
@@ -286,14 +289,14 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 questionResults.add(SubmitQuestionResultResponse.builder()
                         .questionId(question.getId())
                         .earnedPoints(BigDecimal.ZERO)
-                        .maxPoints(defaultPoint(question))
+                        .maxPoints(defaultPoint(aq))
                         .status(QuestionSubmissionStatus.INCORRECT)
                         .detail("Question is not answered")
                         .build());
                 continue;
             }
 
-            GradingResponse grading = gradeStoredSubmission(question, stored, studentId);
+            GradingResponse grading = gradeStoredSubmission(question, stored, studentId, defaultPoint(aq));
             QuestionSubmissionStatus mappedStatus = mapStatus(grading.getStatus());
 
             stored.setScore(grading.getEarnedPoints());
@@ -468,7 +471,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .orderIndex(assessmentQuestion.getOrderIndex())
                 .questionType(question.getQuestionType())
                 .content(question.getContent())
-                .point(defaultPoint(question))
+                .point(defaultPoint(assessmentQuestion))
                 .required(question.isRequired());
 
         switch (question.getQuestionType()) {
@@ -547,19 +550,18 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .collect(Collectors.toMap(s -> s.getQuestion().getId(), s -> s, (a, b) -> a));
 
         List<SubmitQuestionResultResponse> questionResults = new ArrayList<>();
-        BigDecimal maxScore = BigDecimal.ZERO;
+        BigDecimal maxScore = BigDecimal.TEN;
         boolean hasPendingReview = false;
 
         for (AssessmentQuestion aq : assessmentQuestions) {
             Question question = aq.getQuestion();
-            maxScore = maxScore.add(defaultPoint(question));
-
+            maxScore = maxScore.add(defaultPoint(aq));
             QuestionSubmission submission = submissionByQuestionId.get(question.getId());
             if (submission == null) {
                 questionResults.add(SubmitQuestionResultResponse.builder()
                         .questionId(question.getId())
                         .earnedPoints(BigDecimal.ZERO)
-                        .maxPoints(defaultPoint(question))
+                        .maxPoints(defaultPoint(aq))
                         .status(QuestionSubmissionStatus.INCORRECT)
                         .detail("Question is not answered")
                         .build());
@@ -579,7 +581,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             questionResults.add(SubmitQuestionResultResponse.builder()
                     .questionId(question.getId())
                     .earnedPoints(nonNull(submission.getScore()))
-                    .maxPoints(defaultPoint(question))
+                    .maxPoints(defaultPoint(aq))
                     .status(submission.getStatus())
                     .detail(detail)
                     .build());
@@ -649,15 +651,10 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         boolean hasRemainingAttempts = assessment.getMaxAttempts() <= 0 || attemptsUsed < assessment.getMaxAttempts();
         boolean canStart = isAssessmentOpenNow(assessment) && (hasInProgress || hasRemainingAttempts);
 
+        AssessmentResponse assessmentResponse = assessmentMapper.toResponse(assessment);
+
         return StudentCourseAssessmentResponse.builder()
-                .id(assessment.getId())
-                .title(assessment.getTitle())
-                .assessmentType(assessment.getAssessmentType())
-                .assessmentStatus(assessment.getAssessmentStatus())
-                .startTime(assessment.getStartTime())
-                .closeTime(assessment.getCloseTime())
-                .maxAttempts(assessment.getMaxAttempts())
-                .timeLimit(assessment.getTimeLimit())
+                .assessmentInfo(assessmentResponse)
                 .attemptsUsed(attemptsUsed)
                 .bestScore(bestScore)
                 .myStatus(myStatus)
@@ -665,24 +662,24 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .build();
     }
 
-    private GradingResponse gradeStoredSubmission(Question question, QuestionSubmission submission, UUID studentId) {
+    private GradingResponse gradeStoredSubmission(Question question, QuestionSubmission submission, UUID studentId, BigDecimal maxScore) {
         question = resolveConcreteQuestion(question);
 
         if (question.getQuestionType() == QuestionType.CODING) {
             CodingSubmission codingSubmission = resolveCodingSubmission(submission);
-            return gradeCodingSubmission((CodingQuestion) question, codingSubmission);
+            return gradeCodingSubmission((CodingQuestion) question, codingSubmission,  maxScore);
         }
 
         if (question.getQuestionType() == QuestionType.ESSAY) {
             EssaySubmission essaySubmission = resolveEssaySubmission(submission);
             if (essaySubmission == null || !hasEssayContent(essaySubmission)) {
-                return zeroScoreResponse(question, "Question is not answered");
+                return zeroScoreResponse(question, "Question is not answered", maxScore);
             }
 
             return GradingResponse.builder()
                     .questionId(question.getId())
                     .earnedPoints(BigDecimal.ZERO)
-                    .maxPoints(defaultPoint(question))
+                    .maxPoints(maxScore)
                     .status(GradingStatus.PENDING_REVIEW)
                     .detail("Essay submitted. Awaiting instructor review.")
                     .build();
@@ -691,26 +688,26 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         SubmissionDto submissionDto = toSubmissionDto(question, submission, studentId);
 
         if (submissionDto == null) {
-            return zeroScoreResponse(question, "Question is not answered");
+            return zeroScoreResponse(question, "Question is not answered", maxScore);
         }
 
         try {
-            return assessmentExecutionService.submitAnswer(question.getId(), submissionDto);
+            return assessmentExecutionService.submitAnswer(question.getId(), submissionDto, maxScore);
         } catch (IllegalArgumentException ex) {
-            return zeroScoreResponse(question, ex.getMessage());
+            return zeroScoreResponse(question, ex.getMessage(), maxScore);
         } catch (RuntimeException ex) {
             log.warn("Auto grading failed for question {}. Fallback zero score. Cause: {}",
                     question.getId(), ex.getMessage(), ex);
-            return zeroScoreResponse(question, "Unable to grade automatically at this time");
+            return zeroScoreResponse(question, "Unable to grade automatically at this time", maxScore);
         }
     }
 
-    private GradingResponse gradeCodingSubmission(CodingQuestion question, CodingSubmission submission) {
+    private GradingResponse gradeCodingSubmission(CodingQuestion question, CodingSubmission submission, BigDecimal maxScore) {
         validateCodingQuestionConfiguration(question);
 
         if (submission == null || submission.getInputCode() == null || submission.getInputCode().isBlank()) {
             persistCodingSummaryOnly(submission, question, 0);
-            return zeroScoreResponse(question, "Question is not answered");
+            return zeroScoreResponse(question, "Question is not answered",  maxScore);
         }
 
         if (!cppJudgeService.isSupportedLanguage(submission.getExecutionLanguage())) {
@@ -727,9 +724,8 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             );
             persistCodingJudgeResults(submission, evaluation);
 
-            BigDecimal maxPoints = defaultPoint(question);
             BigDecimal earnedPoints = calculateCodingEarnedPoints(
-                    maxPoints,
+                    maxScore,
                     evaluation.getPassedCount(),
                     evaluation.getTotalCount()
             );
@@ -737,7 +733,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             return GradingResponse.builder()
                     .questionId(question.getId())
                     .earnedPoints(earnedPoints)
-                    .maxPoints(maxPoints)
+                    .maxPoints(maxScore)
                     .status(mapCodingGradingStatus(evaluation.getPassedCount(), evaluation.getTotalCount()))
                     .detail(evaluation.getDetail())
                     .build();
@@ -969,11 +965,11 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 : normalized;
     }
 
-    private GradingResponse zeroScoreResponse(Question question, String detail) {
+    private GradingResponse zeroScoreResponse(Question question, String detail, BigDecimal maxPoints) {
         return GradingResponse.builder()
                 .questionId(question.getId())
                 .earnedPoints(BigDecimal.ZERO.setScale(3, RoundingMode.HALF_UP))
-                .maxPoints(defaultPoint(question))
+                .maxPoints(maxPoints)
                 .status(GradingStatus.INCORRECT)
                 .detail(detail)
                 .build();
@@ -1116,8 +1112,9 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
         return (int) Math.max(0, Instant.now().getEpochSecond() - attempt.getCreatedAt().getEpochSecond());
     }
 
-    private BigDecimal defaultPoint(Question question) {
-        return BigDecimal.ZERO;
+    private BigDecimal defaultPoint(AssessmentQuestion aq) {
+        return aq.getPoint() == null ? BigDecimal.ZERO : aq.getPoint();
+
     }
 
     private BigDecimal nonNull(BigDecimal value) {

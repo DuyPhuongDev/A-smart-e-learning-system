@@ -23,9 +23,9 @@ public class AssessmentExecutionController {
      * CODING: { "questionType":"CODING", "questionId":"...", "studentId":"...", "code":"...", "language":"python" }
      * ESSAY:  { "questionType":"ESSAY",  "questionId":"...", "studentId":"...", "textContent":"..." }
      */
-    @PostMapping("/questions/{questionId}/submit")
-    public GradingResponse submitAnswer(@PathVariable UUID questionId,
-                                        @RequestBody SubmissionDto submission) {
-        return executionService.submitAnswer(questionId, submission);
-    }
+//    @PostMapping("/questions/{questionId}/submit")
+//    public GradingResponse submitAnswer(@PathVariable UUID questionId,
+//                                        @RequestBody SubmissionDto submission) {
+//        return executionService.submitAnswer(questionId, submission);
+//    }
 }

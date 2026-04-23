@@ -104,8 +104,8 @@ public class EssayQuestionHandler implements QuestionHandler {
 
     // need handler
     @Override
-    public GradingResult grade(Question question, SubmissionDto submission) {
-        BigDecimal maxPoints =  BigDecimal.ZERO;
+    public GradingResult grade(Question question, SubmissionDto submission,  BigDecimal maxPoints) {
+
 
         return GradingResult.builder()
                 .questionId(question.getId())
