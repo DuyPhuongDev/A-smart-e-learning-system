@@ -139,7 +139,8 @@ public class CodingQuestionHandler implements QuestionHandler {
         CodingJudgeEvaluation evaluation = cppJudgeService.evaluate(
                 codingQuestion,
                 codingSubmission.getCode(),
-                codingSubmission.getLanguage()
+                codingSubmission.getLanguage(),
+                false
         );
 
         BigDecimal earnedPoints = evaluation.getTotalCount() <= 0 || evaluation.getPassedCount() <= 0

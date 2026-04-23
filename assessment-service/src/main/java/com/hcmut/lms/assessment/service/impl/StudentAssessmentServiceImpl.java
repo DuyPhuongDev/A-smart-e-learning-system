@@ -723,7 +723,8 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             CodingJudgeEvaluation evaluation = cppJudgeService.evaluate(
                     question,
                     submission.getInputCode(),
-                    submission.getExecutionLanguage()
+                    submission.getExecutionLanguage(),
+                    false
             );
             persistCodingJudgeResults(submission, evaluation);
 

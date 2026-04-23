@@ -31,7 +31,7 @@ class CppJudgeServiceTest {
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> cppJudgeService.evaluate(question, "int main(){return 0;}", "python")
+                () -> cppJudgeService.evaluate(question, "int main(){return 0;}", "python", false)
         );
 
         assertTrue(ex.getMessage().contains("Only C++ language is supported"));
@@ -47,7 +47,7 @@ class CppJudgeServiceTest {
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> cppJudgeService.evaluate(question, "int main(){return 0;}", "cpp")
+                () -> cppJudgeService.evaluate(question, "int main(){return 0;}", "cpp", false)
         );
 
         assertTrue(ex.getMessage().contains("no test cases"));
