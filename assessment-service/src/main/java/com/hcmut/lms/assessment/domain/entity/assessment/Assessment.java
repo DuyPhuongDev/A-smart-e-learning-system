@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -22,6 +24,9 @@ public class Assessment extends BaseEntity {
 
     @Column(name = "class_id", nullable = false)
     private UUID classId;
+
+    @Column(name = "weight", precision = 6, scale = 2)
+    private BigDecimal weight;
 
     private String title;
 
@@ -47,16 +52,20 @@ public class Assessment extends BaseEntity {
     private int passingScore;
 
     @Column(name = "start_time")
-    private LocalDateTime startTime;
+    private Instant startTime;
 
     @Column(name = "close_time")
-    private LocalDateTime closeTime;
+    private Instant closeTime;
 
     @Column(name = "can_review")
     private boolean canReview;
 
     @Column(name = "show_correct_answers")
     private boolean showCorrectAnswers;
+
+    @Column(name = "time_can_review")
+    @Enumerated(EnumType.STRING)
+    private TimeCanReview timeCanReview;
 
     @OneToMany(mappedBy = "assessment", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

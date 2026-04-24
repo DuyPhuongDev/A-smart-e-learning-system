@@ -5,6 +5,7 @@ import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.*;
+import com.hcmut.lms.coursemanagement.application.service.ClassGradingService;
 import com.hcmut.lms.coursemanagement.application.mapper.ClassSectionMapper;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
 import com.hcmut.lms.coursemanagement.client.UserServiceClient;
@@ -38,7 +39,7 @@ import java.util.stream.Collectors;
 
 import static com.hcmut.lms.coursemanagement.util.SemesterUtil.computeSemKeyFromSemesterCode;
 
-  @Service
+@Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional

@@ -25,9 +25,6 @@ public abstract class Question extends BaseEntity {
     @Column(name = "difficult_level")
     private DifficultLevel difficultLevel;
 
-    @Column(precision = 5, scale = 3)
-    private BigDecimal point;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "question_type")
     private QuestionType questionType;
@@ -40,4 +37,6 @@ public abstract class Question extends BaseEntity {
     @ManyToMany(mappedBy = "questions")
     @Builder.Default
     private Set<QuestionBank> banks = new HashSet<>();
+
+
 }
