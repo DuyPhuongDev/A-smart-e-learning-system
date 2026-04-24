@@ -133,7 +133,7 @@ public class AssessmentEventPublisher {
         }
     }
 
-    private String toIso(LocalDateTime value) {
+    private String toIso(Instant value) {
         return value == null ? "" : value.toString();
     }
 

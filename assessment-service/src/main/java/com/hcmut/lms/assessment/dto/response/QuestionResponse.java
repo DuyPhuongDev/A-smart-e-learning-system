@@ -29,6 +29,7 @@ public abstract class QuestionResponse {
     private QuestionType questionType;
     private DifficultLevel difficultLevel;
     private BigDecimal point;
+    private int orderIndex;
     private boolean required;
     private String content;
     private Instant createdAt;

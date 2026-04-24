@@ -30,12 +30,8 @@ public abstract class QuestionRequest {
 
     private DifficultLevel difficultLevel;
 
-    private BigDecimal point;
-
     @NotEmpty(message = "Question must have content")
     private String content;
 
     private boolean required;
-
-    private UUID questionBankId;
 }

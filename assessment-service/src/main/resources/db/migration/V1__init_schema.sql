@@ -13,7 +13,6 @@ CREATE TABLE "question_banks" (
 CREATE TABLE "questions" (
     "id"              uuid PRIMARY KEY,
     "difficult_level" varchar,
-    "point"           numeric(5,3),
     "question_type"   varchar,
     "content"         text,
     "required"        bool,
@@ -79,6 +78,7 @@ ALTER TABLE "essay_accepted_file_types"
 CREATE TABLE "assessments" (
     "id"                  uuid PRIMARY KEY,
     "class_id"            uuid        NOT NULL,
+    "weight" numeric(6,3) default 0.0,
     "title"               varchar,
     "assessment_type"     varchar,
     "assessment_status"   varchar,
@@ -86,9 +86,10 @@ CREATE TABLE "assessments" (
     "max_attempts"        int,
     "time_limit"          int,
     "passing_score"       int,
-    "start_time"          timestamp,
-    "close_time"          timestamp,
+    "start_time"          timestamptz,
+    "close_time"          timestamptz,
     "show_correct_answers" bool,
+    "time_can_review" varchar(50),
     "can_review"          bool,
     "created_at"          timestamptz NOT NULL DEFAULT (now()),
     "updated_at"          timestamptz NOT NULL DEFAULT (now())
@@ -99,6 +100,7 @@ CREATE TABLE "assessment_questions" (
     "assessment_id" uuid        NOT NULL,
     "question_id"   uuid        NOT NULL,
     "order_index"   int,
+    "point" numeric(5,3),
     "created_at"    timestamptz NOT NULL DEFAULT (now()),
     "updated_at"    timestamptz NOT NULL DEFAULT (now()),
     unique ("assessment_id", "question_id")

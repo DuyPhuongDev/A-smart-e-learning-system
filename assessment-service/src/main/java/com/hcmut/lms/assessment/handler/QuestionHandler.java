@@ -7,6 +7,8 @@ import com.hcmut.lms.assessment.handler.dto.FeedbackDto;
 import com.hcmut.lms.assessment.handler.dto.GradingResult;
 import com.hcmut.lms.assessment.handler.dto.SubmissionDto;
 
+import java.math.BigDecimal;
+
 /**
  * Unified handler for a specific QuestionType.
  * Combines the Factory role (create/update entity from DTO)
@@ -36,7 +38,7 @@ public interface QuestionHandler {
     void validate(Question question, SubmissionDto submission);
 
     /** Grades the submission and returns earned points and status. */
-    GradingResult grade(Question question, SubmissionDto submission);
+    GradingResult grade(Question question, SubmissionDto submission, BigDecimal maxPoints);
 
     /** Produces student-facing feedback from a completed GradingResult. */
     FeedbackDto generateFeedback(Question question, GradingResult result);

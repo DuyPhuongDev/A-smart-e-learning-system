@@ -3,6 +3,7 @@ package com.hcmut.lms.assessment.dto.request.assessment;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Getter
@@ -16,4 +17,6 @@ public class AddQuestionRequest {
     private UUID questionId;
 
     private int orderIndex;
+
+    private BigDecimal weight;
 }
