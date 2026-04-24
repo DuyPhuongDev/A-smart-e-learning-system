@@ -4,7 +4,9 @@ import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
+import com.hcmut.lms.assessment.dto.request.assessment.UpdateWeightRequest;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
+import com.hcmut.lms.assessment.dto.response.AssessmentGrade;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
@@ -44,4 +46,7 @@ public interface AssessmentService {
 
     void reorderQuestionsInAssessment(UUID id, UUID questionId, @Valid @RequestBody ReorderRequest request);
 
+    List<AssessmentGrade> getGradesByClass(UUID classId);
+
+    AssessmentGrade updateGrade(UUID id, UpdateWeightRequest request);
 }

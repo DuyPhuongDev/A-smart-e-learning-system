@@ -5,6 +5,8 @@ import com.hcmut.lms.coursemanagement.application.dto.request.UpdateGradingWeigh
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassGradingResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassGradingWeightResponse;
 import com.hcmut.lms.coursemanagement.application.service.ClassGradingService;
+import com.hcmut.lms.coursemanagement.client.AssessmentServiceClient;
+import com.hcmut.lms.coursemanagement.client.dto.AssessmentGrade;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSectionGrading;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSectionGradingId;
@@ -22,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +49,7 @@ public class ClassGradingServiceImpl implements ClassGradingService {
     private final GradingRepository gradingRepository;
     private final ClassSectionGradingRepository classSectionGradingRepository;
     private final SubjectGradingRepository subjectGradingRepository;
+    private final AssessmentServiceClient assessmentServiceClient;
 
     // -------------------------------------------------------------------------
     // READ
@@ -59,10 +64,23 @@ public class ClassGradingServiceImpl implements ClassGradingService {
         if (isSchoolClass(classSection)) {
             return getSubjectGradingsAsResponse(classSection);
         }
-        return classSectionGradingRepository.findByClassSectionId(classId).stream()
-                .map(this::toClassGradingResponse)
+
+        List<ClassSectionGrading> classSectionGradings = classSectionGradingRepository.findByClassSectionId(classId);
+
+        Map<GradingType, List<AssessmentGrade>> assessmentGrades =
+                assessmentServiceClient.getGradesByClass(classId).stream()
+                        .collect(Collectors.groupingBy(AssessmentGrade::getAssessmentType));
+
+        return classSectionGradings.stream()
+                .map(i -> {
+                    ClassGradingResponse classGradingResponse = this.toClassGradingResponse(i);
+                    classGradingResponse.setAssessmentGrade(assessmentGrades.getOrDefault(i.getGrading().getGradingType(), List.of()));
+                    return classGradingResponse;
+                })
                 .toList();
     }
+
+
 
     @Override
     @Transactional(readOnly = true)
@@ -73,11 +91,12 @@ public class ClassGradingServiceImpl implements ClassGradingService {
         if (isSchoolClass(classSection)) {
             return getSubjectGradingWeights(classSection);
         }
-        return classSectionGradingRepository.findByClassSectionId(classId).stream()
-                .map(csg -> ClassGradingWeightResponse.builder()
-                        .gradingType(csg.getGrading().getGradingType() != null
-                                ? csg.getGrading().getGradingType().name() : null)
-                        .weight(csg.getWeight())
+        List<ClassSectionGrading> classSectionGradings = classSectionGradingRepository.findByClassSectionId(classId);
+
+        return classSectionGradings.stream()
+                .map(i -> ClassGradingWeightResponse.builder()
+                        .gradingType(String.valueOf(i.getGrading().getGradingType()))
+                        .weight(i.getWeight())
                         .build())
                 .toList();
     }
@@ -196,15 +215,24 @@ public class ClassGradingServiceImpl implements ClassGradingService {
 
     private List<ClassGradingResponse> getSubjectGradingsAsResponse(ClassSection classSection) {
         if (classSection.getSubject() == null) return List.of();
+
+        Map<GradingType, List<AssessmentGrade>> assessmentGrades =
+                assessmentServiceClient.getGradesByClass(classSection.getId()).stream()
+                        .collect(Collectors.groupingBy(AssessmentGrade::getAssessmentType));
+
         return subjectGradingRepository.findBySubjectId(classSection.getSubject().getId()).stream()
-                .map(sg -> ClassGradingResponse.builder()
-                        .gradingId(sg.getGrading().getId())
-                        .name(sg.getGrading().getName())
-                        .description(sg.getGrading().getDescription())
-                        .gradingType(sg.getGrading().getGradingType() != null
-                                ? sg.getGrading().getGradingType().name() : null)
-                        .weight(sg.getWeight())
-                        .build())
+                .map(sg -> {
+                    ClassGradingResponse classGradingResponse = ClassGradingResponse.builder()
+                            .gradingId(sg.getGrading().getId())
+                            .name(sg.getGrading().getName())
+                            .description(sg.getGrading().getDescription())
+                            .gradingType(sg.getGrading().getGradingType() != null
+                                    ? sg.getGrading().getGradingType().name() : null)
+                            .weight(sg.getWeight())
+                            .build();
+                    classGradingResponse.setAssessmentGrade(assessmentGrades.getOrDefault(sg.getGrading().getGradingType(), List.of()));
+                    return classGradingResponse;
+                })
                 .toList();
     }
 

@@ -10,7 +10,9 @@ import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
+import com.hcmut.lms.assessment.dto.request.assessment.UpdateWeightRequest;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
+import com.hcmut.lms.assessment.dto.response.AssessmentGrade;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
@@ -58,7 +60,15 @@ public class AssessmentServiceImpl implements AssessmentService {
     public AssessmentResponse createAssessment(AssessmentRequest request) {
         Assessment assessment = assessmentMapper.toEntity(request);
         assessment.setAssessmentStatus(AssessmentStatus.DRAFT);
+        assessment.setWeight(BigDecimal.ZERO);
         return assessmentMapper.toResponse(assessmentRepository.save(assessment));
+    }
+
+    @Override
+    public List<AssessmentGrade> getGradesByClass(UUID classId){
+        List<Assessment> assessments = assessmentRepository.findByClassIdOrderByCreatedAtAsc(classId);
+
+        return assessments.stream().map(AssessmentGrade::toAssessmentGradeResponse).toList();
     }
 
     @Override
@@ -144,6 +154,14 @@ public class AssessmentServiceImpl implements AssessmentService {
         if (status == AssessmentStatus.PUBLISHED) {
             assessmentEventPublisher.publishAssignmentCreated(saved);
         }
+    }
+
+    @Override
+    @Transactional
+    public AssessmentGrade updateGrade(UUID id, UpdateWeightRequest request){
+        Assessment assessment = findAssessmentById(id);
+        assessment.setWeight(request.getWeight());
+        return AssessmentGrade.toAssessmentGradeResponse(assessment);
     }
 
     @Override

@@ -1,11 +1,13 @@
 package com.hcmut.lms.coursemanagement.application.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.hcmut.lms.coursemanagement.client.dto.AssessmentGrade;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -19,4 +21,5 @@ public class ClassGradingResponse {
     private String description;
     private String gradingType;
     private Float weight;
+    private List<AssessmentGrade> assessmentGrade;
 }

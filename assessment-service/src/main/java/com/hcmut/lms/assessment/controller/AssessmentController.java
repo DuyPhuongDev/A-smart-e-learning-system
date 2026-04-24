@@ -4,15 +4,11 @@ import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
-import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
+import com.hcmut.lms.assessment.dto.request.assessment.UpdateWeightRequest;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
-import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
-import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
-import com.hcmut.lms.assessment.dto.response.QuestionImportResultResponse;
-import com.hcmut.lms.assessment.dto.response.QuestionResponse;
+import com.hcmut.lms.assessment.dto.response.*;
 import com.hcmut.lms.assessment.service.AssessmentService;
 import com.hcmut.lms.assessment.service.QuestionImportService;
-import com.hcmut.lms.assessment.service.TestCaseImportService;
 import com.hcmut.lms.common.dto.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -132,5 +128,10 @@ public class AssessmentController {
     public ResponseEntity<QuestionImportResultResponse> importEssayQuestions(@PathVariable UUID id, @RequestPart("file") MultipartFile file) {
         QuestionImportResultResponse result = questionImportService.importEssayQuestions(file, id , false);
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{id}/update-weight")
+    public AssessmentGrade updateWeight(@PathVariable UUID id, @Valid @RequestBody UpdateWeightRequest request) {
+        return assessmentService.updateGrade(id, request);
     }
 }
