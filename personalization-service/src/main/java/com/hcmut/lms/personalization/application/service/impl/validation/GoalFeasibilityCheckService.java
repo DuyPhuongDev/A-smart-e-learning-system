@@ -33,16 +33,19 @@ public class GoalFeasibilityCheckService {
     SemesterCalculationService.SemesterAvailability availability =
         semesterCalculationService.calculateAvailableSemesters(
         goal.getStudentId(), goal.getExpectedCompletedSemester());
-    int totalSemesters = availability.totalSemesters();
+    // Use main semesters only for prerequisite chain validation.
+    // Summer semesters have much lower credit caps and may not offer the required subjects,
+    // so counting them as equivalent to main semesters for chain depth would overestimate feasibility.
+    int mainSemestersOnly = availability.availableMainSemesters();
 
     CompletableFuture<CreditTimeCheckResult> creditTimeFuture = CompletableFuture.supplyAsync(
-        () -> creditTimeValidator.validate(goal, remainingCredits, earnedCredits), taskExecutor);
+        () -> creditTimeValidator.validate(goal, remainingCredits, availability), taskExecutor);
 
     CompletableFuture<GpaCheckResult> gpaFuture = CompletableFuture.supplyAsync(
         () -> gpaRequirementValidator.validate(goal, currentGpa, earnedCredits, remainingCredits), taskExecutor);
 
     CompletableFuture<PrerequisiteChainResult> prerequisiteFuture = CompletableFuture.supplyAsync(
-        () -> prerequisiteChainValidator.validate(goal, completedSubjectIds, remainingSubjectIds, totalSemesters),
+        () -> prerequisiteChainValidator.validate(goal, completedSubjectIds, remainingSubjectIds, mainSemestersOnly),
         taskExecutor);
 
     CompletableFuture<GraduationRequirementCheckResult> graduationReqFuture = CompletableFuture.supplyAsync(

@@ -17,6 +17,8 @@ public interface LearningPathMapper {
   @Mapping(target = "subjects", ignore = true)
   @Mapping(target = "graph", ignore = true)
   @Mapping(target = "validationConflicts", ignore = true)
+  @Mapping(target = "earnedCredits", ignore = true)
+  @Mapping(target = "requiredCredits", ignore = true)
   LearningPathResponse toPathResponse(LearningPath entity);
 
   @Mapping(target = "academicYear", ignore = true)
@@ -24,5 +26,7 @@ public interface LearningPathMapper {
   LearningPathSectionResponse toSectionResponse(LearningPathSection entity);
 
   @Mapping(target = "prerequisitesGraph", ignore = true)
+  @Mapping(target = "parallelsGraph", ignore = true)
+  @Mapping(target = "recommendationsGraph", ignore = true)
   LearningPathSubjectResponse toSubjectResponse(LearningPathSubject entity);
 }

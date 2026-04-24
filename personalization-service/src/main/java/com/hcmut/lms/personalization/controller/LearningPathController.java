@@ -2,11 +2,11 @@ package com.hcmut.lms.personalization.controller;
 
 import com.hcmut.lms.common.helper.CurrentUser;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
-import com.hcmut.lms.personalization.application.dto.request.CompareLearningPathsRequest;
-import com.hcmut.lms.personalization.application.dto.request.OptimizeLearningPathRequest;
+import com.hcmut.lms.personalization.application.dto.request.UpdateLearningPathSubjectsRequest;
 import com.hcmut.lms.personalization.application.dto.request.UpdateLearningPathRequest;
 import com.hcmut.lms.personalization.application.dto.response.*;
 import com.hcmut.lms.personalization.application.service.LearningPathService;
+import com.hcmut.lms.personalization.application.service.RecommendedSubjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +21,7 @@ import java.util.UUID;
 public class LearningPathController {
 
   private final LearningPathService learningPathService;
+  private final RecommendedSubjectService recommendedSubjectService;
 
   @GetMapping("/me/active")
   public ResponseEntity<LearningPathResponse> getActive(@CurrentUser CurrentUserInfo currentUser) {
@@ -42,7 +43,7 @@ public class LearningPathController {
   @PutMapping("/{learningPathId}")
   public ResponseEntity<LearningPathResponse> update(
       @CurrentUser CurrentUserInfo currentUser, @PathVariable UUID learningPathId,
-      @RequestBody UpdateLearningPathRequest request) {
+      @Valid @RequestBody UpdateLearningPathRequest request) {
     return ResponseEntity.ok(learningPathService.updateLearningPath(currentUser.getId(), learningPathId, request));
   }
 
@@ -60,27 +61,6 @@ public class LearningPathController {
     return ResponseEntity.ok(learningPathService.getSubjects(currentUser.getId(), learningPathId));
   }
 
-  @PostMapping("/{learningPathId}/optimize")
-  public ResponseEntity<List<LearningPathOptimizationCandidateResponse>> optimize(
-      @CurrentUser CurrentUserInfo currentUser, @PathVariable UUID learningPathId,
-      @Valid @RequestBody OptimizeLearningPathRequest request) {
-    return ResponseEntity.ok(learningPathService.optimize(currentUser.getId(), learningPathId, request));
-  }
-
-  @GetMapping("/{learningPathId}/validate")
-  public ResponseEntity<List<LearningPathValidationConflictResponse>> validate(
-      @CurrentUser CurrentUserInfo currentUser,
-      @PathVariable UUID learningPathId) {
-    return ResponseEntity.ok(learningPathService.validate(currentUser.getId(), learningPathId));
-  }
-
-  @GetMapping("/{learningPathId}/changes")
-  public ResponseEntity<List<LearningPathChangeRecordResponse>> getChanges(
-      @CurrentUser CurrentUserInfo currentUser,
-      @PathVariable UUID learningPathId) {
-    return ResponseEntity.ok(learningPathService.getChanges(currentUser.getId(), learningPathId));
-  }
-
   @GetMapping("/{learningPathId}/graph")
   public ResponseEntity<LearningPathGraphResponse> getGraph(
       @CurrentUser CurrentUserInfo currentUser,
@@ -88,11 +68,31 @@ public class LearningPathController {
     return ResponseEntity.ok(learningPathService.getGraph(currentUser.getId(), learningPathId));
   }
 
-  @PostMapping("/compare")
-  public ResponseEntity<LearningPathComparisonResultResponse> compare(
+
+  @PutMapping("/{learningPathId}/subjects")
+  public ResponseEntity<LearningPathResponse> updateSubjects(
       @CurrentUser CurrentUserInfo currentUser,
-      @Valid @RequestBody CompareLearningPathsRequest request) {
-    return ResponseEntity.ok(learningPathService.compare(currentUser.getId(), request));
+      @PathVariable UUID learningPathId,
+      @Valid @RequestBody UpdateLearningPathSubjectsRequest request) {
+    return ResponseEntity.ok(learningPathService.updateLearningPathSubjects(
+        currentUser.getId(), learningPathId, request.getChanges()));
+  }
+
+  @GetMapping("/{learningPathId}/subjects/search")
+  public ResponseEntity<List<LearningPathSubjectResponse>> searchSubjects(
+      @CurrentUser CurrentUserInfo currentUser,
+      @PathVariable UUID learningPathId,
+      @RequestParam("keyword") String keyword) {
+    return ResponseEntity.ok(learningPathService.searchSubjects(
+        currentUser.getId(), learningPathId, keyword));
+  }
+
+  @GetMapping("/{learningPathId}/subjects/recommended")
+  public ResponseEntity<List<RecommendedSubjectResponse>> getRecommendedSubjects(
+      @CurrentUser CurrentUserInfo currentUser,
+      @PathVariable UUID learningPathId) {
+    return ResponseEntity.ok(recommendedSubjectService.getRecommendedSubjects(
+        currentUser.getId(), learningPathId));
   }
 }
 

@@ -57,7 +57,7 @@ public class SqlGenerationServiceImpl implements SqlGenerationService {
           request.getStudentInfo().getStudentCode());
       userId = existingStudent.getId();
       log.info("Student exists with ID: {}", userId);
-    } catch (FeignException.NotFound e) {
+    } catch (Exception e) {
       userId = UUID.randomUUID();
       isNewStudent = true;
       log.info("Student does not exist, will create new student with ID: {}", userId);
@@ -88,7 +88,7 @@ public class SqlGenerationServiceImpl implements SqlGenerationService {
     sqlBuilder.append("-- Student: ").append(request.getStudentInfo().getStudentCode()).append("\n\n");
 
     if (isNewStudent) {
-      UUID roleId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+      UUID roleId = UUID.fromString("e5909d1e-492d-4419-9766-ce69821e28ec");
       sqlBuilder.append("-- Step 1: Create new user and student\n");
       sqlBuilder.append(generateUserSql(userId, roleId, request.getStudentInfo(), specialization.getId()));
       sqlBuilder.append("\n");
@@ -133,7 +133,7 @@ public class SqlGenerationServiceImpl implements SqlGenerationService {
         LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")));
 
     String sqlContent = sqlBuilder.toString();
-    String migrationFileName = "V10__init_learning_progress_data.sql";
+    String migrationFileName = "V12__learning_progress_data.sql";
     writeSqlToFile(sqlContent, migrationFileName);
     log.info("SQL generation completed. Total records: {}", totalRecords);
 
@@ -236,8 +236,8 @@ public class SqlGenerationServiceImpl implements SqlGenerationService {
       UUID userId, UUID roleId, GradeHistoryRequest.StudentInfo studentInfo, UUID specializationId) {
     return String.format(
         """
-            INSERT INTO user_management.users (id, email, first_name, last_name, phone, specialization_id, role_id, created_at, updated_at)
-            VALUES ('%s', '%s', '%s', '%s', %s, '%s', '%s', now(), now())
+            INSERT INTO user_management.users (id, email, avatar_url, first_name, last_name, phone, last_login, specialization_id, role_id, created_at, updated_at)
+            VALUES ('%s', '%s', NULL, '%s', '%s', %s, NULL, '%s', '%s', now(), now())
             ON CONFLICT (email) DO NOTHING;""", userId, studentInfo.getEmail(),
         studentInfo.getFirstName() != null ? studentInfo.getFirstName() : "",
         studentInfo.getLastName() != null ? studentInfo.getLastName() : "",
@@ -253,12 +253,14 @@ public class SqlGenerationServiceImpl implements SqlGenerationService {
             ON CONFLICT (email) DO NOTHING;""", credentialId, userId, email);
   }
 
+  private static final UUID DEFAULT_DEPARTMENT_ID = UUID.fromString("f6f1f3bd-cb99-4ec2-8a45-16d59c2c1371");
+
   private String generateStudentSql(UUID userId, String studentCode, UUID intakeYearId) {
     return String.format(
         """
-            INSERT INTO user_management.students (user_id, student_code, intake_year)
-            VALUES ('%s', '%s', '%s')
-            ON CONFLICT (student_code) DO NOTHING;""", userId, studentCode, intakeYearId);
+            INSERT INTO user_management.students (user_id, student_code, intake_year_id, department_id)
+            VALUES ('%s', '%s', '%s', '%s')
+            ON CONFLICT (student_code) DO NOTHING;""", userId, studentCode, intakeYearId, DEFAULT_DEPARTMENT_ID);
   }
 
   private String generateClassSectionSql(

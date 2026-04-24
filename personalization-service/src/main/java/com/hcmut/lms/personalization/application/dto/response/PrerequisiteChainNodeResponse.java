@@ -5,20 +5,20 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LearningPathChangeRecordResponse {
+public class PrerequisiteChainNodeResponse {
 
-  private String type;
+  private UUID id;
   private String subjectCode;
   private String subjectName;
-  private String reason;
-  private Integer fromSemesterOrder;
-  private Integer toSemesterOrder;
-  private Instant appliedAt;
+  private Integer credits;
+  private Integer semesterOrder;
+  private String semesterLabel;
+  private Boolean isCompleted;
+  private Boolean isCurrentSemester;
 }
-

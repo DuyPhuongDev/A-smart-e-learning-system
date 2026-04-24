@@ -42,16 +42,15 @@ public class OnnxInferenceServiceImpl implements OnnxInferenceService {
                     String col = featureColumns.get(i);
                     Object value = features.get(col);
 
-                    if (value == null) {
-                        featureVector[i] = Float.NaN;
-                    } else if (value instanceof Number) {
-                        featureVector[i] = ((Number) value).floatValue();
-                    } else if (value instanceof Boolean) {
-                        featureVector[i] = ((Boolean) value) ? 1.0f : 0.0f;
-                    } else {
-                        log.warn("Unexpected feature type for {}: {}", col, value.getClass());
-                        featureVector[i] = Float.NaN;
+                  switch (value) {
+                    case null -> featureVector[i] = Float.NaN;
+                    case Number number -> featureVector[i] = number.floatValue();
+                    case Boolean b -> featureVector[i] = b ? 1.0f : 0.0f;
+                    default -> {
+                      log.warn("Unexpected feature type for {}: {}", col, value.getClass());
+                      featureVector[i] = Float.NaN;
                     }
+                  }
                 }
 
                 // 2. Create ONNX tensor (shape: [1, n_features])

@@ -16,5 +16,6 @@ public class PrerequisiteGraphNodeResponse {
   private UUID id;
   private String label;
   private Integer semesterOrder;
+  private Boolean isCompleted;
 }
 

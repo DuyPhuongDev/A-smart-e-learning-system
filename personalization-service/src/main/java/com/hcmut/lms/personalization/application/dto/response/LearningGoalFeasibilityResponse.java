@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -18,7 +19,7 @@ public class LearningGoalFeasibilityResponse {
 
   private FeasibilityLevel feasibilityLevel;
 
-  private Double probabilityScore;
+  private BigDecimal probabilityScore;
 
   private FeasibilityMetricsResponse metrics;
 

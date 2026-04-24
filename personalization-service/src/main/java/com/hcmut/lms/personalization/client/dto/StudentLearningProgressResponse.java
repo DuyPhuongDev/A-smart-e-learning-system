@@ -25,11 +25,13 @@ public class StudentLearningProgressResponse {
     @AllArgsConstructor
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class StudentProgramInfo {
+        private String specializationId;
         private String facultyName;
         private String specializationName;
         private String specializationCode;
         private String curriculumCode;
         private Integer curriculumYear;
+        private Integer studentIntakeYear;
         private String studentName;
         private String studentCode;
     }
@@ -42,6 +44,7 @@ public class StudentLearningProgressResponse {
     public static class StudentLearningSummary {
         private Integer earnedCredits;
         private Integer requiredCredits;
+        private Integer remainingCredits;
         private Double cumulativeGpa10;
         private Double cumulativeGpa4;
     }
@@ -84,5 +87,7 @@ public class StudentLearningProgressResponse {
         private String letterGrade;
         private Double grade4;
         private Boolean isPassed;
+        private Integer attemptNo;
+        private Boolean isHighestResult;
     }
 }

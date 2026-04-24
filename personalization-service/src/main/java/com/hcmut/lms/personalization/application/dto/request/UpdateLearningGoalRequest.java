@@ -1,5 +1,7 @@
 package com.hcmut.lms.personalization.application.dto.request;
 
+import com.hcmut.lms.personalization.application.dto.response.LearningGoalFeasibilityResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
@@ -9,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -37,6 +40,9 @@ public class UpdateLearningGoalRequest {
   private Integer focusOnTargetOccupation;
 
   private Integer completedOnTime;
+
+  private List<@Valid CreatePreferredSummerSemesterRequest> summerSemesters;
+
+  @Valid
+  private LearningGoalFeasibilityResponse validationResult;
 }
-
-

@@ -23,6 +23,8 @@ public class LearningPathResponse {
   private UUID learningGoalId;
   private String curriculumCode;
   private Integer totalCredits;
+  private Integer earnedCredits;
+  private Integer requiredCredits;
   private Integer estimatedDurationSemesters;
   private BigDecimal predictedGpa;
   private BigDecimal completionRate;

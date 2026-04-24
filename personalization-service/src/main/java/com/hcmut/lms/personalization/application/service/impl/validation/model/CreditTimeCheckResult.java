@@ -7,7 +7,8 @@ package com.hcmut.lms.personalization.application.service.impl.validation.model;
  * @param remainingCredits  total credits still needed to graduate
  * @param maxCredits        maximum credits achievable given the planned semesters and intensity
  * @param mainSemesters     number of main semesters remaining
- * @param summerSemesters   number of summer semesters planned
+ * @param summerSemesters   number of summer semesters the student plans to use
+ *                         (min of plannedSummerSemCount and availableSummerSemesters)
  * @param reason            human-readable explanation
  */
 public record CreditTimeCheckResult(

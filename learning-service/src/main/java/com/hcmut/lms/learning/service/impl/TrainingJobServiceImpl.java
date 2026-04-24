@@ -359,59 +359,70 @@ public class TrainingJobServiceImpl implements TrainingJobService {
     private List<TrainingMetrics> parseMetrics(UUID trainingJobId, Map<String, Object> metricsMap) {
         List<TrainingMetrics> metricsList = new ArrayList<>();
 
-        // Parse simplified structure: metrics -> {train/test} -> {baseline/model/error_distribution}
-        // Worker now only trains on 4-point scale (0.0-4.0)
+        // Parse structure: metrics -> {train/test} -> {baseline, model, [error_distribution]}
+        // New format: model dict contains mu_error, sigma_error, sample_count directly
+        // Old format: model dict has only mae/rmse/r2, error_distribution is a separate key
         for (String split : Arrays.asList("train", "test")) {
             if (!metricsMap.containsKey(split)) continue;
 
             @SuppressWarnings("unchecked")
             Map<String, Object> splitMetrics = (Map<String, Object>) metricsMap.get(split);
 
-            // Parse baseline metrics (4-point scale)
+            // Parse baseline metrics (mae, rmse, r2 only)
             if (splitMetrics.containsKey("baseline")) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> baselineMetrics = (Map<String, Object>) splitMetrics.get("baseline");
-                metricsList.add(createMetric(trainingJobId, split, "baseline", baselineMetrics));
+                metricsList.add(createBaselineMetric(trainingJobId, split, baselineMetrics));
             }
 
-            // Parse model metrics (4-point scale)
+            // Parse model metrics (mae, rmse, r2 + mu_error, sigma_error, sample_count)
             if (splitMetrics.containsKey("model")) {
                 @SuppressWarnings("unchecked")
-                Map<String, Object> modelMetrics = (Map<String, Object>) splitMetrics.get("model");
-                metricsList.add(createMetric(trainingJobId, split, "model", modelMetrics));
-            }
+                Map<String, Object> modelMetrics = new HashMap<>((Map<String, Object>) splitMetrics.get("model"));
 
-            // Parse error_distribution if present
-            if (splitMetrics.containsKey("error_distribution")) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> errorDist = (Map<String, Object>) splitMetrics.get("error_distribution");
+                // Backward compatibility: if model dict doesn't have error distribution fields,
+                // merge them from the separate error_distribution key (old worker format)
+                if (!modelMetrics.containsKey("mu_error") && splitMetrics.containsKey("error_distribution")) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> errorDist = (Map<String, Object>) splitMetrics.get("error_distribution");
+                    modelMetrics.putIfAbsent("mu_error", errorDist.get("mu_error"));
+                    modelMetrics.putIfAbsent("sigma_error", errorDist.get("sigma_error"));
+                    modelMetrics.putIfAbsent("sample_count", errorDist.get("n"));
+                }
 
-                TrainingMetrics errorMetric = TrainingMetrics.builder()
-                        .trainingJobId(trainingJobId)
-                        .metricType(TrainingMetrics.MetricType.model)
-                        .datasetSplit(TrainingMetrics.DatasetSplit.valueOf(split))
-                        .scaleType(TrainingMetrics.ScaleType.FOUR_POINT)
-                        .muError(getDoubleValue(errorDist, "mu_error"))
-                        .sigmaError(getDoubleValue(errorDist, "sigma_error"))
-                        .sampleCount(getIntegerValue(errorDist, "n"))
-                        .build();
-                metricsList.add(errorMetric);
+                metricsList.add(createModelMetric(trainingJobId, split, modelMetrics));
             }
         }
 
         return metricsList;
     }
 
-    private TrainingMetrics createMetric(UUID trainingJobId, String split, String metricType,
-                                         Map<String, Object> metrics) {
+    private TrainingMetrics createBaselineMetric(UUID trainingJobId, String split,
+                                                  Map<String, Object> metrics) {
         return TrainingMetrics.builder()
                 .trainingJobId(trainingJobId)
-                .metricType(TrainingMetrics.MetricType.valueOf(metricType))
+                .metricType(TrainingMetrics.MetricType.baseline)
                 .datasetSplit(TrainingMetrics.DatasetSplit.valueOf(split))
-                .scaleType(TrainingMetrics.ScaleType.FOUR_POINT)  // Always 4-point scale
+                .scaleType(TrainingMetrics.ScaleType.FOUR_POINT)
                 .mae(getDoubleValue(metrics, "mae"))
                 .rmse(getDoubleValue(metrics, "rmse"))
                 .r2(getDoubleValue(metrics, "r2"))
+                .build();
+    }
+
+    private TrainingMetrics createModelMetric(UUID trainingJobId, String split,
+                                               Map<String, Object> metrics) {
+        return TrainingMetrics.builder()
+                .trainingJobId(trainingJobId)
+                .metricType(TrainingMetrics.MetricType.model)
+                .datasetSplit(TrainingMetrics.DatasetSplit.valueOf(split))
+                .scaleType(TrainingMetrics.ScaleType.FOUR_POINT)
+                .mae(getDoubleValue(metrics, "mae"))
+                .rmse(getDoubleValue(metrics, "rmse"))
+                .r2(getDoubleValue(metrics, "r2"))
+                .muError(getDoubleValue(metrics, "mu_error"))
+                .sigmaError(getDoubleValue(metrics, "sigma_error"))
+                .sampleCount(getIntegerValue(metrics, "sample_count"))
                 .build();
     }
 

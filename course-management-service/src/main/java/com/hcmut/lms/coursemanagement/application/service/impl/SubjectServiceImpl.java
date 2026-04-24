@@ -228,6 +228,31 @@ public class SubjectServiceImpl implements SubjectService {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> getAllSubjectIds() {
+        log.info("Fetching all subject IDs");
+        return subjectRepository.findAll().stream()
+                .map(Subject::getId)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SubjectResponse> searchSubjects(String keyword) {
+        log.info("Searching subjects with keyword: {}", keyword);
+        if (keyword == null || keyword.isBlank()) {
+            return List.of();
+        }
+        String trimmed = keyword.trim();
+        return subjectRepository.findByCodeContainingIgnoreCaseOrNameContainingIgnoreCase(
+                        trimmed, trimmed, PageRequest.of(0, 10))
+                .stream()
+                .map(subjectMapper::toResponse)
+                .toList();
+    }
+}
+
     // -------------------------------------------------------------------------
     // PRIVATE HELPERS
     // -------------------------------------------------------------------------

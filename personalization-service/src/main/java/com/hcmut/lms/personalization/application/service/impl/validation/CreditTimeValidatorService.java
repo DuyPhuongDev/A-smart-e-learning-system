@@ -5,6 +5,8 @@ import com.hcmut.lms.personalization.application.service.impl.support.IntensityC
 import com.hcmut.lms.personalization.application.service.impl.validation.model.CreditTimeCheckResult;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.LearningGoal;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.PreferredSummerSemester;
+import java.util.Comparator;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,20 +18,32 @@ public class CreditTimeValidatorService {
 
   private final SemesterCalculationService semesterCalculationService;
 
-  public CreditTimeCheckResult validate(LearningGoal goal, int remainingCredits, int earnedCredits) {
-    log.info("Validating credit/time feasibility for goal {}", goal.getLearningGoalId());
-
+  public CreditTimeCheckResult validate(LearningGoal goal, int remainingCredits) {
     SemesterCalculationService.SemesterAvailability availability =
         semesterCalculationService.calculateAvailableSemesters(
         goal.getStudentId(), goal.getExpectedCompletedSemester());
+    return validate(goal, remainingCredits, availability);
+  }
+
+  public CreditTimeCheckResult validate(LearningGoal goal, int remainingCredits, SemesterCalculationService.SemesterAvailability availability) {
+    log.info("Validating credit/time feasibility for goal {}", goal.getLearningGoalId());
+
+    if (goal.getPrefMainSemLearnIntensity() == null) {
+      throw new IllegalArgumentException(
+          "prefMainSemLearnIntensity is required for credit/time validation but was null");
+    }
+    if (goal.getPlannedSummerSemCount() == null) {
+      throw new IllegalArgumentException(
+          "plannedSummerSemCount is required for credit/time validation but was null");
+    }
 
     int availableMainSemesters = availability.availableMainSemesters();
     int availableSummerSemesters = availability.availableSummerSemesters();
 
-    int plannedSummerSemesters = goal.getPlannedSummerSemCount() != null ? goal.getPlannedSummerSemCount() : 0;
+    int plannedSummerSemesters = goal.getPlannedSummerSemCount();
     int usableSummerSemesters = Math.min(plannedSummerSemesters, availableSummerSemesters);
 
-    int maxCreditsPerMainSem = IntensityCreditCapSupport.mainSemesterCap(goal.getPrefMainSemLearnIntensity());
+    int maxCreditsPerMainSem = IntensityCreditCapSupport.mainSemesterCapStrict(goal.getPrefMainSemLearnIntensity());
     int maxCreditsFromSummer = calculateSummerCapacity(goal, usableSummerSemesters);
 
     int maxCreditsFromMain = availableMainSemesters * maxCreditsPerMainSem;
@@ -38,13 +52,10 @@ public class CreditTimeValidatorService {
     boolean passed = remainingCredits <= totalMaxCredits;
 
     String reason = passed ? String.format(
-        "Số tín chỉ còn lại %d có thể hoàn thành trong %d học kỳ chính và %d/%d học kỳ hè khả dụng theo kế hoạch tốt "
-            + "nghiệp",
-        remainingCredits, availableMainSemesters, usableSummerSemesters, availableSummerSemesters) : String.format(
-        "Số tín chỉ còn lại %d vượt quá khả năng hoàn thành tối đa %d tín chỉ (%d từ học kỳ chính + %d từ học kỳ hè; "
-            + "dùng %d/%d học kỳ hè khả dụng)",
-        remainingCredits, totalMaxCredits, maxCreditsFromMain, maxCreditsFromSummer, usableSummerSemesters,
-        availableSummerSemesters);
+        "Số tín chỉ còn lại %d có thể hoàn thành trong %d học kỳ chính và %d học kỳ hè theo kế hoạch tốt nghiệp",
+        remainingCredits, availableMainSemesters, usableSummerSemesters) : String.format(
+        "Số tín chỉ còn lại (%d) vượt quá khả năng hoàn thành trong thời gian còn lại. Hãy giảm mục tiêu tín chỉ hoặc tăng cường độ học.",
+        remainingCredits);
 
     log.info(
         "Credit/time check: passed={}, remaining={}, max={}, availableMain={}, availableSummer={}, usableSummer={}",
@@ -53,7 +64,7 @@ public class CreditTimeValidatorService {
 
     return new CreditTimeCheckResult(
         passed, remainingCredits, totalMaxCredits, availableMainSemesters,
-        availableSummerSemesters, reason);
+        usableSummerSemesters, reason);
   }
 
   private int calculateSummerCapacity(LearningGoal goal, int usableSummerSemesters) {
@@ -61,33 +72,32 @@ public class CreditTimeValidatorService {
       return 0;
     }
 
-    java.util.List<PreferredSummerSemester> preferredSummerSemesters = goal.getPreferredSummerSemesters() != null ?
-        goal.getPreferredSummerSemesters() : java.util.List.of();
+    List<PreferredSummerSemester> preferredSummerSemesters = goal.getPreferredSummerSemesters();
 
     if (preferredSummerSemesters.isEmpty()) {
-      return usableSummerSemesters * IntensityCreditCapSupport.defaultSummerSemesterCap();
+      throw new IllegalArgumentException(
+          "plannedSummerSemCount > 0 but no PreferredSummerSemester entries found. "
+              + "Each planned summer semester must have a preferred intensity.");
     }
 
-    java.util.List<PreferredSummerSemester> sorted = preferredSummerSemesters.stream()
-        .sorted(java.util.Comparator.comparing(
+    if (preferredSummerSemesters.size() < usableSummerSemesters) {
+      throw new IllegalArgumentException(
+          "plannedSummerSemCount requires " + usableSummerSemesters
+              + " summer semester(s) but only " + preferredSummerSemesters.size()
+              + " PreferredSummerSemester entries exist.");
+    }
+
+    List<PreferredSummerSemester> sorted = preferredSummerSemesters.stream()
+        .sorted(Comparator.comparing(
             PreferredSummerSemester::getSemesterId,
-            java.util.Comparator.nullsLast(java.util.UUID::compareTo)))
+            Comparator.nullsLast(java.util.UUID::compareTo)))
         .toList();
 
     int total = 0;
-    int count = 0;
-    for (PreferredSummerSemester preferred : sorted) {
-      if (count >= usableSummerSemesters) {
-        break;
-      }
+    for (int i = 0; i < usableSummerSemesters; i++) {
+      PreferredSummerSemester preferred = sorted.get(i);
       SummerLearningIntensity intensity = preferred.getLearningIntensity();
-      int cap = IntensityCreditCapSupport.summerSemesterCap(intensity);
-      total += cap;
-      count++;
-    }
-
-    if (count < usableSummerSemesters) {
-      total += (usableSummerSemesters - count) * IntensityCreditCapSupport.defaultSummerSemesterCap();
+      total += IntensityCreditCapSupport.summerSemesterCapStrict(intensity);
     }
 
     return total;

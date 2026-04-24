@@ -34,7 +34,11 @@ public class LearningPathSubjectResponse {
   private Integer studyOrder;
   private BigDecimal completionGrade;
   private BigDecimal predictedGrade;
+  private Integer attemptNo;
+  private Boolean isHighestResult;
   private List<PrerequisiteNodeResponse> prerequisitesGraph;
+  private List<PrerequisiteNodeResponse> parallelsGraph;
+  private List<PrerequisiteNodeResponse> recommendationsGraph;
   private Instant createdAt;
   private Instant updatedAt;
 }

@@ -22,7 +22,6 @@ public class GradeHistoryRequest {
   private StudentInfo studentInfo;
 
   @Valid
-  @NotEmpty
   private List<GradeRecord> gradeRecords;
 
   @Data

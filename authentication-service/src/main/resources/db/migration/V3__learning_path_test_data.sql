@@ -1,0 +1,3 @@
+INSERT INTO authentication.user_credentials (id, user_id, email, password_hash, is_account_locked, failed_login_attempts, locked_until, last_login_at, created_at, updated_at)
+VALUES ('576d0e7e-49c0-41e3-8b69-7e4230dc4b3c', 'd036adda-78a1-4a53-ba51-1af83907c5f8', 'test.001@hcmut.edu.vn', '$2a$12$sUpyBvT89YMX.ibZTh9ZT.33qJq0DxhgVBFKKxL0XBsKhM0Vt1YqC', false, 0, NULL, NULL, now(), now())
+ON CONFLICT (email) DO NOTHING;

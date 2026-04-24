@@ -17,6 +17,8 @@ public interface LearningPathRepository extends JpaRepository<LearningPath, UUID
 
   Optional<LearningPath> findByLearningPathIdAndStudentIdAndIsActiveTrue(UUID learningPathId, UUID studentId);
 
+  Optional<LearningPath> findByLearningPathIdAndStudentId(UUID learningPathId, UUID studentId);
+
   @Modifying
   @Query("UPDATE LearningPath lp SET lp.isActive = false WHERE lp.studentId = :studentId AND lp.isActive = true")
   void deactivateActiveByStudentId(@Param("studentId") UUID studentId);

@@ -9,16 +9,21 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
-@FeignClient(name = "learning-service", path = "/api/learning/internal/prediction")
+@FeignClient(name = "learning-service", path = "/api/learning/internal")
 public interface LearningServiceClient {
 
-  @GetMapping("/grade")
+  @GetMapping("/prediction/grade")
   GradePredictionResponse predictGrade(
       @RequestParam UUID studentId, @RequestParam UUID subjectId,
       @RequestParam(required = false) Integer plannedSemesterCredits, @RequestParam(required = false) Double threshold);
 
-  @PostMapping("/grade/batch")
+  @PostMapping("/prediction/grade/batch")
   BatchGradePredictionResponse predictGradeBatch(@RequestBody BatchGradePredictionRequest request);
+
+  @GetMapping("/subject-metrics/batch/difficulty")
+  Map<UUID, String> getBatchDifficulty(@RequestParam("subjectIds") List<UUID> subjectIds);
 }

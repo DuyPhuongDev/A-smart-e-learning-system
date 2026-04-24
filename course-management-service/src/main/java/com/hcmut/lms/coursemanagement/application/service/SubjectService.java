@@ -29,4 +29,17 @@ public interface SubjectService {
      * Used by learning-service for grade prediction dataset computation.
      */
     List<SubjectPrerequisiteMapResponse> getPrerequisiteMapping();
+
+    /**
+     * Get all subject IDs in the database.
+     * Used by learning-service to pre-compute SubjectSemesterMetrics for all subjects,
+     * including those with no enrollment data.
+     */
+    List<UUID> getAllSubjectIds();
+
+    /**
+     * Search subjects by name or code.
+     * Returns a list of matching subjects (max 10).
+     */
+    List<SubjectResponse> searchSubjects(String keyword);
 }

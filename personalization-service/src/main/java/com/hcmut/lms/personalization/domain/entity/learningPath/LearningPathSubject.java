@@ -80,4 +80,10 @@ public class LearningPathSubject extends BaseEntity {
 
   @Column(name = "predicted_grade", precision = 4, scale = 2)
   private BigDecimal predictedGrade;
+
+  @Column(name = "attempt_no")
+  private Integer attemptNo;
+
+  @Column(name = "is_highest_result")
+  private Boolean isHighestResult;
 }

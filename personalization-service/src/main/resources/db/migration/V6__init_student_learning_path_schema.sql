@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS personalization.learning_path_subjects (
     completion_date timestamptz,
     completion_grade numeric(4, 2),
     predicted_grade numeric(4, 2),
+    attempt_no int4,
+    is_highest_result boolean,
 
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
