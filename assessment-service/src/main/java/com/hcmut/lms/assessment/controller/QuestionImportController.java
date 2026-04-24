@@ -21,31 +21,18 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QuestionImportController {
 
-    private final QuestionImportService questionImportService;
     private final TestCaseImportService testCaseImportService;
 
-//    @PostMapping(value = "/import/mcq", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public ResponseEntity<QuestionImportResultResponse> importMcqQuestions(@RequestPart("file") MultipartFile file) {
-//        QuestionImportResultResponse result = questionImportService.importMcqQuestions(file);
-//        return ResponseEntity.ok(result);
-//    }
-//
-//    @PostMapping(value = "/import/essay", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public ResponseEntity<QuestionImportResultResponse> importEssayQuestions(@RequestPart("file") MultipartFile file) {
-//        QuestionImportResultResponse result = questionImportService.importEssayQuestions(file);
-//        return ResponseEntity.ok(result);
-//    }
-//
-//    /**
-//     * Import coding test cases for one CODING question.
-//     * CSV template columns: input, expected, hidden (no questionId in file).
-//     */
-//    @PostMapping(value = "/{questionId}/import/testcases", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public ResponseEntity<TestCaseImportResultResponse> importTestCases(
-//            @PathVariable UUID questionId,
-//            @RequestPart("file") MultipartFile file) {
-//        TestCaseImportResultResponse result = testCaseImportService.importTestCases(questionId, file);
-//        return ResponseEntity.ok(result);
-//    }
+    /**
+     * Import coding test cases for one CODING question.
+     * CSV template columns: input, expected, hidden (no questionId in file).
+     */
+    @PostMapping(value = "/{questionId}/import/testcases", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<TestCaseImportResultResponse> importTestCases(
+            @PathVariable UUID questionId,
+            @RequestPart("file") MultipartFile file) {
+        TestCaseImportResultResponse result = testCaseImportService.importTestCases(questionId, file);
+        return ResponseEntity.ok(result);
+    }
 }
 
