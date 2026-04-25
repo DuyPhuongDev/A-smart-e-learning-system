@@ -78,4 +78,27 @@ public interface StudyTimeRepository extends JpaRepository<StudyTime, UUID> {
             GROUP BY st.lectureId
             """)
     List<Object[]> sumDurationByClassGroupedByLecture(@Param("classId") UUID classId);
+
+    /**
+     * Count distinct students who spent time on each lecture in a class.
+     */
+    @Query("""
+            SELECT st.lectureId, COUNT(DISTINCT st.studentId)
+            FROM StudyTime st
+            WHERE st.classId = :classId
+              AND st.durationSeconds > 0
+            GROUP BY st.lectureId
+            """)
+    List<Object[]> countDistinctStudentsByClassGroupedByLecture(@Param("classId") UUID classId);
+
+    /**
+     * Aggregate total spent seconds by student in a class.
+     */
+    @Query("""
+            SELECT st.studentId, COALESCE(SUM(st.durationSeconds), 0)
+            FROM StudyTime st
+            WHERE st.classId = :classId
+            GROUP BY st.studentId
+            """)
+    List<Object[]> sumDurationByClassGroupedByStudent(@Param("classId") UUID classId);
 }

@@ -2,6 +2,7 @@ package com.hcmut.lms.learning.service;
 
 import com.hcmut.lms.learning.dto.request.StudyTimeRequest;
 import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
+import com.hcmut.lms.learning.dto.response.StudentStudyTimeSummaryResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
@@ -33,4 +34,6 @@ public interface StudyTimeService {
     Integer getTotalStudyTime(UUID studentId, UUID classId);
 
     LectureFrequencyResponse getLectureFrequencyForTeacher(UUID classId, CurrentUserInfo currentUserInfo);
+
+    List<StudentStudyTimeSummaryResponse> getStudentStudyTimesForTeacher(UUID classId, CurrentUserInfo currentUserInfo);
 }

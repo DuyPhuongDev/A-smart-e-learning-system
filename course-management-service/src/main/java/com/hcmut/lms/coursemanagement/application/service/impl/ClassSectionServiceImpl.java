@@ -436,6 +436,7 @@ public class ClassSectionServiceImpl implements ClassSectionService {
                         .title(lecture.getTitle())
                         .order(displayOrder.getAndIncrement())
                         .estimateTimeSpent(lecture.getEstimateTimeSpent())
+                        .viewCount(lecture.getViewCount())
                         .build())
                 .toList();
 

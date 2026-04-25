@@ -10,5 +10,5 @@ public class LectureReportMetadataResponse {
     private String title;
     private Integer order;
     private Integer estimateTimeSpent;
+    private Integer viewCount;
 }
-

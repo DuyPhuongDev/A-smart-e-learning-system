@@ -1,6 +1,7 @@
 package com.hcmut.lms.assessment.service;
 
 import com.hcmut.lms.assessment.dto.request.teacher.TeacherEssayGradesRequest;
+import com.hcmut.lms.assessment.dto.response.teacher.TeacherAssessmentReportResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherAssessmentSummaryResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherEssayGradesResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherGradebookResponse;
@@ -19,6 +20,8 @@ public interface TeacherAssessmentService {
             int page,
             int size
     );
+
+    TeacherAssessmentReportResponse getClassAssessmentReport(UUID classId, CurrentUserInfo currentUser);
 
     PageResponse<TeacherSubmissionSummaryResponse> listAssessmentSubmissions(
             UUID assessmentId,

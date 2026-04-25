@@ -4,6 +4,7 @@ import com.hcmut.lms.common.helper.CurrentUser;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.learning.dto.request.StudyTimeRequest;
 import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
+import com.hcmut.lms.learning.dto.response.StudentStudyTimeSummaryResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
 import com.hcmut.lms.learning.service.StudyTimeService;
@@ -125,5 +126,13 @@ public class StudyTimeController {
             @PathVariable UUID classId
     ) {
         return ResponseEntity.ok(studyTimeService.getLectureFrequencyForTeacher(classId, currentUser));
+    }
+
+    @GetMapping("/teacher/classes/{classId}/student-study-times")
+    public ResponseEntity<List<StudentStudyTimeSummaryResponse>> getStudentStudyTimesForTeacher(
+            @CurrentUser CurrentUserInfo currentUser,
+            @PathVariable UUID classId
+    ) {
+        return ResponseEntity.ok(studyTimeService.getStudentStudyTimesForTeacher(classId, currentUser));
     }
 }

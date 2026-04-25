@@ -13,6 +13,15 @@ public interface AssessmentQuestionRepository extends JpaRepository<AssessmentQu
     @Query("SELECT aq FROM AssessmentQuestion aq WHERE aq.assessment.id = :assessmentId ORDER BY aq.orderIndex")
     List<AssessmentQuestion> findByAssessmentIdOrderByIndex(@Param("assessmentId") UUID assessmentId);
 
+    @Query("""
+            SELECT aq
+            FROM AssessmentQuestion aq
+            JOIN FETCH aq.question
+            WHERE aq.assessment.id IN :assessmentIds
+            ORDER BY aq.assessment.id, aq.orderIndex
+            """)
+    List<AssessmentQuestion> findByAssessmentIdsOrderByAssessmentAndIndex(@Param("assessmentIds") List<UUID> assessmentIds);
+
     void deleteByAssessmentIdAndQuestionId(UUID assessmentId, UUID questionId);
 
     boolean existsByAssessment_IdAndQuestion_Id(UUID assessmentId, UUID questionId);

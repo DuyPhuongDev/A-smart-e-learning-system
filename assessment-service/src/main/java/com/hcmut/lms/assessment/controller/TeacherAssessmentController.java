@@ -1,6 +1,7 @@
 package com.hcmut.lms.assessment.controller;
 
 import com.hcmut.lms.assessment.dto.request.teacher.TeacherEssayGradesRequest;
+import com.hcmut.lms.assessment.dto.response.teacher.TeacherAssessmentReportResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherAssessmentSummaryResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherEssayGradesResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherGradebookResponse;
@@ -37,6 +38,14 @@ public class TeacherAssessmentController {
             @RequestParam(defaultValue = "20") int size
     ) {
         return teacherAssessmentService.listClassAssessments(classId, currentUser, page, size);
+    }
+
+    @GetMapping("/classes/{classId}/assessment-report")
+    public TeacherAssessmentReportResponse getClassAssessmentReport(
+            @PathVariable UUID classId,
+            @CurrentUser CurrentUserInfo currentUser
+    ) {
+        return teacherAssessmentService.getClassAssessmentReport(classId, currentUser);
     }
 
     @GetMapping("/assessments/{assessmentId}/submissions")
