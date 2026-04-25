@@ -30,6 +30,7 @@ import com.hcmut.lms.assessment.dto.response.teacher.TeacherAssessmentSummaryRes
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherEssayGradeUpdatedQuestionResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherEssayGradesResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherGradebookAssessmentColumnResponse;
+import com.hcmut.lms.assessment.dto.response.teacher.TeacherGradebookAttemptResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherGradebookCellResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherGradebookResponse;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherGradebookRowResponse;
@@ -518,9 +519,18 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                             AssessmentSubmissionStatus.SUBMITTED
                     );
 
-            Set<UUID> pendingAttemptIds = findPendingReviewAttemptIds(
-                    submissions.stream().map(AssessmentSubmission::getId).toList()
-            );
+            List<UUID> attemptIds = submissions.stream().map(AssessmentSubmission::getId).toList();
+            Set<UUID> pendingAttemptIds = findPendingReviewAttemptIds(attemptIds);
+            Map<UUID, List<QuestionSubmission>> questionSubmissionsByAttemptId = attemptIds.isEmpty()
+                    ? Map.of()
+                    : questionSubmissionRepository.findAllByAttemptIdsWithQuestion(attemptIds)
+                            .stream()
+                            .collect(Collectors.groupingBy(questionSubmission -> questionSubmission.getAssessmentSubmission().getId()));
+            Map<UUID, Integer> questionCountByAssessmentId = assessments.stream()
+                    .collect(Collectors.toMap(
+                            Assessment::getId,
+                            assessment -> assessmentQuestionRepository.findByAssessmentIdOrderByIndex(assessment.getId()).size()
+                    ));
 
             Map<UUID, Map<UUID, List<AssessmentSubmission>>> submissionsByStudentAndAssessment = submissions.stream()
                     .collect(Collectors.groupingBy(
@@ -538,7 +548,9 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                         .map(assessment -> toGradebookCell(
                                 assessment,
                                 byAssessment.getOrDefault(assessment.getId(), List.of()),
-                                pendingAttemptIds
+                                pendingAttemptIds,
+                                questionSubmissionsByAttemptId,
+                                questionCountByAssessmentId.getOrDefault(assessment.getId(), 0)
                         ))
                         .toList();
 
@@ -761,13 +773,28 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
     private TeacherGradebookCellResponse toGradebookCell(
             Assessment assessment,
             List<AssessmentSubmission> attempts,
-            Set<UUID> pendingAttemptIds
+            Set<UUID> pendingAttemptIds,
+            Map<UUID, List<QuestionSubmission>> questionSubmissionsByAttemptId,
+            int totalQuestions
     ) {
+        List<TeacherGradebookAttemptResponse> attemptResponses = attempts.stream()
+                .sorted(Comparator
+                        .comparing(AssessmentSubmission::getAttemptNo, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(AssessmentSubmission::getSubmitTime, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(attempt -> toGradebookAttempt(
+                        attempt,
+                        pendingAttemptIds,
+                        questionSubmissionsByAttemptId.getOrDefault(attempt.getId(), List.of()),
+                        totalQuestions
+                ))
+                .toList();
+
         if (attempts.isEmpty()) {
             return TeacherGradebookCellResponse.builder()
                     .assessmentId(assessment.getId())
                     .status(STATUS_NOT_STARTED)
                     .score(null)
+                    .attempts(List.of())
                     .build();
         }
 
@@ -777,6 +804,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                     .assessmentId(assessment.getId())
                     .status(STATUS_PENDING_REVIEW)
                     .score(null)
+                    .attempts(attemptResponses)
                     .build();
         }
 
@@ -787,6 +815,38 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 .assessmentId(assessment.getId())
                 .status(status)
                 .score(score)
+                .attempts(attemptResponses)
+                .build();
+    }
+
+    private TeacherGradebookAttemptResponse toGradebookAttempt(
+            AssessmentSubmission attempt,
+            Set<UUID> pendingAttemptIds,
+            List<QuestionSubmission> questionSubmissions,
+            int totalQuestions
+    ) {
+        int correctCount = (int) questionSubmissions.stream()
+                .filter(questionSubmission -> questionSubmission.getStatus() == QuestionSubmissionStatus.CORRECT)
+                .count();
+        int incorrectCount = (int) questionSubmissions.stream()
+                .filter(questionSubmission ->
+                        questionSubmission.getStatus() == QuestionSubmissionStatus.INCORRECT ||
+                        questionSubmission.getStatus() == QuestionSubmissionStatus.PARTIAL
+                )
+                .count();
+        int skippedCount = Math.max(0, totalQuestions - questionSubmissions.size());
+
+        return TeacherGradebookAttemptResponse.builder()
+                .attemptId(attempt.getId())
+                .attemptNo(attempt.getAttemptNo())
+                .submittedAt(attempt.getSubmitTime())
+                .score(attempt.getScore())
+                .status(pendingAttemptIds.contains(attempt.getId()) ? STATUS_PENDING_REVIEW : STATUS_GRADED)
+                .takenTime(attempt.getTakenTime())
+                .correctCount(correctCount)
+                .incorrectCount(incorrectCount)
+                .skippedCount(skippedCount)
+                .totalQuestions(totalQuestions)
                 .build();
     }
 
