@@ -167,7 +167,6 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
         List<AdminNotificationListItemResponse> content = result.getContent().stream()
                 .map(this::toListItem)
                 .toList();
-
         return PageResponse.<AdminNotificationListItemResponse>builder()
                 .content(content)
                 .pageNumber(result.getNumber())
@@ -301,6 +300,7 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
                 .status(entity.getStatus())
                 .channels(jsonCodec.toStringSet(entity.getChannels()))
                 .createdAt(entity.getCreatedAt())
+                .targetMode(entity.getTargetMode())
                 .scheduledAt(entity.getScheduledAt())
                 .expiresAt(entity.getExpiresAt())
                 .totalRecipients(totalRecipients)

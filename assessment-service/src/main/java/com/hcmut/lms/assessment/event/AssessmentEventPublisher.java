@@ -43,6 +43,7 @@ public class AssessmentEventPublisher {
         metadata.put("assessmentType", assessment.getAssessmentType() == null ? "" : assessment.getAssessmentType().name());
         metadata.put("startTime", toIso(assessment.getStartTime()));
         metadata.put("closeTime", toIso(assessment.getCloseTime()));
+        metadata.put("actionUrl",  "/my-class/" + assessment.getClassId() + "/assessment");
 
         SimpleNotificationEvent event = SimpleNotificationEvent.builder()
                 .messageId(assessment.getId().toString())
@@ -70,6 +71,7 @@ public class AssessmentEventPublisher {
         metadata.put("classId", assessment.getClassId().toString());
         metadata.put("title", nullToEmpty(assessment.getTitle()));
         metadata.put("closeTime", toIso(assessment.getCloseTime()));
+        metadata.put("actionUrl",  "/my-class/" + assessment.getClassId() + "/assessment");
         metadata.put("minutesToDeadline", Math.max(minutesToDeadline, 0));
 
         SimpleNotificationEvent event = SimpleNotificationEvent.builder()
@@ -98,9 +100,10 @@ public class AssessmentEventPublisher {
         metadata.put("classId", assessment.getClassId().toString());
         metadata.put("studentId", submission.getStudentId().toString());
         metadata.put("title", nullToEmpty(assessment.getTitle()));
-        metadata.put("score", submission.getScore() == null ? "0" : submission.getScore().toPlainString());
+        metadata.put("score", submission.getScore() == null ? "0" : submission.getActualScore().toPlainString());
         metadata.put("submittedAt", submission.getSubmitTime() == null ? Instant.now().toString() : submission.getSubmitTime().toString());
         metadata.put("gradingStatus", nullToEmpty(gradingStatus));
+        metadata.put("actionUrl",  "/my-class/" + assessment.getClassId() + "/assessment");
 
         SimpleNotificationEvent event = SimpleNotificationEvent.builder()
                 .messageId(submission.getId().toString())

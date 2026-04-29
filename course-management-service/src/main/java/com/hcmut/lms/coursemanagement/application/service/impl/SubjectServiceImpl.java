@@ -251,7 +251,6 @@ public class SubjectServiceImpl implements SubjectService {
                 .map(subjectMapper::toResponse)
                 .toList();
     }
-}
 
     // -------------------------------------------------------------------------
     // PRIVATE HELPERS

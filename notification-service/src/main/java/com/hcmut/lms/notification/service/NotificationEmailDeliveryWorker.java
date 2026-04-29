@@ -1,5 +1,6 @@
 package com.hcmut.lms.notification.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.hcmut.lms.notification.client.UserManagementInternalClient;
 import com.hcmut.lms.notification.client.dto.InternalResolveUsersRequest;
 import com.hcmut.lms.notification.client.dto.InternalUserSummaryResponse;
@@ -8,13 +9,14 @@ import com.hcmut.lms.notification.entity.NotificationEntity;
 import com.hcmut.lms.notification.entity.NotificationDlqEntity;
 import com.hcmut.lms.notification.entity.NotificationDeliveryLogEntity;
 import com.hcmut.lms.notification.entity.UserNotificationEntity;
-import com.hcmut.lms.notification.enums.DeliveryStatus;
-import com.hcmut.lms.notification.enums.DeferReason;
-import com.hcmut.lms.notification.enums.NotificationChannel;
+import com.hcmut.lms.notification.enums.*;
 import com.hcmut.lms.notification.repository.NotificationDeliveryLogRepository;
 import com.hcmut.lms.notification.repository.NotificationDlqRepository;
 import com.hcmut.lms.notification.repository.UserNotificationRepository;
 import com.hcmut.lms.notification.util.JsonCodec;
+import com.hcmut.lms.notification.util.TimeHelper;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,8 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +52,7 @@ public class NotificationEmailDeliveryWorker {
     private final JavaMailSender javaMailSender;
     private final SpringTemplateEngine templateEngine;
     private final JsonCodec jsonCodec;
+    private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Saigon");
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void executeDelivery(UUID userNotificationId) {
@@ -63,10 +68,14 @@ public class NotificationEmailDeliveryWorker {
         String subject = notification.getTitle();
         String title = notification.getTitle();
         String textContent = notification.getContent();
+        NotificationType notificationType = notification.getType();
+        JsonNode metadata = jsonCodec.toJsonNode(notification.getMetadata());
+
+        NotificationPriority notificationPriority = notification.getPriority();
 
         long startedAt = System.currentTimeMillis();
         try {
-            sendTemplatedNotificationEmail(userNotification.getUserId(), subject, title, textContent);
+            sendTemplatedNotificationEmail(userNotification.getUserId(), subject, title, textContent, notificationType, metadata, notificationPriority);
 
             userNotification.setDeliveryStatus(DeliveryStatus.DELIVERED);
             userNotification.setDeliveredAt(Instant.now());
@@ -121,7 +130,7 @@ public class NotificationEmailDeliveryWorker {
         }
     }
 
-    private void sendTemplatedNotificationEmail(UUID userId, String subject, String title, String textContent) throws Exception {
+    private void sendTemplatedNotificationEmail(UUID userId, String subject, String title, String textContent, NotificationType notificationType, JsonNode metadata, NotificationPriority priority) throws Exception {
         String to = resolveUserEmail(userId);
         if (!StringUtils.hasText(to)) {
             throw new IllegalStateException("Cannot resolve email for user " + userId);
@@ -130,7 +139,28 @@ public class NotificationEmailDeliveryWorker {
         ctx.setVariable("subject", subject);
         ctx.setVariable("title", title);
         ctx.setVariable("content", textContent);
-        String html = templateEngine.process("mail/notification", ctx);
+        ctx.setVariable("metadata", metadata);
+        ctx.setVariable("priority", priority);
+        if(notificationType.equals(NotificationType.DEADLINE_REMINDER)){
+            // Giả sử bạn lấy dữ liệu từ JsonNode metadata
+            String closeTimeRaw = metadata.get("closeTime").asText();
+            int minutesToRemind = metadata.get("minutesToDeadline").asInt();
+
+            Instant instant = Instant.parse(closeTimeRaw);
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(instant, DEFAULT_ZONE);
+            String formattedCloseTime = localDateTime.format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy"));
+
+            String formattedReminder = TimeHelper.formatReminderTime(minutesToRemind);
+            ctx.setVariable("closeTimeStr", formattedCloseTime);
+            ctx.setVariable("reminderStr", formattedReminder);
+        }
+
+        String html = switch (notificationType){
+            case SUBMISSION_GRADED ->  templateEngine.process("mail/submission-graded", ctx);
+            case DEADLINE_REMINDER ->  templateEngine.process("mail/deadline-reminder", ctx);
+            case SYSTEM_MAINTENANCE -> templateEngine.process("mail/system-maintenance", ctx);
+            default ->  templateEngine.process("mail/notification", ctx);
+        };
         MimeMessage mime = javaMailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(mime, true, "UTF-8");
         helper.setFrom(notificationProperties.getEmail().getFrom());
