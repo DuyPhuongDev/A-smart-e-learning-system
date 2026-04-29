@@ -20,7 +20,7 @@ public class PersonalizationExceptionHandler {
         log.error(e.getMessage(), e);
         return ErrorResponse.builder()
                 .status(HttpStatus.NOT_FOUND.value())
-                .message(e.getMessage())
+                .message("Không tìm thấy dữ liệu yêu cầu.")
                 .build();
     }
 
@@ -30,7 +30,7 @@ public class PersonalizationExceptionHandler {
         log.error(e.getMessage(), e);
         return ErrorResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
-                .message(e.getMessage())
+                .message("Yêu cầu không hợp lệ. Vui lòng kiểm tra lại.")
                 .build();
     }
 
@@ -54,6 +54,36 @@ public class PersonalizationExceptionHandler {
         return ErrorResponse.builder()
                 .status(HttpStatus.SERVICE_UNAVAILABLE.value())
                 .message("Valuation request timed out. Please narrow the request scope or increase the async timeout.")
+                .build();
+    }
+
+    @ExceptionHandler(StudentDataUnavailableException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    public ErrorResponse handleStudentDataUnavailable(StudentDataUnavailableException e) {
+        log.error(e.getMessage(), e);
+        return ErrorResponse.builder()
+                .status(HttpStatus.UNPROCESSABLE_ENTITY.value())
+                .message(e.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(CyclicDependencyException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleCyclicDependency(CyclicDependencyException e) {
+        log.error(e.getMessage(), e);
+        return ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(e.getMessage())
+                .build();
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleServiceUnavailable(ServiceUnavailableException e) {
+        log.error(e.getMessage(), e);
+        return ErrorResponse.builder()
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .message(e.getMessage())
                 .build();
     }
 

@@ -25,7 +25,5 @@ public class ClassSectionDatasetResponse {
     private Integer credits;
     private UUID semesterId;
     private String semesterCode;
-    private String yearCode;
-    private Integer semesterNumber;
     private Integer semKey;
 }

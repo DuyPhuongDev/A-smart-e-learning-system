@@ -65,7 +65,6 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     Enrollment enrollment = enrollmentMapper.toEntity(request);
     enrollment.setEnrolledAt(LocalDateTime.now());
     enrollment.setProgressPercentage(0.0);
-    enrollment.setAttemptNo(1);
 
     Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
 

@@ -22,29 +22,34 @@ import java.util.UUID;
 @FeignClient(name = "course-management-service", path = "/api/courses/internal")
 public interface CourseManagementClient {
 
-    @GetMapping("/subjects/{subjectId}")
-    SubjectResponse getSubjectById(@PathVariable UUID subjectId);
+  @GetMapping("/subjects/{subjectId}")
+  SubjectResponse getSubjectById(@PathVariable UUID subjectId);
 
-    @GetMapping("/subjects/{subjectId}/learning-outcomes")
-    List<SubjectLearningOutcomeResponse> getLearningOutcomes(@PathVariable UUID subjectId);
+  @GetMapping("/subjects/search")
+  List<SubjectResponse> searchSubjects(@RequestParam("search") String keyword);
 
-    @GetMapping("/graduation-requirements/students/{studentId}")
-    List<GraduationRequirementResponse> getGraduationRequirementsByStudentId(@PathVariable UUID studentId);
+  @GetMapping("/subjects/{subjectId}/learning-outcomes")
+  List<SubjectLearningOutcomeResponse> getLearningOutcomes(@PathVariable UUID subjectId);
 
-    @PostMapping("/curriculums/prerequisite-chains")
-    PrerequisiteChainResponse getPrerequisiteChain(@RequestBody PrerequisiteChainRequest request);
+  @GetMapping("/graduation-requirements/students/{studentId}")
+  List<GraduationRequirementResponse> getGraduationRequirementsByStudentId(@PathVariable UUID studentId);
 
-    @GetMapping("/student-progress/internal/{studentId}")
-    StudentLearningProgressResponse getStudentProgress(@PathVariable UUID studentId);
+  @PostMapping("/curriculums/prerequisite-chains")
+  PrerequisiteChainResponse getPrerequisiteChain(@RequestBody PrerequisiteChainRequest request);
 
-    @GetMapping("/semesters/remaining/{studentId}")
-    List<SemesterResponse> getRemainingSemesters(@PathVariable UUID studentId);
+  @GetMapping("/student-progress/internal/{studentId}")
+  StudentLearningProgressResponse getStudentProgress(@PathVariable UUID studentId,
+      @RequestParam(value = "specializationId", required = false) UUID specializationId);
 
-    @GetMapping("/curriculums/{curriculumCode}/full")
-    CurriculumFullResponse getCurriculumFull(@PathVariable String curriculumCode);
+  @GetMapping("/semesters/remaining/{studentId}")
+  List<SemesterResponse> getRemainingSemesters(@PathVariable UUID studentId);
 
-    @GetMapping("/curriculums/resolve")
-    CurriculumResolutionResponse resolveCurriculum(
-        @RequestParam UUID specializationId,
-        @RequestParam Integer intakeYear);
+  @GetMapping("/semesters")
+  List<SemesterResponse> getAllSemesters();
+
+  @GetMapping("/curriculums/{curriculumCode}/full")
+  CurriculumFullResponse getCurriculumFull(@PathVariable String curriculumCode);
+
+  @GetMapping("/curriculums/resolve")
+  CurriculumResolutionResponse resolveCurriculum(@RequestParam UUID specializationId, @RequestParam Integer intakeYear);
 }

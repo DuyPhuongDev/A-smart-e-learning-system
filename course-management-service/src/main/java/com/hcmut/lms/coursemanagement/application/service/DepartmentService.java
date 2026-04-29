@@ -16,5 +16,6 @@ public interface DepartmentService {
     List<DepartmentResponse> getDepartmentsByFacultyId(UUID facultyId);
     PageResponse<DepartmentResponse> getDepartmentsByFacultyId(UUID facultyId, int page, int size);
     void deleteDepartment(UUID id);
+    DepartmentResponse getDepartmentBySpecialization(UUID specializationId);
 }
 

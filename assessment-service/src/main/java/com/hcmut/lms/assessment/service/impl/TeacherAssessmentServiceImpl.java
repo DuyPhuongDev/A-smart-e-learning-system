@@ -1101,8 +1101,10 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
         return codingSubmissionRepository.findById(concrete.getId()).orElse(null);
     }
 
+
+    /////// impl later
     private BigDecimal defaultPoint(Question question) {
-        return question.getPoint() != null ? question.getPoint() : BigDecimal.ZERO;
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal nonNull(BigDecimal value) {

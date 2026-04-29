@@ -28,7 +28,7 @@ public class NotificationPreferenceServiceImpl implements NotificationPreference
     private final NotificationPreferenceRepository notificationPreferenceRepository;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<NotificationPreferenceResponse> getPreferences(CurrentUserInfo currentUser) {
         return getOrCreateDefaultPreferences(currentUser.getId()).stream()
                 .map(this::toResponse)

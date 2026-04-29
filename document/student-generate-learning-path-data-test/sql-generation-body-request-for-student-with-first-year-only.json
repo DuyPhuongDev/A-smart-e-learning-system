@@ -1,0 +1,126 @@
+{
+  "studentInfo": {
+    "studentCode": "2110002",
+    "email": "firstyear.test@hcmut.edu.vn",
+    "firstName": "FIRSTYEAR",
+    "lastName": "STUDENT",
+    "phone": "0900000002",
+    "specializationCode": "CS",
+    "intakeYearCode": "22"
+  },
+  "gradeRecords": [
+    {
+      "subjectCode": "MT1005",
+      "credits": 4,
+      "gradeNumeric": 7.8,
+      "gradeLetter": "B+",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "MT1003",
+      "credits": 4,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "PH1003",
+      "credits": 4,
+      "gradeNumeric": 7.0,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1005",
+      "credits": 3,
+      "gradeNumeric": 7.6,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1023",
+      "credits": 3,
+      "gradeNumeric": 7.2,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "LA1003",
+      "credits": 2,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "PE_HP1",
+      "credits": 0,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "MT1007",
+      "credits": 3,
+      "gradeNumeric": 7.3,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1007",
+      "credits": 4,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1027",
+      "credits": 3,
+      "gradeNumeric": 7.8,
+      "gradeLetter": "B+",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CH1003",
+      "credits": 3,
+      "gradeNumeric": 7.9,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "PH1007",
+      "credits": 1,
+      "gradeNumeric": 6.5,
+      "gradeLetter": "C+",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "MI1003",
+      "credits": 0,
+      "gradeNumeric": 0.0,
+      "gradeLetter": "DT",
+      "semesterCode": "HK222",
+      "academicYearCode": "22",
+      "isPassed": true
+    },
+    {
+      "subjectCode": "PE_HP2",
+      "credits": 0,
+      "gradeNumeric": 7.0,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    }
+  ]
+}

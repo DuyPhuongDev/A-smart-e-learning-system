@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title th:text="${subject}">System Maintenance Notification</title>
+  <!-- Giữ lại Web Fonts cho các ứng dụng email có hỗ trợ -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9f9ff; -webkit-font-smoothing: antialiased;">
+<!-- Wrapper ngoài cùng -->
+<table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #f9f9ff; padding: 20px 10px;">
+  <tr>
+    <td align="center">
+      <!-- Container chính (Max width 600px) -->
+      <table width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #c3c5d7; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); overflow: hidden;">
+
+        <!-- Header -->
+        <tr>
+          <td style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; background-color: #ffffff;">
+            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="left" style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 700; color: #003fb1;">
+                  WeLearning
+                </td>
+                <td align="right" style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 500;">
+                  <a href="#" style="color: #475569; text-decoration: none;">Không thử sao biết ta không thể</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Main Content -->
+        <tr>
+          <td align="center" style="padding: 40px 20px; background-color: #ffffff;">
+            <!-- Tiêu đề & Priority Badge nằm ngang và căn giữa -->
+            <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom: 12px;">
+              <tr>
+                <!-- Cột chứa Tiêu đề -->
+                <td align="center" valign="middle" style="padding-right: 12px;">
+                  <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 24px; line-height: 32px; font-weight: 700; color: #121c2a; margin: 0;" th:text="${title}">
+                    Thông báo bảo trì hệ thống
+                  </div>
+                </td>
+
+                <!-- Cột chứa Priority Badge -->
+                <td align="center" valign="middle">
+                  <!-- LOW -->
+                  <span th:if="${priority == 'LOW'}" style="display: inline-block; padding: 4px 10px; background-color: #f1f5f9; color: #475569; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #e2e8f0; white-space: nowrap;">
+                                            Low Priority
+                                        </span>
+                  <!-- MEDIUM -->
+                  <span th:if="${priority == 'MEDIUM'}" style="display: inline-block; padding: 4px 10px; background-color: #fef9c3; color: #854d0e; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #fef08a; white-space: nowrap;">
+                                            Medium Priority
+                                        </span>
+                  <!-- HIGH -->
+                  <span th:if="${priority == 'HIGH'}" style="display: inline-block; padding: 4px 10px; background-color: #ffedd5; color: #c2410c; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #fed7aa; white-space: nowrap;">
+                                            High Priority
+                                        </span>
+                  <!-- URGENT -->
+                  <span th:if="${priority == 'URGENT'}" style="display: inline-block; padding: 4px 10px; background-color: #fee2e2; color: #b91c1c; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #fecaca; white-space: nowrap;">
+                                            Urgent
+                                        </span>
+                </td>
+              </tr>
+            </table>
+
+            <p style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 24px; font-weight: 400; color: #434654; text-align: center; margin: 0 auto 32px auto; max-width: 450px;" th:utext="${content}">
+              Hệ thống Welearning sẽ tiến hành bảo trì định kỳ để nâng cấp hiệu suất. Việc đăng nhập và sử dụng dịch vụ sẽ tạm thời không khả dụng trong thời gian này.
+            </p>
+
+            <!-- Khối Thời gian (Bento-style Box) -->
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #eff3ff; border: 1px solid #d9e3f7; border-radius: 12px; margin-bottom: 32px;">
+              <tr>
+                <!-- Thời gian Bắt đầu -->
+                <td align="center" valign="middle" style="padding: 24px; width: 45%;">
+                  <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 12px; line-height: 16px; font-weight: 500; color: #434654; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+                    Bắt đầu
+                  </div>
+                  <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 24px; line-height: 32px; font-weight: 700; color: #003fb1;" th:text="${metadata.get('startTime')}">
+                    22:00
+                  </div>
+                </td>
+
+                <!-- Đường kẻ dọc chia cắt -->
+                <td align="center" valign="middle" style="width: 10%;">
+                  <div style="height: 48px; width: 1px; background-color: #c3c5d7;"></div>
+                </td>
+
+                <!-- Thời gian Kết thúc -->
+                <td align="center" valign="middle" style="padding: 24px; width: 45%;">
+                  <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 12px; line-height: 16px; font-weight: 500; color: #434654; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+                    Kết thúc
+                  </div>
+                  <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 24px; line-height: 32px; font-weight: 700; color: #003fb1;" th:text="${metadata.get('endTime')}">
+                    02:00
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Secondary Context -->
+            <p style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 20px; font-weight: 400; color: #434654; text-align: center; margin: 0 auto; max-width: 384px;">
+              Chúng tôi xin lỗi vì sự bất tiện này và cảm ơn sự thông cảm của bạn trong quá trình nâng cấp hệ thống.
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background-color: #f8fafc; border-top: 1px solid #e5e7eb; padding: 32px; text-align: center;">
+            <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 12px; color: #64748b; margin-bottom: 16px;">
+              © 2026 WeLearning LMS. All rights reserved.
+            </div>
+            <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 12px;">
+              <a href="#" style="color: #64748b; text-decoration: none; margin: 0 10px;">Hủy đăng ký</a>
+              <a href="#" style="color: #64748b; text-decoration: none; margin: 0 10px;">Chính sách bảo mật</a>
+              <a href="#" style="color: #64748b; text-decoration: none; margin: 0 10px;">Điều khoản dịch vụ</a>
+            </div>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

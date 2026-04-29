@@ -2,12 +2,12 @@ package com.hcmut.lms.personalization.application.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.hcmut.lms.personalization.application.dto.response.enums.ProbabilityMethod;
+import java.math.BigDecimal;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Map;
 
 @Data
 @Builder
@@ -34,7 +34,7 @@ public class ProbabilityAnalysisResponse {
       }
 
       this.details = ProbabilityAnalysisDetailsResponse.builder()
-          .probabilityScore(getDouble(rawDetails.get("probabilityScore")))
+          .probabilityScore(toBigDecimal(rawDetails.get("probabilityScore")))
           .note(getString(rawDetails.get("note")))
           .sampleSize(getInteger(rawDetails.get("sampleSize")))
           .predictedFinalGpa(getDouble(rawDetails.get("predictedFinalGpa")))
@@ -46,6 +46,12 @@ public class ProbabilityAnalysisResponse {
 
     private static Double getDouble(Object value) {
       return value instanceof Number number ? number.doubleValue() : null;
+    }
+
+    private static BigDecimal toBigDecimal(Object value) {
+      if (value instanceof BigDecimal bd) return bd;
+      if (value instanceof Number number) return BigDecimal.valueOf(number.doubleValue());
+      return null;
     }
 
     private static Integer getInteger(Object value) {

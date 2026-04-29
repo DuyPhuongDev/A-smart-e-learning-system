@@ -120,15 +120,10 @@ def estimate_error_distribution(y_true, y_pred) -> Dict[str, float]:
     sigma_error = float(np.std(diff, ddof=1))
     n = int(diff.shape[0])
 
-    lower_95 = mu_error - 1.96 * sigma_error
-    upper_95 = mu_error + 1.96 * sigma_error
-
     return {
         "mu_error": mu_error,
         "sigma_error": sigma_error,
         "n": n,
-        "lower_95": lower_95,
-        "upper_95": upper_95,
     }
 
 
@@ -211,17 +206,26 @@ class ModelTrainer:
         logger.info(f"Test metrics: MAE={model_test_metrics['mae']:.4f}, "
                    f"RMSE={model_test_metrics['rmse']:.4f}, R²={model_test_metrics['r2']:.4f}")
 
-        # Build metrics dictionary
+        # Build metrics dictionary — merge error distribution into model object
+        # so each split has: baseline (mae, rmse, r2) and model (mae, rmse, r2, mu_error, sigma_error, sample_count)
         metrics = {
             "train": {
                 "baseline": baseline_train_metrics,
-                "model": model_train_metrics,
-                "error_distribution": error_dist_train,
+                "model": {
+                    **model_train_metrics,
+                    "mu_error": error_dist_train["mu_error"],
+                    "sigma_error": error_dist_train["sigma_error"],
+                    "sample_count": error_dist_train["n"],
+                },
             },
             "test": {
                 "baseline": baseline_test_metrics,
-                "model": model_test_metrics,
-                "error_distribution": error_dist_test,
+                "model": {
+                    **model_test_metrics,
+                    "mu_error": error_dist_test["mu_error"],
+                    "sigma_error": error_dist_test["sigma_error"],
+                    "sample_count": error_dist_test["n"],
+                },
             },
         }
 
@@ -330,14 +334,19 @@ class ModelTrainer:
         with open(onnx_local_path, 'wb') as f:
             f.write(onnx_bytes)
 
-        # 4. Save metadata JSON (for Java to read feature_cols and metrics)
+        # 4. Save metadata JSON (only include what the Java prediction service reads)
         metadata = {
             "feature_cols": feature_cols,
-            "metrics": metrics,
+            "metrics": {
+                "test": {
+                    "error_distribution": {
+                        "mu_error": metrics["test"]["model"]["mu_error"],
+                        "sigma_error": metrics["test"]["model"]["sigma_error"],
+                    }
+                }
+            },
             "trained_at": payload["trained_at"],
             "model_type": payload["model_type"],
-            "preprocessing": payload["preprocessing"],
-            "training_config": payload["training_config"],
         }
         metadata_filename = f"{base_filename}_metadata.json"
         metadata_local_path = os.path.join(self.temp_dir, metadata_filename)

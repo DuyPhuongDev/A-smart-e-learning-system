@@ -17,4 +17,14 @@ public interface FeatureExtractionService {
     Map<String, Object> extractFeatures(UUID studentId,
                                         UUID subjectId,
                                         Integer plannedSemesterCredits);
+
+    /**
+     * Lightweight check: does this student have any graded enrollments?
+     * Used to decide whether to run full feature extraction or fall back to
+     * SubjectSemesterMetrics-based prediction for first-semester students.
+     *
+     * @param studentId Student UUID
+     * @return true if the student has at least one enrollment with a final grade
+     */
+    boolean hasGradedHistory(UUID studentId);
 }

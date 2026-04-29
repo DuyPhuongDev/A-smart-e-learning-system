@@ -1,5 +1,6 @@
 package com.hcmut.lms.personalization.application.service.impl.validation;
 
+import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
 import com.hcmut.lms.personalization.client.LearningServiceClient;
 import com.hcmut.lms.personalization.client.dto.GradePredictionResponse;
 import lombok.RequiredArgsConstructor;
@@ -16,16 +17,33 @@ import java.util.concurrent.Executor;
 @Slf4j
 public class PredictiveModelAnalyzerService {
 
-  private static final double DEFAULT_STD_DEV = 0.5;
-  private static final double MIN_STD_DEV_EPS = 1e-8;
+  private static final double DEFAULT_STD_DEV = 1.2;
+  private static final int DEFAULT_CREDITS = 3;
 
   private final LearningServiceClient learningServiceClient;
   private final Executor taskExecutor;
 
   public Map<String, Object> analyze(
-      UUID studentId, List<UUID> remainingSubjectIds, BigDecimal currentGpa, int earnedCredits, int remainingCredits,
-      BigDecimal targetGpa) {
+      UUID studentId, List<UUID> remainingSubjectIds, Map<UUID, Integer> remainingSubjectCredits,
+      BigDecimal currentGpa, int earnedCredits, int remainingCredits,
+      BigDecimal targetGpa, Integer mainCreditCap) {
     log.info("Analyzing with predictive model for student {}", studentId);
+
+    boolean isNullGpaBaseline = (currentGpa == null);
+    BigDecimal effectiveCurrentGpa;
+    int effectiveEarnedCredits;
+
+    if (isNullGpaBaseline) {
+      log.info("Student has no current GPA; proceeding with predictive model using zero-GPA baseline");
+      effectiveCurrentGpa = BigDecimal.ZERO;
+      effectiveEarnedCredits = 0;
+    } else {
+      effectiveCurrentGpa = currentGpa;
+      effectiveEarnedCredits = earnedCredits;
+    }
+
+    Integer creditCap = mainCreditCap != null ? mainCreditCap : IntensityCreditCapSupport.mainSemesterCapStrict(
+        com.hcmut.lms.personalization.application.dto.response.enums.LearningIntensity.Standard);
 
     try {
       List<CompletableFuture<GradePredictionResponse>> futures = new ArrayList<>();
@@ -33,7 +51,7 @@ public class PredictiveModelAnalyzerService {
         futures.add(CompletableFuture.supplyAsync(
             () -> {
               try {
-                return learningServiceClient.predictGrade(studentId, subjectId, null, null);
+                return learningServiceClient.predictGrade(studentId, subjectId, creditCap, null);
               } catch (Exception e) {
                 log.error("Failed to predict grade for subject {}: {}", subjectId, e.getMessage());
                 return null;
@@ -48,24 +66,28 @@ public class PredictiveModelAnalyzerService {
           .filter(Objects::nonNull)
           .toList();
 
-      double meanPredicted = 0.0;
-      double varianceSum = 0.0;
+      double weightedPredictedSum = 0.0;
+      double totalRemainingCreditsWithPredictions = 0.0;
+      double varianceWeightedSum = 0.0;
       int validPredictionCount = 0;
       int nullPredictionCount = 0;
-      int totalCredits = earnedCredits + remainingCredits;
+      int curriculumTotalCredits = effectiveEarnedCredits + remainingCredits;
 
       for (GradePredictionResponse pred : predictions) {
         Double predicted = pred.getCorrectedPredictedGrade() != null ? pred.getCorrectedPredictedGrade() :
             pred.getRawPredictedGrade();
         Double stdDev = pred.getResidualStd();
+        UUID subjectId = pred.getSubjectId();
 
         if (predicted != null) {
-          meanPredicted += predicted;
-          validPredictionCount++;
+          int credits = remainingSubjectCredits.getOrDefault(subjectId, DEFAULT_CREDITS);
+          weightedPredictedSum += predicted * credits;
+          totalRemainingCreditsWithPredictions += credits;
 
-          // Some models return 0 for residual std; treat it as missing to avoid deterministic collapse.
-          double effectiveStdDev = (stdDev != null && stdDev > MIN_STD_DEV_EPS) ? stdDev : DEFAULT_STD_DEV;
-          varianceSum += Math.pow(effectiveStdDev, 2);
+          double effectiveStdDev = (stdDev != null && stdDev > DEFAULT_STD_DEV) ? stdDev : DEFAULT_STD_DEV;
+          double weight = (double) credits / curriculumTotalCredits;
+          varianceWeightedSum += weight * weight * effectiveStdDev * effectiveStdDev;
+          validPredictionCount++;
         } else {
           nullPredictionCount++;
         }
@@ -77,18 +99,21 @@ public class PredictiveModelAnalyzerService {
 
       if (validPredictionCount == 0) {
         Map<String, Object> analysis = new HashMap<>();
-        analysis.put("method", "predictive_fallback");
-        analysis.put("probabilityScore", 0.5);
-        analysis.put("note", "No valid predictions returned - using default probability");
+        analysis.put("method", "predictive_unavailable");
+        analysis.put("probabilityScore", null);
+        analysis.put("note", "No valid predictions returned - prediction model could not produce results for any subject");
         analysis.put("predictionsCount", predictions.size());
         return analysis;
       }
 
-      meanPredicted /= validPredictionCount;
+      int gpaDenominator = effectiveEarnedCredits + (int) totalRemainingCreditsWithPredictions;
+      double finalGpaMean = gpaDenominator > 0
+          ? (effectiveCurrentGpa.doubleValue() * effectiveEarnedCredits + weightedPredictedSum) / gpaDenominator
+          : 0.0;
 
-      double finalGpaMean =
-          (currentGpa.doubleValue() * earnedCredits + meanPredicted * remainingCredits) / totalCredits;
-      double finalGpaStdDev = Math.sqrt(varianceSum) / totalCredits;
+      // Correct credit-weighted variance propagation
+      double computefinalGpaStdDev = Math.sqrt(varianceWeightedSum);
+      double finalGpaStdDev = Math.max(computefinalGpaStdDev, DEFAULT_STD_DEV);
 
       double probabilityScore;
       if (finalGpaStdDev <= 0.0001) {
@@ -101,7 +126,7 @@ public class PredictiveModelAnalyzerService {
       probabilityScore = Math.max(0.0, Math.min(1.0, probabilityScore));
 
       Map<String, Object> analysis = new HashMap<>();
-      analysis.put("method", "predictive");
+      analysis.put("method", isNullGpaBaseline ? "predictive_fallback" : "predictive");
       analysis.put("probabilityScore", probabilityScore);
       analysis.put("predictedFinalGpa", finalGpaMean);
       analysis.put("standardDeviation", finalGpaStdDev);
@@ -110,12 +135,12 @@ public class PredictiveModelAnalyzerService {
       return analysis;
 
     } catch (Exception e) {
-      log.warn("Failed to get predictions from learning-service, falling back to default", e);
+      log.warn("Failed to get predictions from learning-service", e);
 
       Map<String, Object> analysis = new HashMap<>();
-      analysis.put("method", "predictive_fallback");
-      analysis.put("probabilityScore", 0.5);
-      analysis.put("note", "Prediction service unavailable - using default probability");
+      analysis.put("method", "predictive_error");
+      analysis.put("probabilityScore", null);
+      analysis.put("note", "Prediction service unavailable: " + e.getMessage());
 
       return analysis;
     }

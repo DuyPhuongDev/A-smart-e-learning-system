@@ -21,13 +21,11 @@ public class HistoricalDataAnalyzerService {
     ) {
         log.info("Analyzing historical data for specialization {}", specializationId);
 
-        double probabilityScore = 0.5;
-
         Map<String, Object> analysis = new HashMap<>();
-        analysis.put("method", "historical");
-        analysis.put("probabilityScore", probabilityScore);
+        analysis.put("method", "historical_unimplemented");
+        analysis.put("probabilityScore", null);
         analysis.put("sampleSize", 0);
-        analysis.put("note", "Historical analysis not yet implemented - using default probability");
+        analysis.put("note", "Historical analysis is not yet implemented - probability score unavailable");
 
         return analysis;
     }

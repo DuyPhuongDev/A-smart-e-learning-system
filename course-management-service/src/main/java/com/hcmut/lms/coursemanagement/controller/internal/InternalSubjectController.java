@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -45,6 +46,21 @@ public class InternalSubjectController {
     @GetMapping("/{subjectId}")
     public ResponseEntity<SubjectResponse> getSubjectById(@PathVariable UUID subjectId) {
         return ResponseEntity.ok(subjectService.getSubjectById(subjectId));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<SubjectResponse>> searchSubjects(@RequestParam("search") String keyword) {
+        return ResponseEntity.ok(subjectService.searchSubjects(keyword));
+    }
+
+    /**
+     * Get all subject IDs in the database.
+     * Used by learning-service to pre-compute SubjectSemesterMetrics for all subjects.
+     * GET /api/courses/internal/subjects/ids
+     */
+    @GetMapping("/ids")
+    public ResponseEntity<List<UUID>> getAllSubjectIds() {
+        return ResponseEntity.ok(subjectService.getAllSubjectIds());
     }
 }
 

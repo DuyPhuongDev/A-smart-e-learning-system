@@ -23,7 +23,7 @@ public final class IntensityParsingSupport {
     if (value == null || value.isBlank()) {
       return null;
     }
-    String normalized = value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase();
+    String normalized = normalizeTrimmedTitleCase(value);
     return Enum.valueOf(enumClass, normalized);
   }
 }

@@ -7,29 +7,40 @@ import java.util.Map;
 
 public final class IntensityCreditCapSupport {
 
-  private static final int DEFAULT_MAIN_SEMESTER_CAP = 17;
-  private static final int DEFAULT_SUMMER_SEMESTER_CAP = 7;
-
   private static final Map<LearningIntensity, Integer> MAIN_SEMESTER_CAPS = Map.of(
       LearningIntensity.Low, 13,
-      LearningIntensity.Light, 15, LearningIntensity.Standard, 17, LearningIntensity.Heavy, 19);
+      LearningIntensity.Light, 15, LearningIntensity.Standard, 17, LearningIntensity.Heavy, 22);
 
   private static final Map<SummerLearningIntensity, Integer> SUMMER_SEMESTER_CAPS = Map.of(
-      SummerLearningIntensity.Light, 4, SummerLearningIntensity.Standard, 9, SummerLearningIntensity.Heavy, 11);
+      SummerLearningIntensity.Light, 4, SummerLearningIntensity.Standard, 6, SummerLearningIntensity.Heavy, 8);
 
   private IntensityCreditCapSupport() {
   }
 
-  public static int mainSemesterCap(LearningIntensity intensity) {
-    return MAIN_SEMESTER_CAPS.getOrDefault(intensity, DEFAULT_MAIN_SEMESTER_CAP);
+  public static int mainSemesterCapStrict(LearningIntensity intensity) {
+    if (intensity == null) {
+      throw new IllegalArgumentException(
+          "prefMainSemLearnIntensity is required for learning path generation but was null");
+    }
+    Integer cap = MAIN_SEMESTER_CAPS.get(intensity);
+    if (cap == null) {
+      throw new IllegalArgumentException(
+          "Unrecognised main-semester learning intensity: " + intensity);
+    }
+    return cap;
   }
 
-  public static int summerSemesterCap(SummerLearningIntensity intensity) {
-    return SUMMER_SEMESTER_CAPS.getOrDefault(intensity, DEFAULT_SUMMER_SEMESTER_CAP);
-  }
-
-  public static int defaultSummerSemesterCap() {
-    return DEFAULT_SUMMER_SEMESTER_CAP;
+  public static int summerSemesterCapStrict(SummerLearningIntensity intensity) {
+    if (intensity == null) {
+      throw new IllegalArgumentException(
+          "learningIntensity is required for preferred summer semester but was null");
+    }
+    Integer cap = SUMMER_SEMESTER_CAPS.get(intensity);
+    if (cap == null) {
+      throw new IllegalArgumentException(
+          "Unrecognised summer learning intensity: " + intensity);
+    }
+    return cap;
   }
 }
 

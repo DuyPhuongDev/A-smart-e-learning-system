@@ -36,7 +36,6 @@ public class McqQuestionHandler implements QuestionHandler {
         McqQuestion question = McqQuestion.builder()
                 .questionType(QuestionType.MCQ)
                 .difficultLevel(req.getDifficultLevel())
-                .point(req.getPoint())
                 .required(req.isRequired())
                 .allowMultiAnswer(req.isAllowMultiAnswer())
                 .content(req.getContent())
@@ -56,13 +55,13 @@ public class McqQuestionHandler implements QuestionHandler {
         McqQuestion mcq = (McqQuestion) existing;
 
         if (req.getDifficultLevel() != null) mcq.setDifficultLevel(req.getDifficultLevel());
-        if (req.getPoint() != null) mcq.setPoint(req.getPoint());
         mcq.setRequired(req.isRequired());
         mcq.setAllowMultiAnswer(req.isAllowMultiAnswer());
         mcq.setShuffleOption(req.isShuffleOption());
+        mcq.setContent(req.getContent());
+
 
         if (req.getAnswerOptions() != null) {
-            mcq.getAnswerOptions().clear();
             req.getAnswerOptions().forEach(o -> mcq.addOption(buildOption(o)));
         }
         return mcq;
@@ -92,8 +91,9 @@ public class McqQuestionHandler implements QuestionHandler {
         });
     }
 
+    /// need handler again
     @Override
-    public GradingResult grade(Question question, SubmissionDto submission) {
+    public GradingResult grade(Question question, SubmissionDto submission, BigDecimal maxPoints) {
         McqQuestion mcq = (McqQuestion) question;
         McqSubmissionDto sub = (McqSubmissionDto) submission;
 
@@ -103,7 +103,6 @@ public class McqQuestionHandler implements QuestionHandler {
                 .map(AnswerOption::getId)
                 .collect(Collectors.toSet());
 
-        BigDecimal maxPoints = mcq.getPoint() != null ? mcq.getPoint() : BigDecimal.ZERO;
         long correctSelected = selected.stream().filter(correctIds::contains).count();
         boolean fullyCorrect = selected.equals(correctIds);
 

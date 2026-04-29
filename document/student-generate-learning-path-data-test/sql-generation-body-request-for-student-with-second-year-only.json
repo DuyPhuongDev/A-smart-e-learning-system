@@ -1,0 +1,236 @@
+{
+  "studentInfo": {
+    "studentCode": "2110003",
+    "email": "secondyear.test@hcmut.edu.vn",
+    "firstName": "SECONDYEAR",
+    "lastName": "STUDENT",
+    "phone": "0900000003",
+    "specializationCode": "CS",
+    "intakeYearCode": "22"
+  },
+  "gradeRecords": [
+    {
+      "subjectCode": "MT1005",
+      "credits": 4,
+      "gradeNumeric": 7.8,
+      "gradeLetter": "B+",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "MT1003",
+      "credits": 4,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "PH1003",
+      "credits": 4,
+      "gradeNumeric": 7.0,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1005",
+      "credits": 3,
+      "gradeNumeric": 7.6,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1023",
+      "credits": 3,
+      "gradeNumeric": 7.2,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "LA1003",
+      "credits": 2,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "PE_HP1",
+      "credits": 0,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK221",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "MT1007",
+      "credits": 3,
+      "gradeNumeric": 7.3,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1007",
+      "credits": 4,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO1027",
+      "credits": 3,
+      "gradeNumeric": 7.8,
+      "gradeLetter": "B+",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CH1003",
+      "credits": 3,
+      "gradeNumeric": 7.9,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "PH1007",
+      "credits": 1,
+      "gradeNumeric": 6.5,
+      "gradeLetter": "C+",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "MI1003",
+      "credits": 0,
+      "gradeNumeric": 0.0,
+      "gradeLetter": "DT",
+      "semesterCode": "HK222",
+      "academicYearCode": "22",
+      "isPassed": true
+    },
+    {
+      "subjectCode": "PE_HP2",
+      "credits": 0,
+      "gradeNumeric": 7.0,
+      "gradeLetter": "B",
+      "semesterCode": "HK222",
+      "academicYearCode": "22"
+    },
+    {
+      "subjectCode": "CO2003",
+      "credits": 4,
+      "gradeNumeric": 7.3,
+      "gradeLetter": "B",
+      "semesterCode": "HK231",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "CO2007",
+      "credits": 4,
+      "gradeNumeric": 7.8,
+      "gradeLetter": "B+",
+      "semesterCode": "HK231",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "CO2001",
+      "credits": 3,
+      "gradeNumeric": 8.0,
+      "gradeLetter": "B+",
+      "semesterCode": "HK231",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "SP1033",
+      "credits": 2,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK231",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "CO2011",
+      "credits": 3,
+      "gradeNumeric": 7.2,
+      "gradeLetter": "B",
+      "semesterCode": "HK231",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "CO2013",
+      "credits": 4,
+      "gradeNumeric": 7.5,
+      "gradeLetter": "B",
+      "semesterCode": "HK232",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "CO2017",
+      "credits": 3,
+      "gradeNumeric": 7.9,
+      "gradeLetter": "B",
+      "semesterCode": "HK232",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "CO2039",
+      "credits": 3,
+      "gradeNumeric": 7.6,
+      "gradeLetter": "B",
+      "semesterCode": "HK232",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "MT2013",
+      "credits": 4,
+      "gradeNumeric": 7.0,
+      "gradeLetter": "B",
+      "semesterCode": "HK232",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "SP1035",
+      "credits": 2,
+      "gradeNumeric": 7.1,
+      "gradeLetter": "B",
+      "semesterCode": "HK232",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "SP1007",
+      "credits": 2,
+      "gradeNumeric": 7.3,
+      "gradeLetter": "B",
+      "semesterCode": "HK232",
+      "academicYearCode": "23"
+    },
+    {
+      "subjectCode": "LA1005",
+      "credits": 2,
+      "semesterCode": "HK232",
+      "academicYearCode": "23",
+      "isPassed": true
+    },
+    {
+      "subjectCode": "LA1007",
+      "credits": 2,
+      "semesterCode": "HK232",
+      "academicYearCode": "23",
+      "isPassed": true
+    },
+    {
+      "subjectCode": "SP1031",
+      "credits": 3,
+      "gradeNumeric": 7.4,
+      "gradeLetter": "B",
+      "semesterCode": "HK223",
+      "academicYearCode": "22"
+    }
+  ]
+}

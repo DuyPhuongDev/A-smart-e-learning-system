@@ -1,5 +1,7 @@
 package com.hcmut.lms.notification.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.notification.dto.response.InboxNotificationResponse;
@@ -11,6 +13,7 @@ import com.hcmut.lms.notification.exception.ResourceNotFoundException;
 import com.hcmut.lms.notification.repository.UserNotificationRepository;
 import com.hcmut.lms.notification.service.UserInboxService;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +30,7 @@ import java.util.UUID;
 public class UserInboxServiceImpl implements UserInboxService {
 
     private final UserNotificationRepository userNotificationRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -37,7 +41,13 @@ public class UserInboxServiceImpl implements UserInboxService {
                 .findInboxByUserId(currentUser.getId(), readStatus, Instant.now(), pageable);
 
         List<InboxNotificationResponse> content = result.getContent().stream()
-                .map(this::toResponse)
+                .map(entity -> {
+                    try {
+                        return toResponse(entity);
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException("Failed to parse notification metadata", e);
+                    }
+                })
                 .toList();
 
         return PageResponse.<InboxNotificationResponse>builder()
@@ -78,7 +88,8 @@ public class UserInboxServiceImpl implements UserInboxService {
         userNotificationRepository.markAllRead(currentUser.getId(), Instant.now());
     }
 
-    private InboxNotificationResponse toResponse(UserNotificationEntity entity) {
+    private InboxNotificationResponse toResponse(UserNotificationEntity entity) throws JsonProcessingException {
+
         NotificationEntity notification = entity.getNotification();
         return InboxNotificationResponse.builder()
                 .userNotificationId(entity.getId())
@@ -88,6 +99,7 @@ public class UserInboxServiceImpl implements UserInboxService {
                 .type(notification.getType())
                 .priority(notification.getPriority())
                 .channel(entity.getChannel())
+                .metadata(objectMapper.readTree(notification.getMetadata()))
                 .read(entity.getReadStatus() == ReadStatus.READ)
                 .readAt(entity.getReadAt())
                 .deliveredAt(entity.getDeliveredAt())

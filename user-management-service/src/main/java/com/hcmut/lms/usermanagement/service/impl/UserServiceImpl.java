@@ -1,6 +1,9 @@
 package com.hcmut.lms.usermanagement.service.impl;
 
 import com.hcmut.lms.usermanagement.client.AuthServiceClient;
+import com.hcmut.lms.usermanagement.client.CourseServiceClient;
+import com.hcmut.lms.usermanagement.client.dto.DepartmentResponse;
+import com.hcmut.lms.usermanagement.client.dto.SemesterResponse;
 import com.hcmut.lms.usermanagement.exception.DuplicateResourceException;
 import com.hcmut.lms.usermanagement.exception.ResourceNotFoundException;
 import com.hcmut.lms.usermanagement.mapper.UserMapper;
@@ -39,6 +42,7 @@ public class UserServiceImpl implements UserService {
     private final AdminRepository adminRepository;
     private final UserMapper userMapper;
     private final AuthServiceClient authServiceClient;
+    private final CourseServiceClient courseServiceClient;
 
     @Override
     @Transactional
@@ -51,6 +55,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Role", "id", request.getRoleId()));
 
         User user = userMapper.toEntity(request);
+        user.setSpecializationId(request.getSpecializationId());
         user.setRole(role);
         user = userRepository.save(user);
 
@@ -59,9 +64,14 @@ public class UserServiceImpl implements UserService {
             if (studentRepository.existsByStudentCode(request.getStudentCode())) {
                 throw new DuplicateResourceException("Student", "studentCode", request.getStudentCode());
             }
+            DepartmentResponse departmentResponse = courseServiceClient.getDepartmentBySpecializationId(request.getSpecializationId());
+
+            SemesterResponse semesterResponse = courseServiceClient.getCurrentSemester();
             Student student = Student.builder()
                     .user(user)
                     .studentCode(request.getStudentCode())
+                    .departmentId(departmentResponse.getId())
+                    .intakeYearId(semesterResponse.getAcademicYearId())
                     .build();
             studentRepository.save(student);
         }
@@ -88,6 +98,8 @@ public class UserServiceImpl implements UserService {
                     .build();
             adminRepository.save(admin);
         }
+
+        authServiceClient.createUserCredentials(new AuthServiceClient.CreateCredentialsRequest(user.getId(), user.getEmail(), request.getPassword()));
 
         return userMapper.toResponse(user);
     }

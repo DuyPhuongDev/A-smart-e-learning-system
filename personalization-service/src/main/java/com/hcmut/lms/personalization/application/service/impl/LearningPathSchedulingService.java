@@ -1,10 +1,10 @@
 package com.hcmut.lms.personalization.application.service.impl;
 
-import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
 import com.hcmut.lms.personalization.application.service.impl.support.SemesterClassifier;
-import com.hcmut.lms.personalization.application.service.impl.validation.SemesterCalculationService;
+import com.hcmut.lms.personalization.application.service.impl.support.SubjectCreditUtil;
 import com.hcmut.lms.personalization.client.dto.CurriculumFullResponse;
 import com.hcmut.lms.personalization.client.dto.SemesterResponse;
+import com.hcmut.lms.personalization.exception.CyclicDependencyException;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -20,33 +20,72 @@ import java.util.stream.Collectors;
 @Slf4j
 public class LearningPathSchedulingService {
 
-  private static final int MAX_BACKTRACK_NODES = 50_000;
+  private static final int MAX_BACKTRACK_NODES = 50_000_000;
+
+  /**
+   * Hard constraints on the type of semester where certain subjects must be placed.
+   * Keys are subject codes; values are the required semester type
+   * (1=HK1, 2=HK2, 3=HK3/summer), derived from the last digit of semKey.
+   * <p>
+   * A subject listed here will ONLY be placed in a semester whose type matches
+   * the required value. If no matching semester is available, the scheduling
+   * will fail for that subject.
+   */
+  private static final Map<String, Integer> SUBJECT_SEMESTER_TYPE_CONSTRAINTS = Map.of(
+      "MI1003", 2  // MI1003 must be in HK2 (2nd semester of academic year)
+                                                                                      );
 
   public List<SemesterSlot> scheduleSubjects(
-      List<SubjectCandidate> candidates,
-      SemesterCalculationService.SemesterAvailability availability,
-      List<SemesterResponse> remainingSemesters,
-      int mainCreditCap,
-      Map<UUID, Integer> preferredSummerCapBySemesterId,
-      Set<UUID> completedSubjectIds) {
+      List<SubjectCandidate> candidates, List<SemesterResponse> remainingSemesters, int mainCreditCap,
+      Map<UUID, Integer> preferredSummerCapBySemesterId, int plannedSummerSemCount, Set<UUID> completedSubjectIds) {
 
     log.info("Scheduling subjects into semesters");
 
-    List<SubjectCandidate> sorted = candidates.stream()
-        .sorted(Comparator.comparingInt(this::safePriority1)
-            .thenComparingInt(this::safePriority2))
-        .toList();
-
-    Map<UUID, SubjectCandidate> candidateById = sorted.stream()
+    Map<UUID, SubjectCandidate> candidateById = candidates.stream()
         .collect(Collectors.toMap(SubjectCandidate::getSubjectId, candidate -> candidate));
 
-    Map<UUID, Set<UUID>> dependentGraph = buildDependentGraph(sorted);
+    Map<UUID, Set<UUID>> dependentGraph = buildDependentGraph(candidates);
+    validateAcyclicGraph(dependentGraph);
+
+    Map<UUID, Integer> staticMaxDepth = computeStaticMaxDepth(
+        dependentGraph,
+        candidates.stream().map(SubjectCandidate::getSubjectId).collect(Collectors.toSet()));
+
+    // Sort candidates: priority1 (curriculum chronology), then downstream depth
+    // (subjects that are prerequisites for longer chains are scheduled first),
+    // then section weight as final tiebreaker.
+    List<SubjectCandidate> sorted = candidates.stream()
+        .sorted(Comparator.comparingInt(SubjectCreditUtil::safePriority1)
+            .thenComparingInt(SubjectCreditUtil::safePriority2)
+            .thenComparingInt(c -> -staticMaxDepth.getOrDefault(c.getSubjectId(), 1)))
+        .toList();
+
+    for (SubjectCandidate candidate : sorted) {
+      log.debug(
+          "Candidate: subjectId={}, subjectCode={}, priority1={}, priority2={}, staticMaxDepth={}",
+          candidate.getSubjectId(), candidate.getSubjectCode(), SubjectCreditUtil.safePriority1(candidate), SubjectCreditUtil.safePriority2(candidate),
+          staticMaxDepth.getOrDefault(candidate.getSubjectId(), 1));
+    }
+
+    int totalRemainingCredits = candidates.stream().mapToInt(SubjectCreditUtil::safeCredits).sum();
+    int longestChainDepth = calculateLongestPrerequisiteChain(sorted, candidateById);
+
+    int summerCapacity = preferredSummerCapBySemesterId.values().stream().mapToInt(Integer::intValue).sum();
+    int effectiveMainCap = mainCreditCap - 1;
+    int effectiveSummerCapacity = preferredSummerCapBySemesterId.values().stream().mapToInt(cap -> cap - 1).sum();
+    int mainCreditsNeeded = Math.max(0, totalRemainingCredits - effectiveSummerCapacity);
+    int maxMainByCredits = mainCreditsNeeded > 0 ? (int) Math.ceil((double) mainCreditsNeeded / effectiveMainCap) : 0;
+    int chainDepthBeyondSummer = Math.max(0, longestChainDepth - plannedSummerSemCount);
+    int boundedMainSemesters = Math.max(Math.max(maxMainByCredits, chainDepthBeyondSummer), 1);
+
+    log.info(
+        "Semester boundary: totalRemainingCredits={}, summerCapacity={}, mainCreditsNeeded={}, " + "maxMainByCredits" + "={}, longestChain={}, boundedMainSemesters={}",
+        totalRemainingCredits, summerCapacity, mainCreditsNeeded, maxMainByCredits, longestChainDepth,
+        boundedMainSemesters);
 
     List<SemesterSlot> semesters = buildSemesterSlots(
-        availability,
-        remainingSemesters,
-        mainCreditCap,
-        preferredSummerCapBySemesterId);
+        remainingSemesters, mainCreditCap, preferredSummerCapBySemesterId,
+        plannedSummerSemCount, boundedMainSemesters);
 
     Set<UUID> completed = new HashSet<>(completedSubjectIds);
     Map<UUID, Integer> scheduledSemesterOrders = new HashMap<>();
@@ -54,8 +93,8 @@ public class LearningPathSchedulingService {
     int[] exploredNodes = new int[]{0};
 
     boolean feasible = backtrackAssign(
-        0, sorted, semesters, candidateById, dependentGraph, completed, scheduledSemesterOrders, scheduledBySemester,
-        exploredNodes);
+        0, sorted, semesters, staticMaxDepth,
+        completed, scheduledSemesterOrders, scheduledBySemester, exploredNodes);
 
     log.info("Backtracking explored {} nodes", exploredNodes[0]);
     if (!feasible) {
@@ -66,53 +105,80 @@ public class LearningPathSchedulingService {
     return semesters;
   }
 
+  /**
+   * Builds semester slots from the remaining semesters list.
+   *
+   * <p>Main semesters are limited to {@code maxMainSemesters} — excess main
+   * semesters beyond the credit-based boundary are skipped.
+   *
+   * <p>Summer semesters are only included when they have an explicit intensity
+   * configuration in the preferredSummerCapBySemesterId map.
+   */
   private List<SemesterSlot> buildSemesterSlots(
-      SemesterCalculationService.SemesterAvailability availability,
-      List<SemesterResponse> remainingSemesters,
-      int mainCreditCap,
-      Map<UUID, Integer> preferredSummerCapBySemesterId) {
+      List<SemesterResponse> remainingSemesters, int mainCreditCap, Map<UUID, Integer> preferredSummerCapBySemesterId,
+      int plannedSummerSemCount, int maxMainSemesters) {
+
+    if (plannedSummerSemCount > 0 && preferredSummerCapBySemesterId.size() != plannedSummerSemCount) {
+      throw new IllegalArgumentException(
+          "plannedSummerSemCount is " + plannedSummerSemCount + " but " + preferredSummerCapBySemesterId.size() + " " + "preferred summer semester cap entries provided");
+    }
 
     List<SemesterSlot> semesters = new ArrayList<>();
-    int totalSemesters = availability.totalSemesters();
+    int order = 0;
+    int mainSlotsCreated = 0;
 
-    if (totalSemesters > remainingSemesters.size()) {
-      log.warn(
-          "Available semester window ({}) is larger than fetched remaining semesters ({}). Scheduling uses fetched list size.",
-          totalSemesters,
-          remainingSemesters.size());
-    }
-
-    for (int i = 0; i < totalSemesters && i < remainingSemesters.size(); i++) {
-      SemesterResponse semesterInfo = remainingSemesters.get(i);
+    for (SemesterResponse semesterInfo : remainingSemesters) {
       boolean isSummer = SemesterClassifier.isSummerSemester(semesterInfo);
-      int semesterCap = isSummer
-          ? preferredSummerCapBySemesterId.getOrDefault(
-              semesterInfo.getId(), IntensityCreditCapSupport.defaultSummerSemesterCap())
-          : mainCreditCap;
 
-      semesters.add(SemesterSlot.builder()
-          .semesterOrder(i + 1)
-          .subjects(new ArrayList<>())
-          .totalCredits(0)
-          .creditCap(semesterCap)
-          .semesterInfo(semesterInfo)
-          .isSummer(isSummer)
-          .build());
+      if (isSummer) {
+        if (!preferredSummerCapBySemesterId.containsKey(semesterInfo.getId())) {
+          continue;
+        }
+        Integer summerCap = preferredSummerCapBySemesterId.get(semesterInfo.getId());
+        if (summerCap == null) {
+          throw new IllegalArgumentException(
+              "No credit cap found for preferred summer semester " + semesterInfo.getId() + ". Every included summer "
+                  + "semester must have a corresponding PreferredSummerSemester entry.");
+        }
+        order++;
+        semesters.add(SemesterSlot.builder()
+            .semesterOrder(order)
+            .subjects(new ArrayList<>())
+            .totalCredits(0)
+            .creditCap(summerCap)
+            .semesterInfo(semesterInfo)
+            .isSummer(true)
+            .build());
+      } else {
+        if (mainSlotsCreated >= maxMainSemesters) {
+          continue;
+        }
+        mainSlotsCreated++;
+        order++;
+        semesters.add(SemesterSlot.builder()
+            .semesterOrder(order)
+            .subjects(new ArrayList<>())
+            .totalCredits(0)
+            .creditCap(mainCreditCap)
+            .semesterInfo(semesterInfo)
+            .isSummer(false)
+            .build());
+      }
     }
+
+    log.info(
+        "Built {} semester slots ({} main, {} summer) from {} remaining semesters, maxMainSemesters={}",
+        semesters.size(), semesters.stream().filter(s -> !Boolean.TRUE.equals(s.getIsSummer())).count(),
+        semesters.stream().filter(s -> Boolean.TRUE.equals(s.getIsSummer())).count(), remainingSemesters.size(),
+        maxMainSemesters);
 
     return semesters;
   }
 
   private boolean backtrackAssign(
-      int index,
-      List<SubjectCandidate> ordered,
-      List<SemesterSlot> semesters,
-      Map<UUID, SubjectCandidate> candidateById,
-      Map<UUID, Set<UUID>> dependentGraph,
-      Set<UUID> completed,
-      Map<UUID, Integer> scheduledSemesterOrders,
-      Map<Integer, Set<UUID>> scheduledBySemester,
-      int[] exploredNodes) {
+      int index, List<SubjectCandidate> ordered, List<SemesterSlot> semesters,
+      Map<UUID, Integer> staticMaxDepth, Set<UUID> completed, Map<UUID, Integer> scheduledSemesterOrders,
+      Map<Integer, Set<UUID>> scheduledBySemester, int[] exploredNodes) {
 
     if (exploredNodes[0]++ > MAX_BACKTRACK_NODES) {
       return false;
@@ -126,84 +192,77 @@ public class LearningPathSchedulingService {
     }
 
     SubjectCandidate candidate = ordered.get(index);
-    Set<UUID> placementBundle = resolvePlacementBundle(candidate, candidateById, completed, scheduledSemesterOrders);
-    if (placementBundle.isEmpty()) {
-      return false;
-    }
 
     int minSemesterOrder = calculateMinSemesterOrder(
-        placementBundle,
-        candidateById,
-        completed,
-        scheduledSemesterOrders);
+        candidate, completed, scheduledSemesterOrders);
 
-    for (int semesterOrder = minSemesterOrder; semesterOrder <= semesters.size(); semesterOrder++) {
+    // Preferred start: treat parallels like prerequisites (prefer different semester)
+    int preferredStart = minSemesterOrder;
+    if (candidate.getParallels() != null) {
+      for (CurriculumFullResponse.SubjectRelation parallel : candidate.getParallels()) {
+        UUID parallelId = parallel.getSubjectId();
+        if (parallelId == null || completed.contains(parallelId)) {
+          continue;
+        }
+        Integer parallelOrder = scheduledSemesterOrders.get(parallelId);
+        if (parallelOrder != null) {
+          preferredStart = Math.max(preferredStart, parallelOrder + 1);
+        }
+      }
+    }
+
+    // Pass 1: try preferred semesters (different from parallel) first
+    for (int semesterOrder = preferredStart; semesterOrder <= semesters.size(); semesterOrder++) {
       SemesterSlot semester = semesters.get(semesterOrder - 1);
-      if (!canPlaceBundle(
-          placementBundle, semester, candidateById, completed, scheduledSemesterOrders, scheduledBySemester,
-          dependentGraph, semesters.size())) {
+      if (canNotPlaceSubject(candidate, semester, completed, scheduledSemesterOrders, staticMaxDepth, semesters.size())) {
         continue;
       }
 
-      placeBundle(placementBundle, semester, candidateById, scheduledSemesterOrders, scheduledBySemester);
+      placeSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
 
       if (backtrackAssign(
-          index + 1, ordered, semesters, candidateById, dependentGraph, completed, scheduledSemesterOrders,
-          scheduledBySemester, exploredNodes)) {
+          index + 1, ordered, semesters, staticMaxDepth, completed,
+          scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
         return true;
       }
 
-      unplaceBundle(placementBundle, semester, scheduledSemesterOrders, scheduledBySemester);
+      unplaceSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
+    }
+
+    // Pass 2: fall back to same-semester-as-parallel
+    if (preferredStart > minSemesterOrder) {
+      for (int semesterOrder = minSemesterOrder; semesterOrder < preferredStart; semesterOrder++) {
+        SemesterSlot semester = semesters.get(semesterOrder - 1);
+        if (canNotPlaceSubject(
+            candidate, semester, completed, scheduledSemesterOrders, staticMaxDepth,
+            semesters.size())) {
+          continue;
+        }
+
+        placeSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
+
+        if (backtrackAssign(
+            index + 1, ordered, semesters, staticMaxDepth, completed,
+            scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
+          return true;
+        }
+
+        unplaceSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
+      }
     }
 
     return false;
   }
 
-  private Set<UUID> resolvePlacementBundle(
-      SubjectCandidate candidate,
-      Map<UUID, SubjectCandidate> candidateById,
-      Set<UUID> completed,
-      Map<UUID, Integer> scheduledSemesterOrders) {
-
-    LinkedHashSet<UUID> bundle = new LinkedHashSet<>();
-    bundle.add(candidate.getSubjectId());
-
-    if (candidate.getParallels() == null) {
-      return bundle;
-    }
-
-    for (CurriculumFullResponse.SubjectRelation parallel : candidate.getParallels()) {
-      UUID parallelId = parallel.getSubjectId();
-      if (parallelId == null || completed.contains(parallelId) || scheduledSemesterOrders.containsKey(parallelId)) {
-        continue;
-      }
-
-      SubjectCandidate parallelCandidate = candidateById.get(parallelId);
-      if (parallelCandidate == null) {
-        return Collections.emptySet();
-      }
-      bundle.add(parallelId);
-    }
-
-    return bundle;
-  }
-
   private int calculateMinSemesterOrder(
-      Set<UUID> placementBundle,
-      Map<UUID, SubjectCandidate> candidateById,
-      Set<UUID> completed,
-      Map<UUID, Integer> scheduledSemesterOrders) {
+      SubjectCandidate candidate, Set<UUID> completed, Map<UUID, Integer> scheduledSemesterOrders) {
 
     int minOrder = 1;
-    for (UUID subjectId : placementBundle) {
-      SubjectCandidate candidate = candidateById.get(subjectId);
-      if (candidate == null || candidate.getPrerequisites() == null) {
-        continue;
-      }
 
+    if (candidate.getPrerequisites() != null) {
       for (CurriculumFullResponse.SubjectRelation prereq : candidate.getPrerequisites()) {
         UUID prereqId = prereq.getSubjectId();
-        if (prereqId == null || completed.contains(prereqId) || placementBundle.contains(prereqId)) {
+        if (prereqId == null || completed.contains(prereqId)) {
           continue;
         }
 
@@ -213,65 +272,65 @@ public class LearningPathSchedulingService {
         }
       }
     }
+
+    // Parallels can be in the same or earlier semester, so the subject
+    // must be at or after its parallel's semester.
+    if (candidate.getParallels() != null) {
+      for (CurriculumFullResponse.SubjectRelation parallel : candidate.getParallels()) {
+        UUID parallelId = parallel.getSubjectId();
+        if (parallelId == null || completed.contains(parallelId)) {
+          continue;
+        }
+
+        Integer parallelOrder = scheduledSemesterOrders.get(parallelId);
+        if (parallelOrder != null) {
+          minOrder = Math.max(minOrder, parallelOrder);
+        }
+      }
+    }
     return minOrder;
   }
 
-  private boolean canPlaceBundle(
-      Set<UUID> placementBundle,
-      SemesterSlot semester,
-      Map<UUID, SubjectCandidate> candidateById,
-      Set<UUID> completed,
+  private boolean canNotPlaceSubject(
+      SubjectCandidate candidate, SemesterSlot semester, Set<UUID> completed,
       Map<UUID, Integer> scheduledSemesterOrders,
-      Map<Integer, Set<UUID>> scheduledBySemester,
-      Map<UUID, Set<UUID>> dependentGraph,
-      int totalSemesters) {
+      Map<UUID, Integer> staticMaxDepth, int totalSemesters) {
 
-    Map<UUID, Integer> chainDepthMemo = new HashMap<>();
+    int credits = SubjectCreditUtil.safeCredits(candidate);
 
-    int bundleCredits = placementBundle.stream()
-        .map(candidateById::get)
-        .filter(Objects::nonNull)
-        .mapToInt(this::safeCredits)
-        .sum();
-
-    if (semester.getTotalCredits() + bundleCredits > semester.getCreditCap()) {
-      return false;
+    if (semester.getTotalCredits() + credits > semester.getCreditCap()) {
+      return true;
     }
 
-    for (UUID subjectId : placementBundle) {
-      SubjectCandidate candidate = candidateById.get(subjectId);
-      if (candidate == null) {
-        return false;
-      }
+    // Stop scheduling into this semester when it already has cap-1 credits.
+    // This prevents over-stuffing while still allowing a subject that pushes
+    // from below cap-1 to the full cap (e.g., a 2-credit subject when at 16/18).
+    if (semester.getTotalCredits() >= semester.getCreditCap() - 1) {
+      return true;
+    }
 
-      if (!prerequisitesSatisfied(
-          candidate, semester.getSemesterOrder(), placementBundle, completed,
-          scheduledSemesterOrders)) {
-        return false;
-      }
-
-      if (!parallelsSatisfied(
-          candidate, semester.getSemesterOrder(), placementBundle, completed, scheduledSemesterOrders,
-          scheduledBySemester)) {
-        return false;
-      }
-
-      if (!hasChainCapacity(
-          subjectId, semester.getSemesterOrder(), totalSemesters, dependentGraph, scheduledSemesterOrders, completed,
-          placementBundle, chainDepthMemo)) {
-        return false;
+    // Check semester-type constraints (e.g., MI1003 must be in HK2)
+    Integer requiredSemType = SUBJECT_SEMESTER_TYPE_CONSTRAINTS.get(candidate.getSubjectCode());
+    if (requiredSemType != null) {
+      if (SemesterClassifier.semesterType(semester.getSemesterInfo()) != requiredSemType) {
+        return true;
       }
     }
 
-    return true;
+    if (!prerequisitesSatisfied(candidate, semester.getSemesterOrder(), completed, scheduledSemesterOrders)) {
+      return true;
+    }
+
+    if (!parallelsSatisfied(candidate, semester.getSemesterOrder(), completed, scheduledSemesterOrders)) {
+      return true;
+    }
+
+    return !hasChainCapacity(candidate.getSubjectId(), semester.getSemesterOrder(), totalSemesters, staticMaxDepth);
   }
 
   private boolean prerequisitesSatisfied(
-      SubjectCandidate candidate,
-      int semesterOrder,
-      Set<UUID> placementBundle,
-      Set<UUID> completed,
-      Map<UUID, Integer> scheduledSemesterOrders) {
+      SubjectCandidate candidate, int semesterOrder,
+      Set<UUID> completed, Map<UUID, Integer> scheduledSemesterOrders) {
 
     if (candidate.getPrerequisites() == null) {
       return true;
@@ -281,10 +340,6 @@ public class LearningPathSchedulingService {
       UUID prereqId = prereq.getSubjectId();
       if (prereqId == null || completed.contains(prereqId)) {
         continue;
-      }
-
-      if (placementBundle.contains(prereqId)) {
-        return false;
       }
 
       Integer prereqOrder = scheduledSemesterOrders.get(prereqId);
@@ -297,18 +352,13 @@ public class LearningPathSchedulingService {
   }
 
   private boolean parallelsSatisfied(
-      SubjectCandidate candidate,
-      int semesterOrder,
-      Set<UUID> placementBundle,
-      Set<UUID> completed,
-      Map<UUID, Integer> scheduledSemesterOrders,
-      Map<Integer, Set<UUID>> scheduledBySemester) {
+      SubjectCandidate candidate, int semesterOrder,
+      Set<UUID> completed, Map<UUID, Integer> scheduledSemesterOrders) {
 
     if (candidate.getParallels() == null) {
       return true;
     }
 
-    Set<UUID> alreadyInSemester = scheduledBySemester.getOrDefault(semesterOrder, Collections.emptySet());
     for (CurriculumFullResponse.SubjectRelation parallel : candidate.getParallels()) {
       UUID parallelId = parallel.getSubjectId();
       if (parallelId == null || completed.contains(parallelId)) {
@@ -317,48 +367,89 @@ public class LearningPathSchedulingService {
 
       Integer scheduledOrder = scheduledSemesterOrders.get(parallelId);
       if (scheduledOrder != null) {
-        if (scheduledOrder != semesterOrder) {
+        // Same or earlier semester is allowed; later semester is not
+        if (scheduledOrder > semesterOrder) {
           return false;
         }
         continue;
       }
 
-      if (!placementBundle.contains(parallelId) && !alreadyInSemester.contains(parallelId)) {
-        return false;
-      }
+      // Not completed, not scheduled — unsatisfied
+      return false;
     }
     return true;
   }
 
   private boolean hasChainCapacity(
-      UUID subjectId,
-      int startSemesterOrder,
-      int totalSemesters,
-      Map<UUID, Set<UUID>> dependentGraph,
-      Map<UUID, Integer> scheduledSemesterOrders,
-      Set<UUID> completed,
-      Set<UUID> placementBundle,
-      Map<UUID, Integer> memo) {
+      UUID subjectId, int startSemesterOrder, int totalSemesters,
+      Map<UUID, Integer> staticMaxDepth) {
 
+    Integer depth = staticMaxDepth.get(subjectId);
+    if (depth == null) {
+      return true;
+    }
     int remainingSemesters = totalSemesters - startSemesterOrder + 1;
-    int chainDepth = calculateRemainingChainDepth(
-        subjectId,
-        dependentGraph,
-        scheduledSemesterOrders,
-        completed,
-        placementBundle,
-        memo,
-        new HashSet<>());
-    return chainDepth <= remainingSemesters;
+    return depth <= remainingSemesters;
   }
 
-  private int calculateRemainingChainDepth(
-      UUID subjectId,
-      Map<UUID, Set<UUID>> dependentGraph,
-      Map<UUID, Integer> scheduledSemesterOrders,
-      Set<UUID> completed,
-      Set<UUID> placementBundle,
-      Map<UUID, Integer> memo,
+  private void placeSubject(
+      SubjectCandidate candidate, SemesterSlot semester,
+      Map<UUID, Integer> scheduledSemesterOrders, Map<Integer, Set<UUID>> scheduledBySemester) {
+
+    if (scheduledSemesterOrders.containsKey(candidate.getSubjectId())) {
+      return;
+    }
+    Set<UUID> semesterSet = scheduledBySemester.computeIfAbsent(
+        semester.getSemesterOrder(), ignored -> new HashSet<>());
+    semester.getSubjects().add(candidate);
+    semester.setTotalCredits(semester.getTotalCredits() + SubjectCreditUtil.safeCredits(candidate));
+    scheduledSemesterOrders.put(candidate.getSubjectId(), semester.getSemesterOrder());
+    semesterSet.add(candidate.getSubjectId());
+  }
+
+  private void unplaceSubject(
+      SubjectCandidate candidate, SemesterSlot semester,
+      Map<UUID, Integer> scheduledSemesterOrders, Map<Integer, Set<UUID>> scheduledBySemester) {
+
+    Set<UUID> semesterSet = scheduledBySemester.getOrDefault(semester.getSemesterOrder(), new HashSet<>());
+    Iterator<SubjectCandidate> iterator = semester.getSubjects().iterator();
+    while (iterator.hasNext()) {
+      SubjectCandidate subject = iterator.next();
+      if (!subject.getSubjectId().equals(candidate.getSubjectId())) {
+        continue;
+      }
+      iterator.remove();
+      semester.setTotalCredits(semester.getTotalCredits() - SubjectCreditUtil.safeCredits(subject));
+      scheduledSemesterOrders.remove(subject.getSubjectId());
+      semesterSet.remove(subject.getSubjectId());
+      break;
+    }
+
+    if (semesterSet.isEmpty()) {
+      scheduledBySemester.remove(semester.getSemesterOrder());
+    }
+  }
+
+  /**
+   * Calculates the longest prerequisite chain depth among the candidates.
+   * Returns the minimum number of semesters needed due to prerequisite ordering.
+   */
+  private int calculateLongestPrerequisiteChain(
+      List<SubjectCandidate> candidates,
+      Map<UUID, SubjectCandidate> candidateById) {
+
+    Map<UUID, Integer> memo = new HashMap<>();
+    int maxDepth = 0;
+    for (SubjectCandidate candidate : candidates) {
+      maxDepth = Math.max(
+          maxDepth,
+          prerequisiteChainDepth(candidate.getSubjectId(), candidateById, memo, new HashSet<>()));
+    }
+    return maxDepth;
+  }
+
+  private int prerequisiteChainDepth(
+      UUID subjectId, Map<UUID, SubjectCandidate> candidateById, Map<UUID, Integer> memo,
       Set<UUID> visiting) {
 
     if (memo.containsKey(subjectId)) {
@@ -368,74 +459,66 @@ public class LearningPathSchedulingService {
       return 1;
     }
 
-    int maxDepth = 1;
-    for (UUID dependentId : dependentGraph.getOrDefault(subjectId, Collections.emptySet())) {
-      if (completed.contains(dependentId) || scheduledSemesterOrders.containsKey(dependentId)
-          || placementBundle.contains(dependentId)) {
+    SubjectCandidate candidate = candidateById.get(subjectId);
+    if (candidate == null || candidate.getPrerequisites() == null || candidate.getPrerequisites().isEmpty()) {
+      visiting.remove(subjectId);
+      memo.put(subjectId, 1);
+      return 1;
+    }
+
+    int maxPrereqDepth = 0;
+    for (CurriculumFullResponse.SubjectRelation prereq : candidate.getPrerequisites()) {
+      UUID prereqId = prereq.getSubjectId();
+      if (prereqId == null || !candidateById.containsKey(prereqId)) {
         continue;
       }
-      int depth = 1 + calculateRemainingChainDepth(
-          dependentId,
-          dependentGraph,
-          scheduledSemesterOrders,
-          completed,
-          placementBundle,
-          memo,
-          visiting);
-      maxDepth = Math.max(maxDepth, depth);
+      maxPrereqDepth = Math.max(maxPrereqDepth, prerequisiteChainDepth(prereqId, candidateById, memo, visiting));
     }
 
     visiting.remove(subjectId);
-    memo.put(subjectId, maxDepth);
+    int depth = maxPrereqDepth + 1;
+    memo.put(subjectId, depth);
+    return depth;
+  }
+
+  /**
+   * Pre-computes the longest path from each subject to a sink node in the
+   * dependent graph. Used for O(1) chain-capacity checks during backtracking.
+   */
+  private Map<UUID, Integer> computeStaticMaxDepth(Map<UUID, Set<UUID>> dependentGraph, Set<UUID> allCandidateIds) {
+
+    Map<UUID, Integer> maxDepth = new HashMap<>();
+    for (UUID id : allCandidateIds) {
+      computeStaticMaxDepthDFS(id, dependentGraph, maxDepth, new HashSet<>());
+    }
     return maxDepth;
   }
 
-  private void placeBundle(
-      Set<UUID> placementBundle,
-      SemesterSlot semester,
-      Map<UUID, SubjectCandidate> candidateById,
-      Map<UUID, Integer> scheduledSemesterOrders,
-      Map<Integer, Set<UUID>> scheduledBySemester) {
+  private int computeStaticMaxDepthDFS(
+      UUID subjectId, Map<UUID, Set<UUID>> dependentGraph, Map<UUID, Integer> maxDepth,
+      Set<UUID> visiting) {
 
-    Set<UUID> semesterSet = scheduledBySemester.computeIfAbsent(
-        semester.getSemesterOrder(), ignored -> new HashSet<>());
-    for (UUID subjectId : placementBundle) {
-      SubjectCandidate candidate = candidateById.get(subjectId);
-      if (candidate == null || scheduledSemesterOrders.containsKey(subjectId)) {
-        continue;
-      }
-      semester.getSubjects().add(candidate);
-      semester.setTotalCredits(
-          semester.getTotalCredits() + safeCredits(candidate));
-      scheduledSemesterOrders.put(subjectId, semester.getSemesterOrder());
-      semesterSet.add(subjectId);
+    if (maxDepth.containsKey(subjectId)) {
+      return maxDepth.get(subjectId);
     }
+    if (!visiting.add(subjectId)) {
+      return 0;
+    }
+
+    int depth = 1;
+    for (UUID dependentId : dependentGraph.getOrDefault(subjectId, Collections.emptySet())) {
+      depth = Math.max(depth, 1 + computeStaticMaxDepthDFS(dependentId, dependentGraph, maxDepth, visiting));
+    }
+
+    visiting.remove(subjectId);
+    maxDepth.put(subjectId, depth);
+    return depth;
   }
 
-  private void unplaceBundle(
-      Set<UUID> placementBundle,
-      SemesterSlot semester,
-      Map<UUID, Integer> scheduledSemesterOrders,
-      Map<Integer, Set<UUID>> scheduledBySemester) {
-
-    Set<UUID> semesterSet = scheduledBySemester.getOrDefault(semester.getSemesterOrder(), Collections.emptySet());
-    Iterator<SubjectCandidate> iterator = semester.getSubjects().iterator();
-    while (iterator.hasNext()) {
-      SubjectCandidate subject = iterator.next();
-      if (!placementBundle.contains(subject.getSubjectId())) {
-        continue;
-      }
-      iterator.remove();
-      semester.setTotalCredits(semester.getTotalCredits() - safeCredits(subject));
-      scheduledSemesterOrders.remove(subject.getSubjectId());
-      semesterSet.remove(subject.getSubjectId());
-    }
-
-    if (semesterSet.isEmpty()) {
-      scheduledBySemester.remove(semester.getSemesterOrder());
-    }
-  }
-
+  /**
+   * Builds a dependency graph mapping each subject to the set of subjects that depend on it.
+   * Only hard prerequisites are included.
+   */
   private Map<UUID, Set<UUID>> buildDependentGraph(List<SubjectCandidate> candidates) {
     Map<UUID, Set<UUID>> graph = new HashMap<>();
     Set<UUID> candidateIds = candidates.stream().map(SubjectCandidate::getSubjectId).collect(Collectors.toSet());
@@ -451,43 +534,42 @@ public class LearningPathSchedulingService {
           }
         }
       }
-
-      if (candidate.getRecommendations() != null) {
-        for (CurriculumFullResponse.SubjectRelation recommendation : candidate.getRecommendations()) {
-          UUID recommendationId = recommendation.getSubjectId();
-          if (recommendationId != null && candidateIds.contains(recommendationId)) {
-            graph.computeIfAbsent(recommendationId, ignored -> new HashSet<>()).add(targetId);
-          }
-        }
-      }
     }
 
     return graph;
   }
 
-  private int safePriority1(SubjectCandidate candidate) {
-    return candidate.getPriority1() != null ? candidate.getPriority1() : Integer.MAX_VALUE;
+  /**
+   * Validates that the dependency graph has no cycles.
+   * Throws {@link CyclicDependencyException} if a cycle is detected.
+   */
+  private void validateAcyclicGraph(Map<UUID, Set<UUID>> graph) {
+    Set<UUID> visited = new HashSet<>();
+    Set<UUID> visiting = new HashSet<>();
+    for (UUID node : graph.keySet()) {
+      if (hasCycle(node, graph, visited, visiting)) {
+        throw new CyclicDependencyException(
+            node.toString(),
+            "Curriculum contains a cyclic prerequisite dependency involving subject " + node);
+      }
+    }
   }
 
-  private int safePriority2(SubjectCandidate candidate) {
-    return candidate.getPriority2() != null ? candidate.getPriority2() : Integer.MAX_VALUE;
-  }
-
-  private int safeCredits(SubjectCandidate candidate) {
-    Integer credits = candidate.getCredits();
-    if (credits == null) {
-      return 0;
+  private boolean hasCycle(UUID node, Map<UUID, Set<UUID>> graph, Set<UUID> visited, Set<UUID> visiting) {
+    if (visited.contains(node)) {
+      return false;
     }
-    if (credits < 0) {
-      throw new IllegalStateException(
-          "Invalid subject credits while scheduling: subjectId="
-              + candidate.getSubjectId()
-              + ", subjectCode="
-              + candidate.getSubjectCode()
-              + ", credits="
-              + credits);
+    if (!visiting.add(node)) {
+      return true;
     }
-    return credits;
+    for (UUID neighbor : graph.getOrDefault(node, Collections.emptySet())) {
+      if (hasCycle(neighbor, graph, visited, visiting)) {
+        return true;
+      }
+    }
+    visiting.remove(node);
+    visited.add(node);
+    return false;
   }
 
   @Data
@@ -518,4 +600,3 @@ public class LearningPathSchedulingService {
     private Boolean isSummer;
   }
 }
-

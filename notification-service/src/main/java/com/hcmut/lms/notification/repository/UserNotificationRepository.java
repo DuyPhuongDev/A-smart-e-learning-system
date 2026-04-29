@@ -26,6 +26,7 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
             where un.userId = :userId
             and (:readStatus is null or un.readStatus = :readStatus)
             and (n.expiresAt is null or n.expiresAt > :now)
+            and (un.channel = 'IN_APP')
             order by n.createdAt desc
             """)
     Page<UserNotificationEntity> findInboxByUserId(
@@ -40,6 +41,7 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
             join un.notification n
             where un.userId = :userId
             and un.readStatus = 'UNREAD'
+            and un.channel = 'IN_APP'
             and (n.expiresAt is null or n.expiresAt > :now)
             """)
     long countUnread(@Param("userId") UUID userId, @Param("now") Instant now);

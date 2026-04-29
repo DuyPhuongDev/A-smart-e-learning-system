@@ -40,8 +40,8 @@ public class PrerequisiteChainValidatorService {
       String reason = passed ? String.format(
           "Chuỗi học phần tiên quyết dài nhất %d học kỳ nằm trong %d học kỳ khả dụng", longestChain,
           totalSemestersAvailable) : String.format(
-          "Chuỗi học phần tiên quyết dài nhất %d học kỳ vượt quá %d học kỳ khả dụng", longestChain,
-          totalSemestersAvailable);
+          "Chuỗi môn học tiên quyết quá dài (%d học kỳ) so với thời gian còn lại (%d học kỳ). Hãy kéo dài thời gian tốt nghiệp hoặc giảm mục tiêu.",
+          longestChain, totalSemestersAvailable);
 
       log.info(
           "Prerequisite chain check: passed={}, longest={}, available={}", passed, longestChain,
@@ -52,8 +52,8 @@ public class PrerequisiteChainValidatorService {
     } catch (Exception e) {
       log.warn("Failed to fetch prerequisite chain from course-management-service", e);
       return new PrerequisiteChainResult(
-          true, 0, totalSemestersAvailable,
-          "Không thể xác minh chuỗi học phần tiên quyết (giả định khả thi)");
+          false, 0, totalSemestersAvailable,
+          "Không thể xác minh chuỗi học phần tiên quyết do lỗi dịch vụ. Vui lòng thử lại sau.");
     }
   }
 }

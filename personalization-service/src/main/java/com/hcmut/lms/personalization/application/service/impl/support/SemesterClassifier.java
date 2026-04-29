@@ -25,4 +25,23 @@ public final class SemesterClassifier {
     String digits = semesterCode.replaceAll("\\D", "");
     return !digits.isEmpty() && digits.charAt(digits.length() - 1) == '3';
   }
+
+  public static boolean isMainSemester(SemesterResponse semester) {
+    if (semester == null || semester.getSemKey() == null) {
+      return false;
+    }
+    int t = Math.abs(semester.getSemKey()) % 10;
+    return t == 1 || t == 2;
+  }
+
+  /**
+   * Returns the semester type from the semester's semKey.
+   * 1 = HK1 (Fall), 2 = HK2 (Spring), 3 = HK3 (Summer), 0 = unknown.
+   */
+  public static int semesterType(SemesterResponse semester) {
+    if (semester == null || semester.getSemKey() == null) {
+      return 0;
+    }
+    return Math.abs(semester.getSemKey()) % 10;
+  }
 }

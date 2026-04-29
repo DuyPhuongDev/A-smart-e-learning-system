@@ -1,7 +1,8 @@
 package com.hcmut.lms.coursemanagement.domain.entity.subject;
 
 public enum GradingType {
-    QUIZ,
+    TUTORIAL,
+    LABS,
     ASSIGNMENT,
     MIDTERM,
     FINAL

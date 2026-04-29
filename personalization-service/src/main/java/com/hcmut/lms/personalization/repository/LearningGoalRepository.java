@@ -13,15 +13,11 @@ import java.util.UUID;
 @Repository
 public interface LearningGoalRepository extends JpaRepository<LearningGoal, UUID> {
 
-  Optional<LearningGoal> findByLearningGoalId(UUID learningGoalId);
-
-  Optional<LearningGoal> findByLearningGoalIdAndIsActiveTrue(UUID learningGoalId);
-
   Optional<LearningGoal> findByLearningGoalIdAndStudentIdAndIsActiveTrue(UUID learningGoalId, UUID studentId);
 
   Optional<LearningGoal> findTopByStudentIdAndIsActiveTrueOrderByCreatedAtDesc(UUID studentId);
 
   @Modifying
   @Query("UPDATE LearningGoal lg SET lg.isActive = false WHERE lg.studentId = :studentId AND lg.isActive = true")
-  int deactivateActiveByStudentId(@Param("studentId") UUID studentId);
+  void deactivateActiveByStudentId(@Param("studentId") UUID studentId);
 }

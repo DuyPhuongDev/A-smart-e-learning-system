@@ -3,6 +3,9 @@ package com.hcmut.lms.personalization.domain.entity.learningGoal;
 import com.hcmut.lms.personalization.application.dto.response.*;
 import com.hcmut.lms.personalization.application.dto.response.enums.FeasibilityLevel;
 import com.hcmut.lms.personalization.domain.entity.BaseEntity;
+import com.hcmut.lms.personalization.infrastructure.converter.PreliminaryChecksConverter;
+import com.hcmut.lms.personalization.infrastructure.converter.RecommendationsConverter;
+import com.hcmut.lms.personalization.infrastructure.converter.WarningsConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -49,7 +52,8 @@ public class GoalValidationResult extends BaseEntity {
   private FeasibilityMetricsResponse metrics;
 
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "preliminary_checks")
+  @Convert(converter = PreliminaryChecksConverter.class)
+  @Column(name = "preliminary_checks", columnDefinition = "jsonb")
   private List<ValidationCheckResponse> preliminaryChecks;
 
   @JdbcTypeCode(SqlTypes.JSON)
@@ -57,11 +61,13 @@ public class GoalValidationResult extends BaseEntity {
   private ProbabilityAnalysisResponse probabilityAnalysis;
 
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "recommendations")
+  @Convert(converter = RecommendationsConverter.class)
+  @Column(name = "recommendations", columnDefinition = "jsonb")
   private List<RecommendationResponse> recommendations;
 
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "warnings")
+  @Convert(converter = WarningsConverter.class)
+  @Column(name = "warnings", columnDefinition = "jsonb")
   private List<WarningResponse> warnings;
 
   @Column(name = "validation_timestamp", nullable = false)

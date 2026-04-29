@@ -6,6 +6,6 @@ import com.hcmut.lms.coursemanagement.application.dto.response.StudentSubjectDet
 import java.util.UUID;
 
 public interface StudentProgressService {
-    StudentLearningProgressResponse getStudentLearningProgress(UUID userId);
+    StudentLearningProgressResponse getStudentLearningProgress(UUID userId, UUID specializationId);
     StudentSubjectDetailResponse getStudentSubjectDetail(UUID subjectId, UUID userId);
 }

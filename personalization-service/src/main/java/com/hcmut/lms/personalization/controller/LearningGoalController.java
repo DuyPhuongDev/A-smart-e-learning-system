@@ -31,7 +31,9 @@ public class LearningGoalController {
 
   @GetMapping("/me/current")
   public ResponseEntity<LearningGoalResponse> getCurrent(@CurrentUser CurrentUserInfo currentUser) {
-    return ResponseEntity.ok(learningGoalService.getCurrentLearningGoal(currentUser.getId()));
+    return learningGoalService.getCurrentLearningGoal(currentUser.getId())
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
   }
 
   @GetMapping("/{learningGoalId}")

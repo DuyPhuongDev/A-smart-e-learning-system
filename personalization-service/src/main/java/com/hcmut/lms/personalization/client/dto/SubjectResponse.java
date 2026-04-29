@@ -15,5 +15,7 @@ public class SubjectResponse {
     private UUID id;
     private String name;
     private String code;
+    private String description;
+    private Integer credits;
+    private String category;
 }
-

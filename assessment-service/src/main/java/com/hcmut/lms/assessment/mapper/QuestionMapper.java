@@ -15,11 +15,17 @@ import java.util.stream.Collectors;
 public interface QuestionMapper {
 
     @Mapping(target = "answerOptions", source = "answerOptions")
+    @Mapping(target = "point", ignore = true)
+    @Mapping(target = "orderIndex",  ignore = true)
     McqQuestionResponse toResponse(McqQuestion question);
 
     @Mapping(target = "testCases", source = "testCases")
+    @Mapping(target = "point", ignore = true)
+    @Mapping(target = "orderIndex",  ignore = true)
     CodingQuestionResponse toResponse(CodingQuestion question);
 
+    @Mapping(target = "point", ignore = true)
+    @Mapping(target = "orderIndex",  ignore = true)
     EssayQuestionResponse toResponse(EssayQuestion question);
 
     AnswerOptionResponse toResponse(AnswerOption option);

@@ -43,11 +43,16 @@ public class CppJudgeService {
     public CodingJudgeEvaluation evaluate(
             CodingQuestion codingQuestion,
             String sourceCode,
-            String language
+            String language,
+            boolean isPrecheck
     ) {
         List<TestCase> testCases = codingQuestion.getTestCases() == null
                 ? List.of()
                 : codingQuestion.getTestCases();
+
+        if(isPrecheck){
+            testCases = testCases.stream().filter(tc -> !tc.isHidden()).toList();
+        }
 
         validateQuestionConfiguration(codingQuestion, testCases);
         if (!isSupportedLanguage(language)) {
@@ -143,8 +148,10 @@ public class CppJudgeService {
         int memoryLimitKb = memoryLimitMb * 1024;
         String timeoutDuration = formatTimeoutDuration(timeLimitMs);
 
-        String runCmd = "ulimit -v " + memoryLimitKb + "; timeout --signal=KILL --kill-after=1s "
-                + timeoutDuration + " ./main";
+        String timeoutCmd = resolveTimeoutCommand();
+
+        String runCmd = "ulimit -v " + memoryLimitKb + "; " + timeoutCmd +
+                " --signal=KILL --kill-after=1s " + timeoutDuration + " ./main";
 
         ProcessExecution runExec;
         try {
@@ -404,5 +411,13 @@ public class CppJudgeService {
             long durationMs,
             boolean timedOut
     ) {
+    }
+
+    private String resolveTimeoutCommand() {
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("mac")) {
+            return "gtimeout";
+        }
+        return "timeout";
     }
 }

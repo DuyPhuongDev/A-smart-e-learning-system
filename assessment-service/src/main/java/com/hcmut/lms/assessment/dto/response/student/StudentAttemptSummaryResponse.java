@@ -17,6 +17,7 @@ public class StudentAttemptSummaryResponse {
     private int attemptNo;
     private AssessmentSubmissionStatus status;
     private BigDecimal score;
+    private BigDecimal actualScore;
     private Instant startedAt;
     private Instant submittedAt;
     private Integer takenTime;

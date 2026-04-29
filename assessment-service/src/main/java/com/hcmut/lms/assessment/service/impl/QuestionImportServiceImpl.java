@@ -2,12 +2,15 @@ package com.hcmut.lms.assessment.service.impl;
 
 import com.hcmut.lms.assessment.domain.entity.question.DifficultLevel;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
+import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.question.AnswerOptionRequest;
 import com.hcmut.lms.assessment.dto.request.question.EssayQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.question.McqQuestionRequest;
+import com.hcmut.lms.assessment.dto.response.McqQuestionResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionImportResultResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.assessment.exception.BadRequestException;
+import com.hcmut.lms.assessment.service.AssessmentService;
 import com.hcmut.lms.assessment.service.QuestionImportService;
 import com.hcmut.lms.assessment.service.QuestionService;
 import lombok.RequiredArgsConstructor;
@@ -36,18 +39,19 @@ import java.util.UUID;
 public class QuestionImportServiceImpl implements QuestionImportService {
 
     private final QuestionService questionService;
+    private final AssessmentService assessmentService;
 
     @Override
-    public QuestionImportResultResponse importMcqQuestions(MultipartFile file) {
-        return importQuestionsFromCsv(file, QuestionType.MCQ);
+    public QuestionImportResultResponse importMcqQuestions(MultipartFile file, UUID id, boolean isBank) {
+        return importQuestionsFromCsv(file, QuestionType.MCQ, id, isBank);
     }
 
     @Override
-    public QuestionImportResultResponse importEssayQuestions(MultipartFile file) {
-        return importQuestionsFromCsv(file, QuestionType.ESSAY);
+    public QuestionImportResultResponse importEssayQuestions(MultipartFile file,  UUID id, boolean isBank) {
+        return importQuestionsFromCsv(file, QuestionType.ESSAY,  id, isBank );
     }
 
-    private QuestionImportResultResponse importQuestionsFromCsv(MultipartFile file, QuestionType expectedType) {
+    private QuestionImportResultResponse importQuestionsFromCsv(MultipartFile file, QuestionType expectedType, UUID id, boolean isBank) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("CSV file is empty");
         }
@@ -76,7 +80,7 @@ public class QuestionImportServiceImpl implements QuestionImportService {
 
             if (expectedType == QuestionType.MCQ) {
                 requireColumns(headerIndex, List.of(
-                        "questionType", "difficultLevel", "point", "content", "required", "questionBankId",
+                        "questionType", "difficultLevel", "point", "content", "required",
                         "allowMultiAnswer", "shuffleOption",
                         "option1", "option2", "option3", "option4",
                         "correctAnswers",
@@ -84,7 +88,7 @@ public class QuestionImportServiceImpl implements QuestionImportService {
                 ));
             } else if (expectedType == QuestionType.ESSAY) {
                 requireColumns(headerIndex, List.of(
-                        "questionType", "difficultLevel", "point", "content", "required", "questionBankId",
+                        "questionType", "difficultLevel", "point", "content", "required",
                         "sampleAnswer", "maxFileSize", "acceptedFileTypes"
                 ));
             } else {
@@ -97,8 +101,8 @@ public class QuestionImportServiceImpl implements QuestionImportService {
                 rowNumber++;
 
                 boolean rowOk = switch (expectedType) {
-                    case MCQ -> importSingleMcqRow(row, rowNumber, headerIndex, errors, createdQuestions);
-                    case ESSAY -> importSingleEssayRow(row, rowNumber, headerIndex, errors, createdQuestions);
+                    case MCQ -> importSingleMcqRow(row, rowNumber, headerIndex, errors, createdQuestions, id, isBank);
+                    case ESSAY -> importSingleEssayRow(row, rowNumber, headerIndex, errors, createdQuestions, id, isBank);
                     default -> false;
                 };
 
@@ -129,7 +133,9 @@ public class QuestionImportServiceImpl implements QuestionImportService {
             int rowNumber,
             Map<String, Integer> headerIndex,
             List<QuestionImportResultResponse.ValidationError> errors,
-            List<QuestionResponse> createdQuestions
+            List<QuestionResponse> createdQuestions,
+            UUID id,
+            boolean isBank
     ) {
         try {
             String questionTypeStr = getCell(row, headerIndex, "questionType");
@@ -149,12 +155,6 @@ public class QuestionImportServiceImpl implements QuestionImportService {
             String content = getRequiredCell(row, headerIndex, "content");
             boolean required = parseBooleanStrict(getRequiredCell(row, headerIndex, "required"));
 
-            // questionBankId is optional – empty -> null
-            UUID questionBankId = null;
-            String bankIdRaw = getCell(row, headerIndex, "questionBankId");
-            if (!isBlank(bankIdRaw)) {
-                questionBankId = parseUuidStrict(bankIdRaw);
-            }
 
             boolean allowMultiAnswer = parseBooleanStrict(getRequiredCell(row, headerIndex, "allowMultiAnswer"));
             boolean shuffleOption = parseBooleanStrict(getRequiredCell(row, headerIndex, "shuffleOption"));
@@ -199,23 +199,32 @@ public class QuestionImportServiceImpl implements QuestionImportService {
                         .build());
             }
 
-            McqQuestionRequest request = new McqQuestionRequest();
-            request.setQuestionType(QuestionType.MCQ);
-            request.setDifficultLevel(difficultLevel);
-            request.setPoint(point);
-            request.setContent(content);
-            request.setRequired(required);
-            request.setQuestionBankId(questionBankId);
-            request.setAllowMultiAnswer(allowMultiAnswer);
-            request.setShuffleOption(shuffleOption);
-            request.setAnswerOptions(answerOptions);
+            McqQuestionRequest questionRequest = new McqQuestionRequest();
+            questionRequest.setQuestionType(QuestionType.MCQ);
+            questionRequest.setDifficultLevel(difficultLevel);
+            questionRequest.setContent(content);
+            questionRequest.setRequired(required);
+            questionRequest.setAllowMultiAnswer(allowMultiAnswer);
+            questionRequest.setShuffleOption(shuffleOption);
+            questionRequest.setAnswerOptions(answerOptions);
 
-            QuestionResponse created = questionService.createQuestion(request);
+            QuestionResponse created;
+
+            if(isBank){
+                // handle later
+                log.info("importMcqQuestions - bank");
+                created = new McqQuestionResponse();
+            }else {
+                log.info("importMcqQuestions - non bank");
+                AssessmentQuestionRequest assessmentQuestionRequest = new AssessmentQuestionRequest();
+                assessmentQuestionRequest.setQuestion(questionRequest);
+                assessmentQuestionRequest.setPoint(point);
+
+
+                created = assessmentService.createQuestionsForAssessment(id, assessmentQuestionRequest);
+            }
             createdQuestions.add(created);
             return true;
-        } catch (BadRequestException e) {
-            addError(errors, rowNumber, "General", e.getMessage());
-            return false;
         } catch (Exception e) {
             addError(errors, rowNumber, "General", e.getMessage());
             return false;
@@ -227,7 +236,9 @@ public class QuestionImportServiceImpl implements QuestionImportService {
             int rowNumber,
             Map<String, Integer> headerIndex,
             List<QuestionImportResultResponse.ValidationError> errors,
-            List<QuestionResponse> createdQuestions
+            List<QuestionResponse> createdQuestions,
+            UUID id,
+            boolean isBank
     ) {
         try {
             String questionTypeStr = getCell(row, headerIndex, "questionType");
@@ -274,20 +285,28 @@ public class QuestionImportServiceImpl implements QuestionImportService {
             EssayQuestionRequest request = new EssayQuestionRequest();
             request.setQuestionType(QuestionType.ESSAY);
             request.setDifficultLevel(difficultLevel);
-            request.setPoint(point);
             request.setContent(content);
             request.setRequired(required);
-            request.setQuestionBankId(questionBankId);
+
             request.setSampleAnswer(sampleAnswer);
             request.setMaxFileSize(maxFileSize);
             request.setAcceptedFileTypes(acceptedFileTypes);
 
-            QuestionResponse created = questionService.createQuestion(request);
+            QuestionResponse created;
+
+            if(isBank){
+                // handle later
+                log.info("importEssayQuestions - bank");
+                created = new McqQuestionResponse();
+            }else {
+                log.info("importEssayQuestions - non bank");
+                AssessmentQuestionRequest assessmentQuestionRequest = new AssessmentQuestionRequest();
+                assessmentQuestionRequest.setQuestion(request);
+                assessmentQuestionRequest.setPoint(point);
+                created = assessmentService.createQuestionsForAssessment(id, assessmentQuestionRequest);
+            }
             createdQuestions.add(created);
             return true;
-        } catch (BadRequestException e) {
-            addError(errors, rowNumber, "General", e.getMessage());
-            return false;
         } catch (Exception e) {
             addError(errors, rowNumber, "General", e.getMessage());
             return false;

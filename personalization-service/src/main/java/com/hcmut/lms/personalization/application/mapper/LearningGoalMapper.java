@@ -16,7 +16,6 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface LearningGoalMapper {
 
   @Mapping(target = "expectedCompletedSemesterId", source = "expectedCompletedSemester")
-  @Mapping(target = "prefMainSemLearnIntensity", source = "prefMainSemLearnIntensity")
   @Mapping(target = "goalValidationResult", ignore = true)
   LearningGoalResponse toResponse(LearningGoal entity);
 

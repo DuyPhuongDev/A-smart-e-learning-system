@@ -83,6 +83,9 @@ aws:
     video-transcription-queue-url: https://sqs.ap-southeast-1.amazonaws.com/211125750777/lms-prod-video-transcription-queue
     document-enrichment-queue-url: https://sqs.ap-southeast-1.amazonaws.com/211125750777/lms-prod-document-lecture-to-enrichment-chunking-queue
 
+curriculum:
+  fallback-intake-year-code: "22"
+
 transcription:
   callback-url: ${TRANSCRIPTION_CALLBACK_URL:https://dev.viettrandai.xyz/api/coaching-chatbot/v1/transcription-callback}
 

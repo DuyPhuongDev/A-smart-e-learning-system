@@ -120,7 +120,7 @@ public class NotificationInboundServiceImpl implements NotificationInboundServic
 
         notificationRepository.save(entity);
         notificationOutboxService.enqueue(entity, NotificationOutboxEventType.EVENT_INGESTED);
-        notificationDispatchService.dispatch(entity);
+        notificationDispatchService.disưpatch(entity);
     }
 
     @Override

@@ -20,8 +20,9 @@ public class StudentProgressController {
 
     @GetMapping("/me")
     public ResponseEntity<StudentLearningProgressResponse> getMyLearningProgress(
+            @RequestParam(required = false) UUID specializationId,
             @CurrentUser CurrentUserInfo currentUser) {
-        StudentLearningProgressResponse response = studentProgressService.getStudentLearningProgress(currentUser.getId());
+        StudentLearningProgressResponse response = studentProgressService.getStudentLearningProgress(currentUser.getId(), specializationId);
         return ResponseEntity.ok(response);
     }
 

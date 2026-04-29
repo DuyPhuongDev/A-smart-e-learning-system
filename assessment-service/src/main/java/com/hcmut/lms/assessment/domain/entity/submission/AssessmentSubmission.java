@@ -34,8 +34,11 @@ public class AssessmentSubmission extends BaseEntity {
     @Column(name = "submit_time")
     private Instant submitTime;
 
-    @Column(precision = 5, scale = 3)
+    @Column(precision = 8, scale = 3)
     private BigDecimal score;
+
+    @Column(precision = 5, scale = 3)
+    private BigDecimal actualScore;
 
     @Column(name = "taken_time")
     private Integer takenTime;

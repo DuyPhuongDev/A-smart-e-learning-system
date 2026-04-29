@@ -1,7 +1,9 @@
 package com.hcmut.lms.coursemanagement.application.service;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.coursemanagement.application.dto.request.SubjectGradingRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.SubjectRequest;
+import com.hcmut.lms.coursemanagement.application.dto.response.SubjectGradingWeightResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.SubjectPrerequisiteMapResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.SubjectResponse;
 
@@ -17,12 +19,27 @@ public interface SubjectService {
     PageResponse<SubjectResponse> getAllSubjects(int page, int size, String keyword);
     void deleteSubject(UUID id);
 
+    List<SubjectGradingWeightResponse> getGradingsForSubject(UUID subjectId);
+
+    List<SubjectGradingWeightResponse> setGradingsForSubject(UUID subjectId, List<SubjectGradingRequest> gradings);
+
     /**
      * Get prerequisite + recommendation mapping for all subjects.
      * Returns subjectId → list of related subjectIds (PREREQUISITE + RECOMMENDED).
      * Used by learning-service for grade prediction dataset computation.
      */
     List<SubjectPrerequisiteMapResponse> getPrerequisiteMapping();
+
+    /**
+     * Get all subject IDs in the database.
+     * Used by learning-service to pre-compute SubjectSemesterMetrics for all subjects,
+     * including those with no enrollment data.
+     */
+    List<UUID> getAllSubjectIds();
+
+    /**
+     * Search subjects by name or code.
+     * Returns a list of matching subjects (max 10).
+     */
+    List<SubjectResponse> searchSubjects(String keyword);
 }
-
-

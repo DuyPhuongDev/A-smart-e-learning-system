@@ -11,6 +11,7 @@ import com.hcmut.lms.personalization.application.dto.response.enums.ProbabilityM
 import com.hcmut.lms.personalization.application.dto.response.enums.ValidationCheckType;
 import com.hcmut.lms.personalization.application.service.LearningGoalService;
 import com.hcmut.lms.personalization.application.service.LearningGoalValidationService;
+import com.hcmut.lms.personalization.application.service.impl.support.IntensityCreditCapSupport;
 import com.hcmut.lms.personalization.application.service.impl.support.IntensityParsingSupport;
 import com.hcmut.lms.personalization.application.service.impl.validation.GoalFeasibilityCheckService;
 import com.hcmut.lms.personalization.application.service.impl.validation.GoalProbabilityAnalysisService;
@@ -19,8 +20,10 @@ import com.hcmut.lms.personalization.application.service.impl.validation.Student
 import com.hcmut.lms.personalization.application.service.impl.validation.model.FeasibilityCheckResult;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.GoalValidationResult;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.LearningGoal;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import com.hcmut.lms.personalization.domain.entity.learningGoal.PreferredSummerSemester;
+import com.hcmut.lms.personalization.application.dto.response.enums.SummerLearningIntensity;
+import com.hcmut.lms.personalization.application.mapper.LearningGoalMapper;
+import com.hcmut.lms.personalization.repository.GoalValidationResultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,12 +31,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 @Service
 @RequiredArgsConstructor
@@ -45,10 +47,8 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
   private final GoalRecommendationService recommendationService;
   private final StudentProgressDataService studentProgressDataService;
   private final LearningGoalService learningGoalService;
-  private final Executor taskExecutor;
-
-  @PersistenceContext
-  private EntityManager entityManager;
+  private final GoalValidationResultRepository goalValidationResultRepository;
+  private final LearningGoalMapper learningGoalMapper;
 
   @Override
   @Transactional
@@ -57,17 +57,14 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
 
     List<CreatePreferredSummerSemesterRequest> summerSemesters = request.getSummerSemesters() != null ?
         request.getSummerSemesters() : List.of();
-    for (CreatePreferredSummerSemesterRequest summerSemester : summerSemesters) {
-      learningGoalService.createPreferredSummerSemester(studentId, createdGoal.getLearningGoalId(), summerSemester);
-    }
+    learningGoalService.createPreferredSummerSemesters(studentId, createdGoal.getLearningGoalId(), summerSemesters);
 
     LearningGoalFeasibilityResponse validationResult = request.getValidationResult();
     GoalValidationResult entity = GoalValidationResult.builder()
         .learningGoalId(createdGoal.getLearningGoalId())
         .studentId(studentId)
         .feasibilityLevel(validationResult.getFeasibilityLevel())
-        .probabilityScore(validationResult.getProbabilityScore() != null ? BigDecimal.valueOf(
-            validationResult.getProbabilityScore()) : null)
+        .probabilityScore(validationResult.getProbabilityScore())
         .metrics(validationResult.getMetrics())
         .preliminaryChecks(validationResult.getPreliminaryChecks())
         .probabilityAnalysis(validationResult.getProbabilityAnalysis())
@@ -76,9 +73,9 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
         .validationTimestamp(Instant.now())
         .build();
 
-    entityManager.persist(entity);
-    entityManager.flush();
-    return learningGoalService.getLearningGoalById(studentId, createdGoal.getLearningGoalId());
+    GoalValidationResult savedValidation = goalValidationResultRepository.save(entity);
+    createdGoal.setGoalValidationResult(learningGoalMapper.toGoalValidationResultResponse(savedValidation));
+    return createdGoal;
   }
 
 
@@ -106,21 +103,34 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
         .completedOnTime(goalRequest.getCompletedOnTime())
         .build();
 
+    List<CreatePreferredSummerSemesterRequest> summerSemesterRequests = request.getSummerSemesters() != null
+        ? request.getSummerSemesters() : Collections.emptyList();
+    List<PreferredSummerSemester> summerEntries = summerSemesterRequests.stream()
+        .map(dto -> {
+          PreferredSummerSemester entry = new PreferredSummerSemester();
+          entry.setPreferredSummerSemesterId(UUID.randomUUID());
+          entry.setLearningGoal(tempGoal);
+          entry.setSemesterId(dto.getSemesterId());
+          entry.setLearningIntensity(IntensityParsingSupport.parseRequiredTrimmedTitleCase(
+              SummerLearningIntensity.class, dto.getLearnIntensity()));
+          return entry;
+        })
+        .collect(java.util.stream.Collectors.toList());
+    tempGoal.setPreferredSummerSemesters(summerEntries);
+
     StudentProgressDataService.StudentProgressData progressData = studentProgressDataService.getStudentProgressData(
-        studentId);
+        studentId, tempGoal.getSpecializationId() != null ? UUID.fromString(tempGoal.getSpecializationId()) : null);
 
     BigDecimal currentGpa = progressData.currentGpa4();
     int earnedCredits = progressData.earnedCredits();
     int remainingCredits = progressData.remainingCredits();
     List<UUID> completedSubjectIds = progressData.completedSubjectIds();
     List<UUID> remainingSubjectIds = progressData.remainingSubjectIds();
+    Map<UUID, Integer> remainingSubjectCredits = progressData.remainingSubjectCredits();
 
-    CompletableFuture<FeasibilityCheckResult> feasibilityFuture = CompletableFuture.supplyAsync(
-        () -> feasibilityCheckService.checkFeasibility(
-            tempGoal, currentGpa, earnedCredits, remainingCredits,
-            completedSubjectIds, remainingSubjectIds, request.getGraduationRequirementUpdates()), taskExecutor);
-
-    FeasibilityCheckResult feasibility = feasibilityFuture.join();
+    FeasibilityCheckResult feasibility = feasibilityCheckService.checkFeasibility(
+        tempGoal, currentGpa, earnedCredits, remainingCredits,
+        completedSubjectIds, remainingSubjectIds, request.getGraduationRequirementUpdates());
 
     Map<String, Object> probabilityAnalysis;
     double probabilityScore;
@@ -136,9 +146,12 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
 
       probabilityAnalysis = probabilityAnalysisService.analyzeProbability(
           studentId, tempGoal.getSpecializationId(),
-          remainingSubjectIds, currentGpa, earnedCredits, remainingCredits, tempGoal.getTargetGpa(), totalSemesters);
+          remainingSubjectIds, remainingSubjectCredits,
+          currentGpa, earnedCredits, remainingCredits, tempGoal.getTargetGpa(),
+          totalSemesters, IntensityCreditCapSupport.mainSemesterCapStrict(tempGoal.getPrefMainSemLearnIntensity()));
 
-      probabilityScore = ((Number) probabilityAnalysis.getOrDefault("probabilityScore", 0.5)).doubleValue();
+      probabilityScore = getDouble(probabilityAnalysis.get("probabilityScore")) != null
+          ? getDouble(probabilityAnalysis.get("probabilityScore")) : 0.5;
     }
 
     log.info("Probability analysis result for studentId={}: {}", studentId, probabilityAnalysis);
@@ -193,7 +206,7 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
         .build();
 
     ProbabilityAnalysisDetailsResponse details = ProbabilityAnalysisDetailsResponse.builder()
-        .probabilityScore(getDouble(probabilityAnalysis.get("probabilityScore")))
+        .probabilityScore(getBigDecimal(probabilityAnalysis.get("probabilityScore")))
         .note(getString(probabilityAnalysis.get("note")))
         .sampleSize(getInteger(probabilityAnalysis.get("sampleSize")))
         .predictedFinalGpa(getDouble(probabilityAnalysis.get("predictedFinalGpa")))
@@ -208,7 +221,7 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
 
     return LearningGoalFeasibilityResponse.builder()
         .feasibilityLevel(feasibilityLevel)
-        .probabilityScore(probabilityScore)
+        .probabilityScore(BigDecimal.valueOf(probabilityScore))
         .metrics(metrics)
         .preliminaryChecks(checks)
         .probabilityAnalysis(probAnalysis)
@@ -219,6 +232,12 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
 
   private Double getDouble(Object value) {
     return value instanceof Number number ? number.doubleValue() : null;
+  }
+
+  private BigDecimal getBigDecimal(Object value) {
+    if (value instanceof BigDecimal bd) return bd;
+    if (value instanceof Number number) return BigDecimal.valueOf(number.doubleValue());
+    return null;
   }
 
   private Integer getInteger(Object value) {
@@ -249,6 +268,9 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
       case "HISTORICAL" -> ProbabilityMethod.HISTORICAL;
       case "PREDICTIVE" -> ProbabilityMethod.PREDICTIVE;
       case "PREDICTIVE_FALLBACK" -> ProbabilityMethod.PREDICTIVE_FALLBACK;
+      case "PREDICTIVE_UNAVAILABLE" -> ProbabilityMethod.PREDICTIVE_UNAVAILABLE;
+      case "PREDICTIVE_ERROR" -> ProbabilityMethod.PREDICTIVE_ERROR;
+      case "HISTORICAL_UNIMPLEMENTED" -> ProbabilityMethod.HISTORICAL_UNIMPLEMENTED;
       default -> ProbabilityMethod.UNKNOWN;
     };
   }
