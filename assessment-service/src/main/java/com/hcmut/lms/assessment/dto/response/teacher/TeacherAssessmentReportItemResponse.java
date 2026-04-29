@@ -6,20 +6,27 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
 @Setter
 @Builder
-public class TeacherAssessmentSummaryResponse {
+public class TeacherAssessmentReportItemResponse {
     private UUID assessmentId;
     private String title;
     private AssessmentType assessmentType;
     private GradingRule gradingRule;
-    private Integer maxAttempts;
-    private Integer timeLimit;
-    private Instant startTime;
-    private Instant closeTime;
+    private LocalDateTime closeTime;
+    private int totalStudents;
+    private int submittedCount;
+    private int onTimeCount;
+    private int lateCount;
+    private int missingCount;
+    private BigDecimal averageScore;
+    private BigDecimal maxScore;
+    private BigDecimal difficultyPercent;
+    private List<TeacherQuestionDifficultyResponse> questions;
 }

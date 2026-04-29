@@ -412,29 +412,30 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     @Override
     @Transactional(readOnly = true)
     public ClassSectionReportMetadataResponse getClassSectionReportMetadata(UUID classId) {
-      ClassSection classSection = classSectionRepository.findById(classId)
-          .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
+        ClassSection classSection = classSectionRepository.findById(classId)
+                .orElseThrow(() -> new EntityNotFoundException("Class section not found with id: " + classId));
 
-      List<Chapter> chapters = chapterRepository.findByClassSectionIdWithLectures(classId);
+        List<Chapter> chapters = chapterRepository.findByClassSectionIdWithLectures(classId);
 
-      AtomicInteger displayOrder = new AtomicInteger(1);
-      List<LectureReportMetadataResponse> lectures = chapters.stream()
-          .sorted(Comparator.comparing(Chapter::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
-          .flatMap(chapter -> chapter.getLectures().stream()
-              .sorted(Comparator.comparing(Lecture::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))))
-          .map(lecture -> LectureReportMetadataResponse.builder()
-              .lectureId(lecture.getId())
-              .title(lecture.getTitle())
-              .order(displayOrder.getAndIncrement())
-              .estimateTimeSpent(lecture.getEstimateTimeSpent())
-              .build())
-          .toList();
+        AtomicInteger displayOrder = new AtomicInteger(1);
+        List<LectureReportMetadataResponse> lectures = chapters.stream()
+                .sorted(Comparator.comparing(Chapter::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
+                .flatMap(chapter -> chapter.getLectures().stream()
+                        .sorted(Comparator.comparing(Lecture::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder()))))
+                .map(lecture -> LectureReportMetadataResponse.builder()
+                        .lectureId(lecture.getId())
+                        .title(lecture.getTitle())
+                        .order(displayOrder.getAndIncrement())
+                        .estimateTimeSpent(lecture.getEstimateTimeSpent())
+                        .viewCount(lecture.getViewCount())
+                        .build())
+                .toList();
 
-      return ClassSectionReportMetadataResponse.builder()
-          .classId(classSection.getId())
-          .teacherId(classSection.getTeacherId())
-          .lectures(lectures)
-          .build();
+        return ClassSectionReportMetadataResponse.builder()
+                .classId(classSection.getId())
+                .teacherId(classSection.getTeacherId())
+                .lectures(lectures)
+                .build();
     }
 
 
