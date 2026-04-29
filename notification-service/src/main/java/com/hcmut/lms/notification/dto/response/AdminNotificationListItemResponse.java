@@ -3,6 +3,7 @@ package com.hcmut.lms.notification.dto.response;
 import com.hcmut.lms.notification.enums.NotificationPriority;
 import com.hcmut.lms.notification.enums.NotificationStatus;
 import com.hcmut.lms.notification.enums.NotificationType;
+import com.hcmut.lms.notification.enums.TargetMode;
 import lombok.Builder;
 import lombok.Data;
 
@@ -22,6 +23,7 @@ public class AdminNotificationListItemResponse {
     private Instant createdAt;
     private Instant scheduledAt;
     private Instant expiresAt;
+    private TargetMode targetMode;
     private long totalRecipients;
     private long deliveredCount;
     private long failedCount;

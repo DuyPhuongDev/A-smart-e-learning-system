@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title th:text="${subject}">General Notification</title>
-  <!-- Web Fonts -->
+  <title th:text="${subject}">System Maintenance Notification</title>
+  <!-- Giữ lại Web Fonts cho các ứng dụng email có hỗ trợ -->
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lexend:wght@400;600;700&display=swap" rel="stylesheet"/>
@@ -36,15 +36,14 @@
 
         <!-- Main Content -->
         <tr>
-          <td align="center" style="padding: 40px 24px; background-color: #ffffff;">
-
-            <!-- Tiêu đề & Priority Badge -->
-            <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom: 16px;">
+          <td align="center" style="padding: 40px 20px; background-color: #ffffff;">
+            <!-- Tiêu đề & Priority Badge nằm ngang và căn giữa -->
+            <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom: 12px;">
               <tr>
                 <!-- Cột chứa Tiêu đề -->
                 <td align="center" valign="middle" style="padding-right: 12px;">
                   <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 24px; line-height: 32px; font-weight: 700; color: #121c2a; margin: 0;" th:text="${title}">
-                    Thông báo từ hệ thống
+                    Thông báo bảo trì hệ thống
                   </div>
                 </td>
 
@@ -52,15 +51,15 @@
                 <td align="center" valign="middle">
                   <!-- LOW -->
                   <span th:if="${priority == 'LOW'}" style="display: inline-block; padding: 4px 10px; background-color: #f1f5f9; color: #475569; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #e2e8f0; white-space: nowrap;">
-                                            Low
+                                            Low Priority
                                         </span>
                   <!-- MEDIUM -->
                   <span th:if="${priority == 'MEDIUM'}" style="display: inline-block; padding: 4px 10px; background-color: #fef9c3; color: #854d0e; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #fef08a; white-space: nowrap;">
-                                            Medium
+                                            Medium Priority
                                         </span>
                   <!-- HIGH -->
                   <span th:if="${priority == 'HIGH'}" style="display: inline-block; padding: 4px 10px; background-color: #ffedd5; color: #c2410c; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #fed7aa; white-space: nowrap;">
-                                            High
+                                            High Priority
                                         </span>
                   <!-- URGENT -->
                   <span th:if="${priority == 'URGENT'}" style="display: inline-block; padding: 4px 10px; background-color: #fee2e2; color: #b91c1c; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 600; border-radius: 9999px; text-transform: uppercase; border: 1px solid #fecaca; white-space: nowrap;">
@@ -70,22 +69,44 @@
               </tr>
             </table>
 
-            <!-- Nội dung chi tiết thông báo -->
-            <!-- Dùng th:utext nếu bạn muốn gửi cả thẻ <br> hay <b> từ backend xuống để ngắt dòng -->
-            <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 26px; font-weight: 400; color: #434654; text-align: center; margin: 0 auto 32px auto; max-width: 500px;" th:utext="${content}">
-              Chào bạn, hệ thống vừa cập nhật một số tính năng mới nhằm nâng cao trải nghiệm học tập của bạn. Vui lòng đăng nhập để xem các thay đổi chi tiết. Nếu có bất kỳ thắc mắc nào, đừng ngần ngại liên hệ với bộ phận hỗ trợ.
-            </div>
+            <p style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 16px; line-height: 24px; font-weight: 400; color: #434654; text-align: center; margin: 0 auto 32px auto; max-width: 450px;" th:utext="${content}">
+              Hệ thống Welearning sẽ tiến hành bảo trì định kỳ để nâng cấp hiệu suất. Việc đăng nhập và sử dụng dịch vụ sẽ tạm thời không khả dụng trong thời gian này.
+            </p>
 
-            <!-- Nút Hành động (Chỉ hiển thị nếu có truyền actionUrl) -->
-            <table th:if="${metadata.get('actionUrl') != null and metadata.get('actionUrl') != ''}" width="100%" border="0" cellpadding="0" cellspacing="0">
+            <!-- Khối Thời gian (Bento-style Box) -->
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #eff3ff; border: 1px solid #d9e3f7; border-radius: 12px; margin-bottom: 32px;">
               <tr>
-                <td align="center">
-                  <a th:href="${metadata.get('actionUrl')}" href="#" style="display: inline-block; background-color: #003fb1; color: #ffffff; font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: 0.025em; padding: 14px 36px; border-radius: 9999px; text-decoration: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <span>Xem chi tiết</span>
-                  </a>
+                <!-- Thời gian Bắt đầu -->
+                <td align="center" valign="middle" style="padding: 24px; width: 45%;">
+                  <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 12px; line-height: 16px; font-weight: 500; color: #434654; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+                    Bắt đầu
+                  </div>
+                  <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 24px; line-height: 32px; font-weight: 700; color: #003fb1;" th:text="${metadata.get('startTime')}">
+                    22:00
+                  </div>
+                </td>
+
+                <!-- Đường kẻ dọc chia cắt -->
+                <td align="center" valign="middle" style="width: 10%;">
+                  <div style="height: 48px; width: 1px; background-color: #c3c5d7;"></div>
+                </td>
+
+                <!-- Thời gian Kết thúc -->
+                <td align="center" valign="middle" style="padding: 24px; width: 45%;">
+                  <div style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 12px; line-height: 16px; font-weight: 500; color: #434654; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+                    Kết thúc
+                  </div>
+                  <div style="font-family: 'Lexend', Helvetica, Arial, sans-serif; font-size: 24px; line-height: 32px; font-weight: 700; color: #003fb1;" th:text="${metadata.get('endTime')}">
+                    02:00
+                  </div>
                 </td>
               </tr>
             </table>
+
+            <!-- Secondary Context -->
+            <p style="font-family: 'Inter', Helvetica, Arial, sans-serif; font-size: 14px; line-height: 20px; font-weight: 400; color: #434654; text-align: center; margin: 0 auto; max-width: 384px;">
+              Chúng tôi xin lỗi vì sự bất tiện này và cảm ơn sự thông cảm của bạn trong quá trình nâng cấp hệ thống.
+            </p>
 
           </td>
         </tr>

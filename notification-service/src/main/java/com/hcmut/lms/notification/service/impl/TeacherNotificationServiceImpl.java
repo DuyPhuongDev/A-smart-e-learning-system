@@ -28,7 +28,10 @@ import com.hcmut.lms.notification.service.TeacherNotificationService;
 import com.hcmut.lms.notification.util.JsonCodec;
 import com.hcmut.lms.notification.util.RoleGuard;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +52,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class TeacherNotificationServiceImpl implements TeacherNotificationService {
 
@@ -59,6 +63,9 @@ public class TeacherNotificationServiceImpl implements TeacherNotificationServic
     private final CourseManagementInternalClient courseManagementInternalClient;
     private final JsonCodec jsonCodec;
 
+    @Value("${front-end}")
+    private String frontEndUrl;
+
     @Override
     @Transactional
     public AdminNotificationCreateResponse create(
@@ -66,6 +73,7 @@ public class TeacherNotificationServiceImpl implements TeacherNotificationServic
             TeacherCreateNotificationRequest request,
             String idempotencyKey
     ) {
+        log.info("TeacherNotificationServiceImpl.create() - Start");
         RoleGuard.requireTeacher(currentUser);
         validateCreateRequest(request);
 
@@ -88,6 +96,7 @@ public class TeacherNotificationServiceImpl implements TeacherNotificationServic
         systemMetadata.put("createdBy", currentUser.getId().toString());
         systemMetadata.put("createdAt", Instant.now().toString());
         systemMetadata.put("scope", request.getScope().name());
+        systemMetadata.put("actionUrl", frontEndUrl);
 
         String targetPayload = jsonCodec.toJsonString(
                 Map.of("classIds", resolvedClassIds.stream().map(UUID::toString).toList())
@@ -115,7 +124,7 @@ public class TeacherNotificationServiceImpl implements TeacherNotificationServic
         entity.setIdempotencyKey(StringUtils.hasText(idempotencyKey) ? idempotencyKey.trim() : null);
 
         notificationRepository.save(entity);
-        notificationOutboxService.enqueue(entity, NotificationOutboxEventType.ADMIN_CREATED);
+        notificationOutboxService.enqueue(entity, NotificationOutboxEventType.ADMIN_CREATED); // luu outbox table
 
         if (request.getSendMode() == SendMode.IMMEDIATE) {
             notificationDispatchService.dispatch(entity);
@@ -307,6 +316,7 @@ public class TeacherNotificationServiceImpl implements TeacherNotificationServic
                 .type(entity.getType())
                 .priority(entity.getPriority())
                 .status(entity.getStatus())
+                .targetMode(entity.getTargetMode())
                 .channels(jsonCodec.toStringSet(entity.getChannels()))
                 .createdAt(entity.getCreatedAt())
                 .scheduledAt(entity.getScheduledAt())

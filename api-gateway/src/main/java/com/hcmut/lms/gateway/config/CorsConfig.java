@@ -38,14 +38,16 @@ public class CorsConfig {
                 "Content-Type",
                 "Accept",
                 "Origin",
-                "X-Requested-With"
+                "X-Requested-With",
+                "Idempotency-Key"
         ));
         
         // Expose custom headers to frontend
         corsConfig.setExposedHeaders(Arrays.asList(
                 "X-User-Id",
                 "X-User-Email",
-                "X-Role"
+                "X-Role",
+                "Idempotency-Key"
         ));
         
         // Allow credentials (cookies, authorization headers)

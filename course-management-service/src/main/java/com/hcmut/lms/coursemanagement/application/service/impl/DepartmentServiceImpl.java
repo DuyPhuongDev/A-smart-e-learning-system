@@ -137,5 +137,11 @@ public class DepartmentServiceImpl implements DepartmentService {
         departmentRepository.deleteById(id);
         log.info("Department deleted successfully with id: {}", id);
     }
+
+    @Override
+    public DepartmentResponse getDepartmentBySpecialization(UUID specializationId) {
+        Department department = departmentRepository.findBySpecializationId(specializationId);
+        return departmentMapper.toResponse(department);
+    }
 }
 

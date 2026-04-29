@@ -11,5 +11,5 @@ import java.util.UUID;
 public interface CourseManagementInternalClient {
 
     @GetMapping("/api/courses/internal/class-sections/teacher/{teacherId}/class-ids")
-    List<UUID> getClassIdsByTeacher(@PathVariable("teacherId") UUID teacherId);
+    List<UUID> getClassIdsByTeacher(@PathVariable UUID teacherId);
 }

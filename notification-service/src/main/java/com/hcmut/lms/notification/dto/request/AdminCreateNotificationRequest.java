@@ -36,7 +36,7 @@ public class AdminCreateNotificationRequest {
     // Required when targetMode = USER_LIST
     private Set<UUID> userIds;
 
-    // Required when targetMode = GROUP (values: ADMIN, TEACHER, STUDENT)
+    // Required when targetMode = GROUP (values: ADMIN, TEACHER, ALL_STUDENT, K22_STUDENT,...)
     private Set<String> groups;
 
     // Required when targetMode = COURSE (provide courseId or classIds)
