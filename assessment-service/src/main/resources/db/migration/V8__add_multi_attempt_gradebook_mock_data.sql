@@ -50,6 +50,7 @@ INSERT INTO assessment_db.assessment_submissions (
     attempt_no,
     submit_time,
     score,
+    actual_score,
     taken_time,
     status,
     created_at,
@@ -62,6 +63,7 @@ SELECT
     attempt_no,
     submit_time,
     score,
+    score,
     taken_time,
     status,
     now(),
@@ -71,6 +73,7 @@ ON CONFLICT (assessment_id, student_id, attempt_no) DO UPDATE
 SET
     submit_time = EXCLUDED.submit_time,
     score = EXCLUDED.score,
+    actual_score = excluded.actual_score,
     taken_time = EXCLUDED.taken_time,
     status = EXCLUDED.status,
     updated_at = now();

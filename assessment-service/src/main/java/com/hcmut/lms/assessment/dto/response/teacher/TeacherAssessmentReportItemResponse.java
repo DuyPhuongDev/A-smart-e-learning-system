@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,7 +19,7 @@ public class TeacherAssessmentReportItemResponse {
     private String title;
     private AssessmentType assessmentType;
     private GradingRule gradingRule;
-    private LocalDateTime closeTime;
+    private Instant closeTime;
     private int totalStudents;
     private int submittedCount;
     private int onTimeCount;

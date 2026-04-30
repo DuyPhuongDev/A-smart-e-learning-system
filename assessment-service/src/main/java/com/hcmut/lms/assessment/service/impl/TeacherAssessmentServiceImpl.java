@@ -289,7 +289,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
             Question question = resolveConcreteQuestion(assessmentQuestion.getQuestion());
             QuestionSubmission questionSubmission = submissionByQuestionId.get(question.getId());
 
-            BigDecimal questionMaxPoints = defaultPoint(question);
+            BigDecimal questionMaxPoints = defaultPoint(assessmentQuestion);
             maxScore = maxScore.add(questionMaxPoints);
 
             TeacherQuestionReviewResponse.TeacherQuestionReviewResponseBuilder builder =
@@ -298,7 +298,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                             .orderIndex(assessmentQuestion.getOrderIndex())
                             .questionType(question.getQuestionType())
                             .content(question.getContent())
-                            .maxPoints(questionMaxPoints)
+                            .maxPoints(maxScore)
                             .earnedPoints(questionSubmission != null ? nonNull(questionSubmission.getScore()) : BigDecimal.ZERO)
                             .status(questionSubmission != null ? questionSubmission.getStatus() : QuestionSubmissionStatus.INCORRECT)
                             .feedback(questionSubmission != null ? latestFeedbackByQuestionSubmissionId.get(questionSubmission.getId()) : null);
@@ -414,7 +414,9 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 throw new BadRequestException("Only ESSAY questions can be graded manually");
             }
 
-            BigDecimal maxPoints = defaultPoint(question);
+            AssessmentQuestion assessmentQuestion = assessmentQuestionRepository.findByQuestionIdAndAssessmentId(question.getId(), assessment.getId()).orElse(null);
+
+            BigDecimal maxPoints = assessmentQuestion != null ? defaultPoint(assessmentQuestion) : BigDecimal.ZERO;
             BigDecimal score = normalizeScore(item.getScore(), maxPoints);
 
             questionSubmission.setScore(score);
@@ -465,7 +467,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
 
         BigDecimal maxScore = assessmentQuestionRepository.findByAssessmentIdOrderByIndex(assessment.getId())
                 .stream()
-                .map(aq -> defaultPoint(resolveConcreteQuestion(aq.getQuestion())))
+                .map(this::defaultPoint)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return TeacherEssayGradesResponse.builder()
@@ -647,7 +649,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                         .divide(BigDecimal.valueOf(selectedScores.size()), 3, RoundingMode.HALF_UP);
 
         BigDecimal maxScore = assessmentQuestions.stream()
-                .map(assessmentQuestion -> defaultPoint(resolveConcreteQuestion(assessmentQuestion.getQuestion())))
+                .map(this::defaultPoint)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(3, RoundingMode.HALF_UP);
 
@@ -840,7 +842,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 .attemptId(attempt.getId())
                 .attemptNo(attempt.getAttemptNo())
                 .submittedAt(attempt.getSubmitTime())
-                .score(attempt.getScore())
+                .score(attempt.getActualScore())
                 .status(pendingAttemptIds.contains(attempt.getId()) ? STATUS_PENDING_REVIEW : STATUS_GRADED)
                 .takenTime(attempt.getTakenTime())
                 .correctCount(correctCount)
@@ -920,7 +922,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 .studentName(buildDisplayName(studentProfile))
                 .attemptNo(attempt.getAttemptNo())
                 .submittedAt(attempt.getSubmitTime())
-                .score(attempt.getScore())
+                .score(attempt.getActualScore())
                 .gradingStatus(gradingStatus)
                 .build();
     }
@@ -1102,9 +1104,8 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
     }
 
 
-    /////// impl later
-    private BigDecimal defaultPoint(Question question) {
-        return BigDecimal.ZERO;
+    private BigDecimal defaultPoint(AssessmentQuestion assessmentQuestion) {
+        return assessmentQuestion.getPoint() != null ? assessmentQuestion.getPoint() : BigDecimal.ZERO;
     }
 
     private BigDecimal nonNull(BigDecimal value) {

@@ -32,22 +32,20 @@ WHERE assessment_id = '29cde1ff-4fa2-4d30-9927-b61f83b5b388'
 INSERT INTO assessment_db.questions (
     id,
     difficult_level,
-    point,
     question_type,
     content,
     required,
     created_at,
     updated_at
 ) VALUES
-    ('a1000000-0000-0000-0000-000000000001', 'EASY', 2.000, 'MCQ', 'Cau 1: LMS viet tat cua cum tu nao?', true, now(), now()),
-    ('a1000000-0000-0000-0000-000000000002', 'EASY', 2.000, 'MCQ', 'Cau 2: Thanh phan nao dung de theo doi tien do hoc tap?', true, now(), now()),
-    ('a1000000-0000-0000-0000-000000000003', 'MEDIUM', 2.000, 'MCQ', 'Cau 3: Completion rate duoc tinh dua tren du lieu nao?', true, now(), now()),
-    ('a1000000-0000-0000-0000-000000000004', 'MEDIUM', 2.000, 'MCQ', 'Cau 4: Khi nao mot submission duoc xem la tre han?', true, now(), now()),
-    ('a1000000-0000-0000-0000-000000000005', 'HARD', 2.000, 'MCQ', 'Cau 5: Chi so nao giup phat hien sinh vien can can thiep?', true, now(), now())
+    ('a1000000-0000-0000-0000-000000000001', 'EASY', 'MCQ', 'Cau 1: LMS viet tat cua cum tu nao?', true, now(), now()),
+    ('a1000000-0000-0000-0000-000000000002', 'EASY', 'MCQ', 'Cau 2: Thanh phan nao dung de theo doi tien do hoc tap?', true, now(), now()),
+    ('a1000000-0000-0000-0000-000000000003', 'MEDIUM', 'MCQ', 'Cau 3: Completion rate duoc tinh dua tren du lieu nao?', true, now(), now()),
+    ('a1000000-0000-0000-0000-000000000004', 'MEDIUM', 'MCQ', 'Cau 4: Khi nao mot submission duoc xem la tre han?', true, now(), now()),
+    ('a1000000-0000-0000-0000-000000000005', 'HARD', 'MCQ', 'Cau 5: Chi so nao giup phat hien sinh vien can can thiep?', true, now(), now())
 ON CONFLICT (id) DO UPDATE
 SET
     difficult_level = EXCLUDED.difficult_level,
-    point = EXCLUDED.point,
     question_type = EXCLUDED.question_type,
     content = EXCLUDED.content,
     required = EXCLUDED.required,
