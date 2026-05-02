@@ -35,6 +35,10 @@ public class LearningPathSchedulingService {
       "MI1003", 2  // MI1003 must be in HK2 (2nd semester of academic year)
                                                                                       );
 
+  private static final Set<String> SUBJECTS_BANNED_IN_SUMMER = Set.of(
+      "CO4029"  // Đồ án Chuyên ngành cannot be taken in summer semester
+  );
+
   public List<SemesterSlot> scheduleSubjects(
       List<SubjectCandidate> candidates, List<SemesterResponse> remainingSemesters, int mainCreditCap,
       Map<UUID, Integer> preferredSummerCapBySemesterId, int plannedSummerSemCount, Set<UUID> completedSubjectIds) {
@@ -306,6 +310,12 @@ public class LearningPathSchedulingService {
     // This prevents over-stuffing while still allowing a subject that pushes
     // from below cap-1 to the full cap (e.g., a 2-credit subject when at 16/18).
     if (semester.getTotalCredits() >= semester.getCreditCap() - 1) {
+      return true;
+    }
+
+    // Check summer-ban constraints (e.g., CO4029 cannot be in summer)
+    if (SUBJECTS_BANNED_IN_SUMMER.contains(candidate.getSubjectCode())
+        && Boolean.TRUE.equals(semester.getIsSummer())) {
       return true;
     }
 

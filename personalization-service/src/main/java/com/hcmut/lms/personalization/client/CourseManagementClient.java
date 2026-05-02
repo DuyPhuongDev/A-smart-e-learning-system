@@ -52,4 +52,7 @@ public interface CourseManagementClient {
 
   @GetMapping("/curriculums/resolve")
   CurriculumResolutionResponse resolveCurriculum(@RequestParam UUID specializationId, @RequestParam Integer intakeYear);
+
+  @GetMapping("/subjects/ids")
+  List<UUID> getAllSubjectIds();
 }

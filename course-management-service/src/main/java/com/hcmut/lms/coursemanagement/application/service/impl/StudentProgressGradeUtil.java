@@ -1,5 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
+import com.hcmut.lms.common.util.SubjectPassUtil;
 import com.hcmut.lms.coursemanagement.client.dto.StudentEnrollmentResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.subject.SubjectGradingType;
 import org.springframework.stereotype.Component;
@@ -35,24 +36,8 @@ public class StudentProgressGradeUtil {
     if (enrollment == null) {
       return null;
     }
-
-    return switch (gradingType) {
-      case GRADED -> enrollment.getFinalGrade() != null ? enrollment.getFinalGrade() >= 4.0 : null;
-      case PASS_FAIL -> enrollment.getIsPassed();
-      case BOTH -> {
-        Boolean isPassed = enrollment.getIsPassed();
-        Double grade = enrollment.getFinalGrade();
-        if (isPassed != null && isPassed) {
-          yield true;
-        }
-        if (grade != null && grade >= 5.0) {
-          yield true;
-        }
-        if (isPassed != null && !isPassed && grade != null && grade < 5.0) {
-          yield false;
-        }
-        yield null;
-      }
-    };
+    return SubjectPassUtil.evaluateIsPassed(
+        enrollment.getIsPassed(), enrollment.getFinalGrade(),
+        gradingType != null ? gradingType.name() : null);
   }
 }

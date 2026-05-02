@@ -1,5 +1,6 @@
 package com.hcmut.lms.personalization.application.service.impl;
 
+import com.hcmut.lms.common.util.SubjectPassUtil;
 import com.hcmut.lms.personalization.application.dto.record.CurriculumContext;
 import com.hcmut.lms.personalization.application.dto.record.CurriculumEnrichmentData;
 import com.hcmut.lms.personalization.application.dto.request.SubjectChangeDto;
@@ -8,6 +9,7 @@ import com.hcmut.lms.personalization.application.dto.response.*;
 import com.hcmut.lms.personalization.application.service.LearningPathService;
 import com.hcmut.lms.personalization.application.service.impl.learning_path.LearningPathGenerationService;
 import com.hcmut.lms.personalization.client.CourseManagementClient;
+import com.hcmut.lms.personalization.client.LearningServiceClient;
 import com.hcmut.lms.personalization.client.dto.*;
 import com.hcmut.lms.personalization.domain.entity.learningGoal.LearningGoal;
 import com.hcmut.lms.personalization.domain.entity.learningPath.LearningPath;
@@ -23,6 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,6 +43,7 @@ public class LearningPathServiceImpl implements LearningPathService {
   private final LearningPathSubjectRepository learningPathSubjectRepository;
   private final LearningPathGenerationService learningPathGenerationService;
   private final LearningPathResponseAssembler assembler;
+  private final LearningServiceClient learningServiceClient;
 
   @Override
   @Transactional(readOnly = true)
@@ -291,6 +296,135 @@ public class LearningPathServiceImpl implements LearningPathService {
             .prerequisitesGraph(List.of())
             .build())
         .toList();
+  }
+
+  @Override
+  public LearningPathSyncProgressResponse syncLearningPathProgress(UUID studentId, UUID learningPathId) {
+    log.info("Syncing learning path progress for studentId={}, learningPathId={}", studentId, learningPathId);
+
+    LearningPath path = getActiveOwnedPath(studentId, learningPathId);
+
+    // 1. Batch read all learning path subjects
+    List<LearningPathSubject> allSubjects = learningPathSubjectRepository.findByLearningPathId(learningPathId);
+
+    // 2. Batch read all enrollments with subject IDs (single Feign call)
+    List<StudentEnrollmentWithSubjectResponse> enrollments;
+    try {
+      enrollments = learningServiceClient.getStudentEnrollmentsWithSubjects(studentId);
+    } catch (Exception e) {
+      log.warn("Failed to fetch enrollments from learning-service: {}", e.getMessage());
+      enrollments = List.of();
+    }
+
+    if (enrollments.isEmpty()) {
+      log.info("No enrollments found for student, returning path as-is");
+      return LearningPathSyncProgressResponse.builder()
+          .path(assembler.toPathResponse(path, studentId))
+          .failedSubjects(List.of())
+          .build();
+    }
+
+    // 3. Group enrollments by subjectId, sorted by attemptNo
+    Map<UUID, List<StudentEnrollmentWithSubjectResponse>> enrollmentsBySubject = enrollments.stream()
+        .filter(e -> e.getSubjectId() != null)
+        .collect(Collectors.groupingBy(
+            StudentEnrollmentWithSubjectResponse::getSubjectId,
+            Collectors.collectingAndThen(
+                Collectors.toList(),
+                list -> list.stream()
+                    .sorted(Comparator.comparing(
+                        StudentEnrollmentWithSubjectResponse::getAttemptNo,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                    .toList())));
+
+    // 4. Group LP subjects by subjectId, sorted by attemptNo (nulls first)
+    Map<UUID, List<LearningPathSubject>> lpSubjectsBySubjectId = allSubjects.stream()
+        .collect(Collectors.groupingBy(
+            LearningPathSubject::getSubjectId,
+            Collectors.collectingAndThen(
+                Collectors.toList(),
+                list -> list.stream()
+                    .sorted(Comparator.comparing(
+                        LearningPathSubject::getAttemptNo,
+                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                    .toList())));
+
+    // Pre-fetch all sections to avoid N+1 inside the matching loop
+    Map<UUID, LearningPathSection> sectionMap = learningPathSectionRepository.findByLearningPathId(learningPathId)
+        .stream()
+        .collect(Collectors.toMap(LearningPathSection::getLearningPathSectionId, s -> s));
+
+    List<LearningPathSubject> subjectsToSave = new ArrayList<>();
+    List<FailedSubjectInfo> failedSubjects = new ArrayList<>();
+
+    // 5. Match by attempt order
+    for (Map.Entry<UUID, List<LearningPathSubject>> entry : lpSubjectsBySubjectId.entrySet()) {
+      UUID subjectId = entry.getKey();
+      List<LearningPathSubject> lpSubjects = entry.getValue();
+      List<StudentEnrollmentWithSubjectResponse> subjectEnrollments = enrollmentsBySubject.getOrDefault(subjectId, List.of());
+
+      int matchCount = Math.min(lpSubjects.size(), subjectEnrollments.size());
+      for (int i = 0; i < matchCount; i++) {
+        LearningPathSubject lpSubject = lpSubjects.get(i);
+        StudentEnrollmentWithSubjectResponse enrollment = subjectEnrollments.get(i);
+
+        Boolean isCompleted = evaluateIsCompleted(enrollment);
+
+        if (isCompleted != null) {
+          lpSubject.setIsCompleted(isCompleted);
+        }
+        lpSubject.setCompletionGrade(enrollment.getFinalGrade() != null ? BigDecimal.valueOf(enrollment.getFinalGrade()) : null);
+        lpSubject.setAttemptNo(enrollment.getAttemptNo());
+        if (enrollment.getCompletionTime() != null && !enrollment.getCompletionTime().isBlank()) {
+          try {
+            lpSubject.setCompletionDate(LocalDateTime.parse(enrollment.getCompletionTime()));
+          } catch (Exception ex) {
+            log.debug("Unable to parse completionTime: {}", enrollment.getCompletionTime());
+          }
+        }
+
+        subjectsToSave.add(lpSubject);
+
+        if (Boolean.FALSE.equals(isCompleted) && enrollment.getFinalGrade() != null) {
+          LearningPathSection section = sectionMap.get(lpSubject.getLearningPathSectionId());
+          failedSubjects.add(FailedSubjectInfo.builder()
+              .subjectId(subjectId)
+              .subjectCode(lpSubject.getSubjectCode())
+              .subjectName(lpSubject.getSubjectName())
+              .semesterOrder(section != null ? section.getSemesterOrder() : null)
+              .completionGrade(enrollment.getFinalGrade())
+              .attemptNo(enrollment.getAttemptNo())
+              .build());
+        }
+      }
+    }
+
+    // 6. Batch save
+    if (!subjectsToSave.isEmpty()) {
+      learningPathSubjectRepository.saveAll(subjectsToSave);
+    }
+
+    // 7. Recalculate completion rate in-memory
+    int totalCredits = allSubjects.stream().mapToInt(LearningPathSubject::getCredits).sum();
+    int completedCredits = allSubjects.stream()
+        .filter(s -> Boolean.TRUE.equals(s.getIsCompleted()))
+        .mapToInt(LearningPathSubject::getCredits)
+        .sum();
+    if (totalCredits > 0) {
+      path.setCompletionRate(BigDecimal.valueOf(completedCredits * 100.0 / totalCredits));
+    }
+    learningPathRepository.save(path);
+
+    log.info("Synced {} subjects, {} failed", subjectsToSave.size(), failedSubjects.size());
+    return LearningPathSyncProgressResponse.builder()
+        .path(assembler.toPathResponse(path, studentId))
+        .failedSubjects(failedSubjects)
+        .build();
+  }
+
+  private Boolean evaluateIsCompleted(StudentEnrollmentWithSubjectResponse enrollment) {
+    return SubjectPassUtil.evaluateIsPassed(
+        enrollment.getIsPassed(), enrollment.getFinalGrade(), enrollment.getGradingType());
   }
 
   private LearningPath getActiveOwnedPath(UUID studentId, UUID learningPathId) {

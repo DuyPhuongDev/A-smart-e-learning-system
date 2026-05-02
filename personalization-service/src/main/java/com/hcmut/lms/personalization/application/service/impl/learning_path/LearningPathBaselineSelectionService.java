@@ -24,6 +24,14 @@ import java.util.stream.Collectors;
 public class LearningPathBaselineSelectionService {
 
   private static final String FREE_ELECTIVE_SECTION_KEY = normalizeSectionName("Tự chọn tự do");
+  private static final String MAJOR_SPECIALIZATION_KEY = normalizeSectionName("Chuyên ngành");
+  private static final String MAJOR_SPECIALIZATION_GROUP_C_KEY = normalizeSectionName("Chuyên ngành (Nhóm C)");
+
+  private static final Set<String> FREE_ELECTIVE_ALLOWED_SECTION_KEYS = Set.of(
+      FREE_ELECTIVE_SECTION_KEY,
+      MAJOR_SPECIALIZATION_KEY,
+      MAJOR_SPECIALIZATION_GROUP_C_KEY
+  );
 
   private final LearningServiceClient learningServiceClient;
   private final SubjectOccupationValuationRepository subjectOccupationValuationRepository;
@@ -171,7 +179,8 @@ public class LearningPathBaselineSelectionService {
           if (selectedSubjectIds.contains(candidate.getSubjectId())) {
             continue;
           }
-          if (SubjectCreditUtil.safeCredits(candidate) > 0) {
+          if (SubjectCreditUtil.safeCredits(candidate) > 0
+              && FREE_ELECTIVE_ALLOWED_SECTION_KEYS.contains(normalizeSectionName(candidate.getSectionName()))) {
             freePool.add(candidate);
           }
         }

@@ -309,6 +309,10 @@ public class StudentProgressServiceImpl implements StudentProgressService {
           .build());
     }
 
+    // Compute overall pass status: true if any attempt passed; false if attempts exist but none passed; null otherwise
+    Boolean overallIsPassed = attempts.isEmpty() ? null
+        : attempts.stream().anyMatch(a -> Boolean.TRUE.equals(a.getIsPassed()));
+
     // Determine which attempt is applied (best grade or most recent if passed)
     if (!attempts.isEmpty()) {
       // If grades are equal, prefer higher attemptNo (more recent)
@@ -360,6 +364,7 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         .subjectId(subjectId.toString())
         .recommendedYear(recommendedYear)
         .recommendedSemester(recommendedSemester)
+        .isPassed(overallIsPassed)
         .attempts(attempts)
         .prerequisites(prerequisites)
         .recommendations(recommendations)

@@ -6,6 +6,7 @@ import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
+import com.hcmut.lms.learning.dto.response.StudentEnrollmentWithSubjectResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -47,6 +48,12 @@ public interface EnrollmentService {
    * Used by course-management-service for student progress tracking
    */
   List<StudentEnrollmentResponse> getStudentEnrollmentsWithSubjects(UUID studentId);
+
+  /**
+   * Get all enrollments for a student with resolved subject IDs.
+   * Batch resolves classId → subjectId via course-management-service in a single Feign call.
+   */
+  List<StudentEnrollmentWithSubjectResponse> getStudentEnrollmentsWithSubjectIds(UUID studentId);
 
   List<UUID> getStudentIdsByClassId(UUID classId);
 

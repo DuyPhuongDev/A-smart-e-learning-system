@@ -1,7 +1,7 @@
 {
   "studentInfo": {
     "studentCode": "2110004",
-    "email": "highachiever.test@hcmut.edu.vn",
+    "email": "test.004@hcmut.edu.vn",
     "firstName": "HIGH",
     "lastName": "ACHIEVER",
     "phone": "0900000004",
@@ -9,110 +9,6 @@
     "intakeYearCode": "22"
   },
   "gradeRecords": [
-    {
-      "subjectCode": "CO3021",
-      "credits": 3,
-      "gradeNumeric": 9.0,
-      "gradeLetter": "A",
-      "semesterCode": "HK251",
-      "academicYearCode": "25"
-    },
-    {
-      "subjectCode": "CO3061",
-      "credits": 3,
-      "gradeNumeric": 9.2,
-      "gradeLetter": "A",
-      "semesterCode": "HK251",
-      "academicYearCode": "25"
-    },
-    {
-      "subjectCode": "CO4029",
-      "credits": 2,
-      "gradeNumeric": 9.5,
-      "gradeLetter": "A+",
-      "semesterCode": "HK251",
-      "academicYearCode": "25"
-    },
-    {
-      "subjectCode": "CO3065",
-      "credits": 3,
-      "gradeNumeric": 9.0,
-      "gradeLetter": "A",
-      "semesterCode": "HK251",
-      "academicYearCode": "25"
-    },
-    {
-      "subjectCode": "IM1021",
-      "credits": 3,
-      "gradeNumeric": 9.6,
-      "gradeLetter": "A+",
-      "semesterCode": "HK243",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "LA1057",
-      "credits": 0,
-      "gradeNumeric": 9.0,
-      "gradeLetter": "A",
-      "semesterCode": "HK243",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "CO3015",
-      "credits": 3,
-      "gradeNumeric": 9.0,
-      "gradeLetter": "A",
-      "semesterCode": "HK242",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "CO3111",
-      "credits": 1,
-      "gradeNumeric": 9.5,
-      "gradeLetter": "A+",
-      "semesterCode": "HK242",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "CO3017",
-      "credits": 3,
-      "gradeNumeric": 9.0,
-      "gradeLetter": "A",
-      "semesterCode": "HK242",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "CO3005",
-      "credits": 4,
-      "gradeNumeric": 9.2,
-      "gradeLetter": "A",
-      "semesterCode": "HK242",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "CO3011",
-      "credits": 3,
-      "gradeNumeric": 9.3,
-      "gradeLetter": "A",
-      "semesterCode": "HK242",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "CO3335",
-      "credits": 2,
-      "gradeNumeric": 10.0,
-      "gradeLetter": "A+",
-      "semesterCode": "HK242",
-      "academicYearCode": "24"
-    },
-    {
-      "subjectCode": "CO3115",
-      "credits": 3,
-      "gradeNumeric": 9.5,
-      "gradeLetter": "A+",
-      "semesterCode": "HK242",
-      "academicYearCode": "24"
-    },
     {
       "subjectCode": "IM1025",
       "credits": 3,

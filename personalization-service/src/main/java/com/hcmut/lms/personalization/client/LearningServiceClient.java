@@ -3,8 +3,10 @@ package com.hcmut.lms.personalization.client;
 import com.hcmut.lms.personalization.client.dto.BatchGradePredictionRequest;
 import com.hcmut.lms.personalization.client.dto.BatchGradePredictionResponse;
 import com.hcmut.lms.personalization.client.dto.GradePredictionResponse;
+import com.hcmut.lms.personalization.client.dto.StudentEnrollmentWithSubjectResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,4 +28,7 @@ public interface LearningServiceClient {
 
   @GetMapping("/subject-metrics/batch/difficulty")
   Map<UUID, String> getBatchDifficulty(@RequestParam("subjectIds") List<UUID> subjectIds);
+
+  @GetMapping("/enrollments/student/{studentId}/with-subjects")
+  List<StudentEnrollmentWithSubjectResponse> getStudentEnrollmentsWithSubjects(@PathVariable UUID studentId);
 }

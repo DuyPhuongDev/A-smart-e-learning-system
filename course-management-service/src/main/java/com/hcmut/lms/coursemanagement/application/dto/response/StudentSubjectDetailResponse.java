@@ -17,6 +17,7 @@ public class StudentSubjectDetailResponse {
     private String subjectId;
     private Integer recommendedYear;
     private Integer recommendedSemester;
+    private Boolean isPassed;
     private List<StudentSubjectAttemptItem> attempts;
     private List<SubjectRelationItem> prerequisites;
     private List<SubjectRelationItem> recommendations;

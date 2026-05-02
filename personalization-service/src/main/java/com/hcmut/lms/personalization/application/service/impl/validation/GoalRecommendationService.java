@@ -30,7 +30,7 @@ public class GoalRecommendationService {
     if (!feasibility.overallPassed()) {
       return FeasibilityLevel.WEAK;
     }
-    return probabilityScore >= GOOD_THRESHOLD ? FeasibilityLevel.GOOD : FeasibilityLevel.MEDIUM;
+    return (Math.round(probabilityScore * 100.0) / 100.0) >= GOOD_THRESHOLD ? FeasibilityLevel.GOOD : FeasibilityLevel.MEDIUM;
   }
 
   public List<RecommendationResponse> buildRecommendations(

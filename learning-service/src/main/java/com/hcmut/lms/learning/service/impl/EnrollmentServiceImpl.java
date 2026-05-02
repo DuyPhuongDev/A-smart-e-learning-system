@@ -10,6 +10,7 @@ import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
+import com.hcmut.lms.learning.dto.response.StudentEnrollmentWithSubjectResponse;
 import com.hcmut.lms.learning.entity.enrollment.Enrollment;
 import com.hcmut.lms.learning.exception.BusinessException;
 import com.hcmut.lms.learning.mapper.EnrollmentMapper;
@@ -276,6 +277,55 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     }
 
     return enrollments.stream().map(enrollmentMapper::toStudentEnrollmentResponse).collect(Collectors.toList());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<StudentEnrollmentWithSubjectResponse> getStudentEnrollmentsWithSubjectIds(UUID studentId) {
+    log.info("Fetching enrollments with subject IDs for student: {}", studentId);
+
+    List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
+
+    if (enrollments.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    Set<UUID> classIds = enrollments.stream()
+        .map(Enrollment::getClassId)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+
+    Map<UUID, UUID> classIdToSubjectId = Collections.emptyMap();
+    Map<UUID, String> classIdToGradingType = Collections.emptyMap();
+    if (!classIds.isEmpty()) {
+      try {
+        List<ClassResponse> classes = courseManagementClient.getClassSectionsByIds(
+            BatchClassLookupRequest.builder().classIds(new ArrayList<>(classIds)).build());
+        classIdToSubjectId = classes.stream()
+            .filter(c -> c.getId() != null && c.getSubjectId() != null)
+            .collect(Collectors.toMap(ClassResponse::getId, ClassResponse::getSubjectId));
+        classIdToGradingType = classes.stream()
+            .filter(c -> c.getId() != null)
+            .collect(Collectors.toMap(ClassResponse::getId, c -> c.getSubjectGradingType() != null ? c.getSubjectGradingType() : "GRADED"));
+      } catch (Exception e) {
+        log.warn("Failed to resolve class IDs to subject IDs: {}", e.getMessage());
+      }
+    }
+
+    Map<UUID, UUID> finalClassIdToSubjectId = classIdToSubjectId;
+    Map<UUID, String> finalClassIdToGradingType = classIdToGradingType;
+    return enrollments.stream().map(enrollment -> StudentEnrollmentWithSubjectResponse.builder()
+        .id(enrollment.getId())
+        .studentId(enrollment.getStudentId())
+        .classId(enrollment.getClassId())
+        .subjectId(enrollment.getClassId() != null ? finalClassIdToSubjectId.get(enrollment.getClassId()) : null)
+        .finalGrade(enrollment.getFinalGrade())
+        .attemptNo(enrollment.getAttemptNo())
+        .isPassed(enrollment.getIsPassed())
+        .gradingType(enrollment.getClassId() != null ? finalClassIdToGradingType.get(enrollment.getClassId()) : "GRADED")
+        .enrolledAt(enrollment.getEnrolledAt() != null ? enrollment.getEnrolledAt().toString() : null)
+        .completionTime(enrollment.getCompletionTime() != null ? enrollment.getCompletionTime().toString() : null)
+        .build()).collect(Collectors.toList());
   }
 
     @Override

@@ -123,29 +123,32 @@ public class StudentProgressDataService {
 
         if (anyPassed) {
           completedSubjectIds.add(subjectId);
-          // Include ALL attempts for completed subjects to preserve full history
-          for (StudentLearningProgressResponse.StudentProgressSubjectItem attempt : attempts) {
-            // Skip attempts missing semester metadata (needed for timeline grouping)
-            if (attempt.getSemesterId() == null || attempt.getAcademicYearId() == null) continue;
-            completedSubjects.add(CompletedSubjectDetail.builder()
-                .subjectId(subjectId)
-                .semesterId(parseUuid(attempt.getSemesterId()))
-                .academicYearId(parseUuid(attempt.getAcademicYearId()))
-                .semesterOrder(attempt.getSemesterOrder())
-                .academicYearOrder(attempt.getAcademicYearOrder())
-                .subjectCode(attempt.getSubjectCode())
-                .subjectName(attempt.getSubjectName())
-                .credits(attempt.getCredits())
-                .studyOrder(attempt.getOrder() != null ? attempt.getOrder() : Integer.MAX_VALUE)
-                .grade10(attempt.getGrade10())
-                .letterGrade(attempt.getLetterGrade())
-                .grade4(attempt.getGrade4())
-                .attemptNo(attempt.getAttemptNo())
-                .isHighestResult(attempt.getIsHighestResult())
-                .isPassed(attempt.getIsPassed())
-                .build());
-          }
-        } else {
+        }
+
+        // Include ALL attempts (passed and failed) to preserve full history
+        for (StudentLearningProgressResponse.StudentProgressSubjectItem attempt : attempts) {
+          // Skip attempts missing semester metadata (needed for timeline grouping)
+          if (attempt.getSemesterId() == null || attempt.getAcademicYearId() == null) continue;
+          completedSubjects.add(CompletedSubjectDetail.builder()
+              .subjectId(subjectId)
+              .semesterId(parseUuid(attempt.getSemesterId()))
+              .academicYearId(parseUuid(attempt.getAcademicYearId()))
+              .semesterOrder(attempt.getSemesterOrder())
+              .academicYearOrder(attempt.getAcademicYearOrder())
+              .subjectCode(attempt.getSubjectCode())
+              .subjectName(attempt.getSubjectName())
+              .credits(attempt.getCredits())
+              .studyOrder(attempt.getOrder() != null ? attempt.getOrder() : Integer.MAX_VALUE)
+              .grade10(attempt.getGrade10())
+              .letterGrade(attempt.getLetterGrade())
+              .grade4(attempt.getGrade4())
+              .attemptNo(attempt.getAttemptNo())
+              .isHighestResult(attempt.getIsHighestResult())
+              .isPassed(attempt.getIsPassed())
+              .build());
+        }
+
+        if (!anyPassed) {
           remainingSubjectIds.add(subjectId);
           Integer subjectCredits = attempts.get(0).getCredits();
           if (subjectCredits == null) {
