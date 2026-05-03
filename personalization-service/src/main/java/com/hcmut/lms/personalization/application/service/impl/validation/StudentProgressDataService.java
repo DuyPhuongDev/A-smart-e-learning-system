@@ -106,8 +106,7 @@ public class StudentProgressDataService {
             try {
               UUID subjectId = UUID.fromString(subject.getSubjectId());
               itemsBySubjectId.computeIfAbsent(subjectId, k -> new ArrayList<>()).add(subject);
-            } catch (IllegalArgumentException ex) {
-              continue;
+            } catch (IllegalArgumentException ignored) {
             }
           }
         }
@@ -150,7 +149,7 @@ public class StudentProgressDataService {
 
         if (!anyPassed) {
           remainingSubjectIds.add(subjectId);
-          Integer subjectCredits = attempts.get(0).getCredits();
+          Integer subjectCredits = attempts.getFirst().getCredits();
           if (subjectCredits == null) {
             throw new StudentDataUnavailableException("credits",
                 "Cannot validate learning goal: credits is missing for subject " + subjectId);
@@ -190,7 +189,12 @@ public class StudentProgressDataService {
   }
 
   /**
-   * Data class to hold student progress information including completion details
+   * Data class holding extracted student progress information.
+   * <p>
+   * Naming note:
+   * - completedSubjectIds = subjects with at least one passed attempt (fulfilled)
+   * - remainingSubjectIds = subjects with no passed attempt yet (failed or never attempted)
+   * - completedSubjects     = ALL individual attempts (passed + failed) with full grade/attempt metadata
    */
   public record StudentProgressData(
       BigDecimal currentGpa4,
@@ -204,11 +208,13 @@ public class StudentProgressDataService {
   ) {}
 
   /**
-   * Metadata for completed subjects including study order and grades.
-   * Uses pass determination formula from StudentProgressServiceImpl.isStudentPassedSubject():
-   * - GRADED: grade >= 4.0
-   * - PASS_FAIL: use isPassed flag
-   * - BOTH: isPassed=true OR grade >= 5.0
+   * A single attempt at a subject — passed or failed.
+   * Stored for every attempt in the student's history to preserve full grade/attempt data
+   * for the learning path timeline.
+   * <p>
+   * Pass/fail status is determined upstream by the course-management progress API.
+   * Consistent with SubjectPassUtil: GRADED → grade >= 4.0, PASS_FAIL → isPassed flag,
+   * BOTH → isPassed=true or grade >= 4.0.
    */
   @Builder
   public record CompletedSubjectDetail(

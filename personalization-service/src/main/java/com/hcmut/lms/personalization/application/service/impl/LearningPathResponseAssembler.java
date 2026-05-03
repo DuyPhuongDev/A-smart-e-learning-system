@@ -248,7 +248,7 @@ public class LearningPathResponseAssembler {
     for (var entry : lpSubjectBySubjectId.entrySet()) {
       UUID subjectId = entry.getKey();
       LearningPathSubject lpSubject = entry.getValue();
-      boolean isCompleted = Boolean.TRUE.equals(lpSubject.getIsCompleted());
+      Boolean isCompleted = lpSubject.getIsCompleted();
       Integer semesterOrder = semesterOrderBySection.get(lpSubject.getLearningPathSectionId());
 
       nodeBySubject.put(subjectId, PrerequisiteGraphNodeResponse.builder()
@@ -518,7 +518,7 @@ public class LearningPathResponseAssembler {
     String subjectCode = lpSubject.getSubjectCode();
     String subjectName = lpSubject.getSubjectName();
     Integer credits = lpSubject.getCredits();
-    boolean isCompleted = Boolean.TRUE.equals(lpSubject.getIsCompleted());
+    Boolean isCompleted = lpSubject.getIsCompleted();
 
     Integer semesterOrder = semesterOrderBySection.getOrDefault(lpSubject.getLearningPathSectionId(), null);
     if (semesterOrder == null) {

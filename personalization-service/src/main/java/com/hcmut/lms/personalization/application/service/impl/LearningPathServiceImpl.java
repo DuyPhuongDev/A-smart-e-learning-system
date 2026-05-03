@@ -183,7 +183,7 @@ public class LearningPathServiceImpl implements LearningPathService {
               .subjectName(change.getSubjectName() != null ? change.getSubjectName() : "")
               .credits(change.getCredits() != null ? change.getCredits() : 0)
               .difficultyLevel(difficulty)
-              .isCompleted(false)
+              .isCompleted(null)
               .prerequisitesGraph(List.of())
               .build();
           subjectsToSave.add(newSubject);
@@ -292,7 +292,7 @@ public class LearningPathServiceImpl implements LearningPathService {
             .subjectName(s.getName() != null ? s.getName() : "")
             .credits(s.getCredits() != null ? s.getCredits() : 0)
             .difficultyLevel(difficultyMap.getOrDefault(s.getId(), "medium"))
-            .isCompleted(false)
+            .isCompleted(null)
             .prerequisitesGraph(List.of())
             .build())
         .toList();
@@ -337,17 +337,9 @@ public class LearningPathServiceImpl implements LearningPathService {
                         Comparator.nullsLast(Comparator.naturalOrder())))
                     .toList())));
 
-    // 4. Group LP subjects by subjectId, sorted by attemptNo (nulls first)
+    // 4. Group LP subjects by subjectId
     Map<UUID, List<LearningPathSubject>> lpSubjectsBySubjectId = allSubjects.stream()
-        .collect(Collectors.groupingBy(
-            LearningPathSubject::getSubjectId,
-            Collectors.collectingAndThen(
-                Collectors.toList(),
-                list -> list.stream()
-                    .sorted(Comparator.comparing(
-                        LearningPathSubject::getAttemptNo,
-                        Comparator.nullsFirst(Comparator.naturalOrder())))
-                    .toList())));
+        .collect(Collectors.groupingBy(LearningPathSubject::getSubjectId));
 
     // Pre-fetch all sections to avoid N+1 inside the matching loop
     Map<UUID, LearningPathSection> sectionMap = learningPathSectionRepository.findByLearningPathId(learningPathId)
@@ -357,44 +349,65 @@ public class LearningPathServiceImpl implements LearningPathService {
     List<LearningPathSubject> subjectsToSave = new ArrayList<>();
     List<FailedSubjectInfo> failedSubjects = new ArrayList<>();
 
-    // 5. Match by attempt order
+    // 5. Match by exact attemptNo
     for (Map.Entry<UUID, List<LearningPathSubject>> entry : lpSubjectsBySubjectId.entrySet()) {
       UUID subjectId = entry.getKey();
       List<LearningPathSubject> lpSubjects = entry.getValue();
       List<StudentEnrollmentWithSubjectResponse> subjectEnrollments = enrollmentsBySubject.getOrDefault(subjectId, List.of());
 
-      int matchCount = Math.min(lpSubjects.size(), subjectEnrollments.size());
-      for (int i = 0; i < matchCount; i++) {
-        LearningPathSubject lpSubject = lpSubjects.get(i);
-        StudentEnrollmentWithSubjectResponse enrollment = subjectEnrollments.get(i);
-
-        Boolean isCompleted = evaluateIsCompleted(enrollment);
-
-        if (isCompleted != null) {
-          lpSubject.setIsCompleted(isCompleted);
+      // Separate LP subjects with known attemptNo from planned (null) ones
+      Map<Integer, LearningPathSubject> lpByAttemptNo = new HashMap<>();
+      List<LearningPathSubject> plannedLpSubjects = new ArrayList<>();
+      for (LearningPathSubject lp : lpSubjects) {
+        if (lp.getAttemptNo() != null) {
+          lpByAttemptNo.put(lp.getAttemptNo(), lp);
+        } else {
+          plannedLpSubjects.add(lp);
         }
-        lpSubject.setCompletionGrade(enrollment.getFinalGrade() != null ? BigDecimal.valueOf(enrollment.getFinalGrade()) : null);
-        lpSubject.setAttemptNo(enrollment.getAttemptNo());
-        if (enrollment.getCompletionTime() != null && !enrollment.getCompletionTime().isBlank()) {
-          try {
-            lpSubject.setCompletionDate(LocalDateTime.parse(enrollment.getCompletionTime()));
-          } catch (Exception ex) {
-            log.debug("Unable to parse completionTime: {}", enrollment.getCompletionTime());
+      }
+
+      // Match each enrollment by exact attemptNo to an LP subject
+      for (StudentEnrollmentWithSubjectResponse enrollment : subjectEnrollments) {
+        Integer enrollmentAttemptNo = enrollment.getAttemptNo();
+        LearningPathSubject lpSubject = lpByAttemptNo.get(enrollmentAttemptNo);
+
+        if (lpSubject != null) {
+          updateSubjectFromEnrollment(lpSubject, enrollment);
+          subjectsToSave.add(lpSubject);
+        } else if (!plannedLpSubjects.isEmpty()) {
+          // No exact match — only consume a planned slot if the enrollment passed
+          Boolean isPassed = evaluateIsCompleted(enrollment);
+          if (Boolean.TRUE.equals(isPassed)) {
+            LearningPathSubject planned = plannedLpSubjects.removeFirst();
+            updateSubjectFromEnrollment(planned, enrollment);
+            subjectsToSave.add(planned);
           }
+          // If failed, leave planned slot as-is (it's the retake)
         }
+        // else: enrollment has no matching LP subject and no planned slot — ignored
+      }
 
-        subjectsToSave.add(lpSubject);
+      // Build failed subjects: only if no passed enrollment AND no planned retake remains
+      boolean anyPassed = subjectEnrollments.stream()
+          .anyMatch(e -> Boolean.TRUE.equals(evaluateIsCompleted(e)));
 
-        if (Boolean.FALSE.equals(isCompleted) && enrollment.getFinalGrade() != null) {
-          LearningPathSection section = sectionMap.get(lpSubject.getLearningPathSectionId());
-          failedSubjects.add(FailedSubjectInfo.builder()
-              .subjectId(subjectId)
-              .subjectCode(lpSubject.getSubjectCode())
-              .subjectName(lpSubject.getSubjectName())
-              .semesterOrder(section != null ? section.getSemesterOrder() : null)
-              .completionGrade(enrollment.getFinalGrade())
-              .attemptNo(enrollment.getAttemptNo())
-              .build());
+      if (!anyPassed && plannedLpSubjects.isEmpty()) {
+        for (StudentEnrollmentWithSubjectResponse enrollment : subjectEnrollments) {
+          Boolean isPassed = evaluateIsCompleted(enrollment);
+          if (Boolean.FALSE.equals(isPassed) && enrollment.getFinalGrade() != null) {
+            LearningPathSubject matchedLp = lpByAttemptNo.get(enrollment.getAttemptNo());
+            LearningPathSection section = matchedLp != null
+                ? sectionMap.get(matchedLp.getLearningPathSectionId())
+                : null;
+            failedSubjects.add(FailedSubjectInfo.builder()
+                .subjectId(subjectId)
+                .subjectCode(matchedLp != null ? matchedLp.getSubjectCode() : "")
+                .subjectName(matchedLp != null ? matchedLp.getSubjectName() : "")
+                .semesterOrder(section != null ? section.getSemesterOrder() : null)
+                .completionGrade(enrollment.getFinalGrade())
+                .attemptNo(enrollment.getAttemptNo())
+                .build());
+          }
         }
       }
     }
@@ -425,6 +438,22 @@ public class LearningPathServiceImpl implements LearningPathService {
   private Boolean evaluateIsCompleted(StudentEnrollmentWithSubjectResponse enrollment) {
     return SubjectPassUtil.evaluateIsPassed(
         enrollment.getIsPassed(), enrollment.getFinalGrade(), enrollment.getGradingType());
+  }
+
+  private void updateSubjectFromEnrollment(LearningPathSubject lpSubject, StudentEnrollmentWithSubjectResponse enrollment) {
+    Boolean isCompleted = evaluateIsCompleted(enrollment);
+    if (isCompleted != null) {
+      lpSubject.setIsCompleted(isCompleted);
+    }
+    lpSubject.setCompletionGrade(enrollment.getFinalGrade() != null ? BigDecimal.valueOf(enrollment.getFinalGrade()) : null);
+    lpSubject.setAttemptNo(enrollment.getAttemptNo());
+    if (enrollment.getCompletionTime() != null && !enrollment.getCompletionTime().isBlank()) {
+      try {
+        lpSubject.setCompletionDate(LocalDateTime.parse(enrollment.getCompletionTime()));
+      } catch (Exception ex) {
+        log.debug("Unable to parse completionTime: {}", enrollment.getCompletionTime());
+      }
+    }
   }
 
   private LearningPath getActiveOwnedPath(UUID studentId, UUID learningPathId) {

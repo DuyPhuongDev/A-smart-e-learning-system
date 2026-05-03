@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS personalization.learning_path_subjects (
     importance_score numeric(4, 2) DEFAULT 1.0,
     prerequisites_graph jsonb DEFAULT '[]'::jsonb,
 
-    is_completed boolean DEFAULT false NOT NULL,
+    is_completed boolean,
     study_order int4,
     completion_date timestamptz,
     completion_grade numeric(4, 2),
