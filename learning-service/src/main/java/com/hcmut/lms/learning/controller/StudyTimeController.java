@@ -6,6 +6,7 @@ import com.hcmut.lms.learning.dto.request.StudyTimeRequest;
 import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
 import com.hcmut.lms.learning.dto.response.StudentStudyTimeSummaryResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
+import com.hcmut.lms.learning.dto.response.AggregatedStudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
 import com.hcmut.lms.learning.service.StudyTimeService;
 import jakarta.validation.Valid;
@@ -134,5 +135,15 @@ public class StudyTimeController {
             @PathVariable UUID classId
     ) {
         return ResponseEntity.ok(studyTimeService.getStudentStudyTimesForTeacher(classId, currentUser));
+    }
+
+    /**
+     * Get daily aggregated study time across all enrolled classes for the last N days.
+     */
+    @GetMapping("/my-classes/aggregated-summary")
+    public ResponseEntity<List<AggregatedStudyTimeResponse>> getAggregatedSummary(
+            @CurrentUser CurrentUserInfo currentUser,
+            @RequestParam(defaultValue = "7") int days) {
+        return ResponseEntity.ok(studyTimeService.getAggregatedSummary(currentUser.getId(), days));
     }
 }

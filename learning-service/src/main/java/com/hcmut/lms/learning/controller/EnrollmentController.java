@@ -6,6 +6,7 @@ import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
+import com.hcmut.lms.learning.dto.response.UpcomingAssessmentResponse;
 import com.hcmut.lms.learning.service.EnrollmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -92,6 +94,16 @@ public class EnrollmentController {
             @CurrentUser CurrentUserInfo currentUser,
             @PathVariable UUID classId) {
         return ResponseEntity.ok(enrollmentService.isEnrolled(currentUser.getId(), classId));
+    }
+
+    /**
+     * Get upcoming assessments across all enrolled classes for current user.
+     * Returns at most 5 assessments ordered by closest closeTime.
+     */
+    @GetMapping("/upcoming-assessments")
+    public ResponseEntity<List<UpcomingAssessmentResponse>> getUpcomingAssessments(
+            @CurrentUser CurrentUserInfo currentUser) {
+        return ResponseEntity.ok(enrollmentService.getUpcomingAssessments(currentUser.getId()));
     }
 
 }

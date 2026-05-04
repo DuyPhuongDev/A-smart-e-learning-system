@@ -8,6 +8,7 @@ import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentWithSubjectResponse;
+import com.hcmut.lms.learning.dto.response.UpcomingAssessmentResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -61,6 +62,12 @@ public interface EnrollmentService {
   List<InternalClassStudentIdsResponse> getStudentIdsByClassIds(List<UUID> classIds);
 
   List<UUID> getStudentIdsByCourseId(UUID courseId);
+
+  /**
+   * Get upcoming assessments across all enrolled classes for a student.
+   * Returns at most 5 assessments ordered by closest closeTime.
+   */
+  List<UpcomingAssessmentResponse> getUpcomingAssessments(UUID studentId);
 
   /**
    * Create a test enrollment directly with grade data, bypassing normal enrollment validation.

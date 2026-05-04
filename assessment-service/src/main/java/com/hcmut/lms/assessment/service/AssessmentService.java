@@ -9,6 +9,7 @@ import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
 import com.hcmut.lms.assessment.dto.response.AssessmentGrade;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
+import com.hcmut.lms.assessment.dto.response.PendingAssessmentCountResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.common.dto.PageResponse;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -47,6 +48,10 @@ public interface AssessmentService {
     void reorderQuestionsInAssessment(UUID id, UUID questionId, @Valid @RequestBody ReorderRequest request);
 
     List<AssessmentGrade> getGradesByClass(UUID classId);
+
+    List<AssessmentResponse> getAssessmentsByClassIds(List<UUID> classIds);
+
+    List<PendingAssessmentCountResponse> getPendingAssessmentCounts(List<UUID> classIds, UUID studentId);
 
     AssessmentGrade updateGrade(UUID id, UpdateWeightRequest request);
 }
