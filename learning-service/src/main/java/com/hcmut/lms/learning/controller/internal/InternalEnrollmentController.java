@@ -5,6 +5,7 @@ import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.learning.dto.internal.InternalBatchClassStudentIdsRequest;
 import com.hcmut.lms.learning.dto.internal.InternalBatchClassStudentIdsResponse;
 import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
+import com.hcmut.lms.learning.dto.request.CreateTestEnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentWithSubjectResponse;
 import com.hcmut.lms.learning.service.EnrollmentService;
@@ -68,5 +69,11 @@ public class InternalEnrollmentController {
       @CurrentUser CurrentUserInfo currentUser,
       @PathVariable UUID classId) {
     return ResponseEntity.ok(enrollmentService.isEnrolled(currentUser.getId(), classId));
+  }
+
+  @PostMapping("/test-data")
+  public ResponseEntity<Void> createTestEnrollment(@RequestBody CreateTestEnrollmentRequest request) {
+    enrollmentService.createTestEnrollment(request);
+    return ResponseEntity.ok().build();
   }
 }

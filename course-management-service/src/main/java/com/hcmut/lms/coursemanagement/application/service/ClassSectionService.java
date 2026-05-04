@@ -4,9 +4,11 @@ import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.EnsureClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionDatasetResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionReportMetadataResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionTestDataResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassStatusResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.CourseMenuResponse;
 
@@ -81,4 +83,11 @@ public interface ClassSectionService {
      * Used internally by notification-service for teacher-scoped notifications.
      */
     List<UUID> getClassIdsByTeacherId(UUID teacherId);
+
+    /**
+     * Ensure a class section exists for a subject in a semester.
+     * Returns existing if found, creates a minimal one otherwise.
+     * Used internally by personalization-service for test data generation.
+     */
+    ClassSectionTestDataResponse ensureClassSection(EnsureClassSectionRequest request);
 }

@@ -1,5 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
+import com.hcmut.lms.common.util.StudentGradeUtil;
 import com.hcmut.lms.coursemanagement.application.config.CurriculumFallbackConfig;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
@@ -294,8 +295,8 @@ public class StudentProgressServiceImpl implements StudentProgressService {
       StudentEnrollmentResponse enrollment = subjectEnrollments.get(i);
       ClassSectionResponse classSection = classMap.get(enrollment.getClassId());
       Double grade10 = enrollment.getFinalGrade();
-      String letterGrade = grade10 != null ? gradeUtil.convertToLetterGrade(grade10) : null;
-      Double grade4 = grade10 != null ? gradeUtil.convertTo4Scale(grade10) : null;
+      String letterGrade = grade10 != null ? StudentGradeUtil.convertToLetterGrade(grade10) : null;
+      Double grade4 = grade10 != null ? StudentGradeUtil.convertTo4Scale(grade10) : null;
       Boolean isPassed = gradeUtil.isStudentPassedSubject(enrollment, gradingType);
 
       attempts.add(StudentSubjectDetailResponse.StudentSubjectAttemptItem.builder()
@@ -309,7 +310,7 @@ public class StudentProgressServiceImpl implements StudentProgressService {
           .build());
     }
 
-    // Compute overall pass status: true if any attempt passed; false if attempts exist but none passed; null otherwise
+    // Compute overall pass status: true if any attempt passed; false if attempts to exist but none passed; null otherwise
     Boolean overallIsPassed = attempts.isEmpty() ? null
         : attempts.stream().anyMatch(a -> Boolean.TRUE.equals(a.getIsPassed()));
 
@@ -468,7 +469,7 @@ public class StudentProgressServiceImpl implements StudentProgressService {
         if (enrollment.getFinalGrade() != null && credits > 0) {
           double grade10 = enrollment.getFinalGrade();
           totalWeightedGrade10 += grade10 * credits;
-          totalWeightedGrade4 += gradeUtil.convertTo4Scale(grade10) * credits;
+          totalWeightedGrade4 += StudentGradeUtil.convertTo4Scale(grade10) * credits;
           gpaDenominatorCredits += credits;
         }
       }
@@ -548,8 +549,8 @@ public class StudentProgressServiceImpl implements StudentProgressService {
             boolean isHighest = enrollment == bestEnrollment;
             Boolean isPassed = gradeUtil.isStudentPassedSubject(enrollment, gradingType);
             Double grade10 = enrollment.getFinalGrade();
-            String letterGrade = grade10 != null ? gradeUtil.convertToLetterGrade(grade10) : null;
-            Double grade4 = grade10 != null ? gradeUtil.convertTo4Scale(grade10) : null;
+            String letterGrade = grade10 != null ? StudentGradeUtil.convertToLetterGrade(grade10) : null;
+            Double grade4 = grade10 != null ? StudentGradeUtil.convertTo4Scale(grade10) : null;
             Integer computedAttemptNo = attemptNoByClassId.get(enrollment.getClassId());
             SubjectProgressMeta meta = subjectProgressMetaByClassId.get(enrollment.getClassId());
 
@@ -606,8 +607,8 @@ public class StudentProgressServiceImpl implements StudentProgressService {
               boolean isHighest = enrollment == bestEnrollment;
               Boolean isPassed = gradeUtil.isStudentPassedSubject(enrollment, gradingType);
               Double grade10 = enrollment.getFinalGrade();
-              String letterGrade = grade10 != null ? gradeUtil.convertToLetterGrade(grade10) : null;
-              Double grade4 = grade10 != null ? gradeUtil.convertTo4Scale(grade10) : null;
+              String letterGrade = grade10 != null ? StudentGradeUtil.convertToLetterGrade(grade10) : null;
+              Double grade4 = grade10 != null ? StudentGradeUtil.convertTo4Scale(grade10) : null;
               Integer computedAttemptNo = attemptNoByClassId.get(enrollment.getClassId());
               SubjectProgressMeta meta = subjectProgressMetaByClassId.get(enrollment.getClassId());
 

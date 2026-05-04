@@ -4,6 +4,7 @@ import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.ClassSectionRequest;
+import com.hcmut.lms.coursemanagement.application.dto.request.EnsureClassSectionRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.*;
 import com.hcmut.lms.coursemanagement.application.mapper.ClassSectionMapper;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
@@ -26,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -466,5 +468,58 @@ public class ClassSectionServiceImpl implements ClassSectionService {
     public List<UUID> getClassIdsByTeacherId(UUID teacherId) {
       log.info("Getting class IDs for teacher: {}", teacherId);
       return classSectionRepository.findIdsByTeacherId(teacherId);
+    }
+
+    @Override
+    public ClassSectionTestDataResponse ensureClassSection(EnsureClassSectionRequest request) {
+      log.info("Ensuring class section for subject={} semester={}", request.getSubjectId(), request.getSemesterId());
+
+      List<ClassSection> existing = classSectionRepository.findBySemesterIdAndSubjectId(
+          request.getSemesterId(), request.getSubjectId());
+      if (!existing.isEmpty()) {
+        ClassSection cs = existing.getFirst();
+        return ClassSectionTestDataResponse.builder()
+            .id(cs.getId())
+            .code(cs.getCode())
+            .subjectId(cs.getSubject() != null ? cs.getSubject().getId() : null)
+            .semesterId(cs.getSemester() != null ? cs.getSemester().getId() : null)
+            .build();
+      }
+
+      Subject subject = subjectRepository.findById(request.getSubjectId())
+          .orElseThrow(() -> new EntityNotFoundException("Subject not found: " + request.getSubjectId()));
+      Semester semester = semesterRepository.findById(request.getSemesterId())
+          .orElseThrow(() -> new EntityNotFoundException("Semester not found: " + request.getSemesterId()));
+
+      String code = subject.getCode() + "_" + semester.getSemesterCode() + "_TEST";
+
+      ClassSection classSection = new ClassSection();
+      classSection.setSectionName(subject.getName() + " - " + semester.getSemesterCode());
+      classSection.setCode(code);
+      classSection.setSubject(subject);
+      classSection.setSemester(semester);
+      classSection.setIsOfficial(true);
+      classSection.setStatus(ClassStatus.OPEN);
+      classSection.setTeacherId(null);
+      classSection.setCreatedBy(request.getCreatedBy());
+      classSection.setMaxStudents(-1);
+      classSection.setCurrentStudents(0);
+
+      ClassSection saved;
+      try {
+        saved = classSectionRepository.save(classSection);
+        log.info("Created test class section: id={} code={}", saved.getId(), saved.getCode());
+      } catch (DataIntegrityViolationException e) {
+        log.info("Class section already exists (concurrent creation), re-querying");
+        saved = classSectionRepository.findBySemesterIdAndSubjectId(
+            request.getSemesterId(), request.getSubjectId()).getFirst();
+      }
+
+      return ClassSectionTestDataResponse.builder()
+          .id(saved.getId())
+          .code(saved.getCode())
+          .subjectId(subject.getId())
+          .semesterId(semester.getId())
+          .build();
     }
 }

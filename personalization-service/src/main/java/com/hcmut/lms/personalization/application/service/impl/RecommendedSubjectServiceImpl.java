@@ -107,9 +107,17 @@ public class RecommendedSubjectServiceImpl implements RecommendedSubjectService 
         .filter(s -> Boolean.TRUE.equals(s.getIsHighestResult()) && !Boolean.TRUE.equals(s.getIsCompleted()) && s.getAttemptNo() != null)
         .collect(Collectors.toMap(LearningPathSubject::getSubjectId, s -> s, (a, b) -> a));
 
-    // Exclude both completed and failed subjects from normal candidate flow
+    // Subjects already in the learning path (planned but not yet taken)
+    Set<UUID> activePathSubjectIds = pathSubjects.stream()
+        .filter(s -> !Boolean.TRUE.equals(s.getIsCompleted()))
+        .filter(s -> !failedSubjectIds.contains(s.getSubjectId()))
+        .map(LearningPathSubject::getSubjectId)
+        .collect(Collectors.toSet());
+
+    // Exclude completed, failed, and active path subjects from normal candidate flow
     Set<UUID> excludedFromCandidates = new HashSet<>(completedSubjectIds);
     excludedFromCandidates.addAll(failedSubjectIds);
+    excludedFromCandidates.addAll(activePathSubjectIds);
 
     if (ctx.curriculum() == null || ctx.curriculum().getCode() == null) {
       return List.of();
@@ -160,11 +168,13 @@ public class RecommendedSubjectServiceImpl implements RecommendedSubjectService 
     }
 
     // Also include subjects already in the learning path that haven't been passed
+    // (only for retake — occupation/gpa will filter these out later)
     Set<UUID> candidateSubjectIds = candidates.stream()
         .map(CandidateInfo::subjectId).collect(Collectors.toSet());
     for (LearningPathSubject ps : pathSubjects) {
       if (completedSubjectIds.contains(ps.getSubjectId())) continue;
       if (failedSubjectIds.contains(ps.getSubjectId())) continue;
+      if (activePathSubjectIds.contains(ps.getSubjectId())) continue;
       if (candidateSubjectIds.contains(ps.getSubjectId())) continue;
       candidates.add(new CandidateInfo(
           ps.getSubjectId(), ps.getSubjectCode(), ps.getSubjectName(),

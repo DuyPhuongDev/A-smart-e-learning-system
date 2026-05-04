@@ -2,6 +2,7 @@ package com.hcmut.lms.personalization.client;
 
 import com.hcmut.lms.personalization.client.dto.BatchGradePredictionRequest;
 import com.hcmut.lms.personalization.client.dto.BatchGradePredictionResponse;
+import com.hcmut.lms.personalization.client.dto.CreateTestEnrollmentRequest;
 import com.hcmut.lms.personalization.client.dto.GradePredictionResponse;
 import com.hcmut.lms.personalization.client.dto.StudentEnrollmentWithSubjectResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -31,4 +32,7 @@ public interface LearningServiceClient {
 
   @GetMapping("/enrollments/student/{studentId}/with-subjects")
   List<StudentEnrollmentWithSubjectResponse> getStudentEnrollmentsWithSubjects(@PathVariable UUID studentId);
+
+  @PostMapping("/enrollments/test-data")
+  void createTestEnrollment(@RequestBody CreateTestEnrollmentRequest request);
 }

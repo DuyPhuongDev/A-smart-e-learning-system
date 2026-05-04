@@ -6,6 +6,7 @@ import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
 import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
+import com.hcmut.lms.learning.dto.request.CreateTestEnrollmentRequest;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
@@ -386,5 +387,41 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         }
 
         return enrollmentRepository.findDistinctStudentIdsByClassIds(new ArrayList<>(targetClassIds));
+    }
+
+    @Override
+    @Transactional
+    public void createTestEnrollment(CreateTestEnrollmentRequest request) {
+        log.info("Creating test enrollment for student={} class={} grade={} passed={}",
+            request.getStudentId(), request.getClassId(), request.getFinalGrade(), request.getIsPassed());
+
+        enrollmentRepository.findByStudentIdAndClassId(request.getStudentId(), request.getClassId())
+            .ifPresentOrElse(
+                existing -> {
+                    existing.setFinalGrade(request.getFinalGrade());
+                    existing.setIsPassed(request.getIsPassed());
+                    if (request.getAttemptNo() != null) {
+                        existing.setAttemptNo(request.getAttemptNo());
+                    }
+                    if (request.getFinalGrade() != null) {
+                        existing.setCompletionTime(LocalDateTime.now());
+                    }
+                    enrollmentRepository.save(existing);
+                    log.info("Updated existing enrollment id={}", existing.getId());
+                },
+                () -> {
+                    Enrollment enrollment = Enrollment.builder()
+                        .studentId(request.getStudentId())
+                        .classId(request.getClassId())
+                        .finalGrade(request.getFinalGrade())
+                        .isPassed(request.getIsPassed())
+                        .attemptNo(request.getAttemptNo() != null ? request.getAttemptNo() : 1)
+                        .progressPercentage(100.0)
+                        .enrolledAt(LocalDateTime.now())
+                        .completionTime(request.getFinalGrade() != null ? LocalDateTime.now() : null)
+                        .build();
+                    enrollmentRepository.save(enrollment);
+                    log.info("Created new test enrollment id={}", enrollment.getId());
+                });
     }
 }

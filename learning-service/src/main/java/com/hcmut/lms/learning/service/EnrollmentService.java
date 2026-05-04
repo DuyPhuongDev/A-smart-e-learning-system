@@ -2,6 +2,7 @@ package com.hcmut.lms.learning.service;
 
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
+import com.hcmut.lms.learning.dto.request.CreateTestEnrollmentRequest;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
@@ -51,7 +52,7 @@ public interface EnrollmentService {
 
   /**
    * Get all enrollments for a student with resolved subject IDs.
-   * Batch resolves classId → subjectId via course-management-service in a single Feign call.
+   * Batch resolves classId -> subjectId via course-management-service in a single Feign call.
    */
   List<StudentEnrollmentWithSubjectResponse> getStudentEnrollmentsWithSubjectIds(UUID studentId);
 
@@ -60,4 +61,10 @@ public interface EnrollmentService {
   List<InternalClassStudentIdsResponse> getStudentIdsByClassIds(List<UUID> classIds);
 
   List<UUID> getStudentIdsByCourseId(UUID courseId);
+
+  /**
+   * Create a test enrollment directly with grade data, bypassing normal enrollment validation.
+   * Used internally by personalization-service for test data generation.
+   */
+  void createTestEnrollment(CreateTestEnrollmentRequest request);
 }
