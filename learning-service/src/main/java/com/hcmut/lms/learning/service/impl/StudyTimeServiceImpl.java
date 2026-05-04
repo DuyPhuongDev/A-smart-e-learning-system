@@ -7,6 +7,7 @@ import com.hcmut.lms.learning.client.dto.LectureReportMetadataResponse;
 import com.hcmut.lms.learning.dto.request.StudyTimeRequest;
 import com.hcmut.lms.learning.dto.response.LectureFrequencyItemResponse;
 import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
+import com.hcmut.lms.learning.dto.response.StudentStudyTimeSummaryResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
 import com.hcmut.lms.learning.entity.progress.LearningProgress;
@@ -168,6 +169,13 @@ public class StudyTimeServiceImpl implements StudyTimeService {
             totalSpentByLecture.put(lectureId, totalSpentSeconds);
         }
 
+        Map<UUID, Integer> viewedStudentCountByLecture = new HashMap<>();
+        for (Object[] row : studyTimeRepository.countDistinctStudentsByClassGroupedByLecture(classId)) {
+            UUID lectureId = (UUID) row[0];
+            int viewedStudentCount = row[1] != null ? ((Number) row[1]).intValue() : 0;
+            viewedStudentCountByLecture.put(lectureId, viewedStudentCount);
+        }
+
         List<LectureReportMetadataResponse> allLectures = classMetadata.getLectures() == null
                 ? List.of()
                 : classMetadata.getLectures();
@@ -198,7 +206,8 @@ public class StudyTimeServiceImpl implements StudyTimeService {
                             .title(lecture.getTitle())
                             .order(lecture.getOrder())
                             .estimateTimeMinutes(lecture.getEstimateTimeSpent())
-                            .studentCount(totalStudents)
+                            .viewCount(lecture.getViewCount() != null ? lecture.getViewCount() : 0)
+                            .studentCount(viewedStudentCountByLecture.getOrDefault(lecture.getLectureId(), 0))
                             .totalSpentSeconds(totalSpentSeconds)
                             .frequencyRatio(ratio.setScale(6, RoundingMode.HALF_UP))
                             .frequencyPercent(percent)
@@ -225,6 +234,31 @@ public class StudyTimeServiceImpl implements StudyTimeService {
                 .lectures(eligibleLectureRows)
                 .generatedAt(Instant.now())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StudentStudyTimeSummaryResponse> getStudentStudyTimesForTeacher(
+            UUID classId,
+            CurrentUserInfo currentUserInfo
+    ) {
+        ClassSectionReportMetadataResponse classMetadata = getClassSectionReportMetadataOrThrow(classId);
+        assertTeacherOrAdmin(currentUserInfo, classMetadata.getTeacherId());
+
+        Map<UUID, Long> totalSpentByStudent = new HashMap<>();
+        for (Object[] row : studyTimeRepository.sumDurationByClassGroupedByStudent(classId)) {
+            UUID studentId = (UUID) row[0];
+            long totalSpentSeconds = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+            totalSpentByStudent.put(studentId, totalSpentSeconds);
+        }
+
+        return enrollmentRepository.findDistinctStudentIdsByClassId(classId).stream()
+                .sorted(Comparator.comparing(UUID::toString))
+                .map(studentId -> StudentStudyTimeSummaryResponse.builder()
+                        .studentId(studentId)
+                        .totalSpentSeconds(totalSpentByStudent.getOrDefault(studentId, 0L))
+                        .build())
+                .toList();
     }
 
     private void assertTeacherOrAdmin(CurrentUserInfo currentUserInfo, UUID classTeacherId) {

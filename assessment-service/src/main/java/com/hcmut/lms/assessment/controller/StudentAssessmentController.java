@@ -1,14 +1,19 @@
 package com.hcmut.lms.assessment.controller;
 
+import com.hcmut.lms.assessment.dto.request.student.RunTestcaseRequest;
 import com.hcmut.lms.assessment.dto.request.student.SaveAnswerRequest;
 import com.hcmut.lms.assessment.dto.response.student.*;
+import com.hcmut.lms.assessment.service.AssessmentExecutionService;
 import com.hcmut.lms.assessment.service.StudentAssessmentService;
+import com.hcmut.lms.assessment.service.judge.CppJudgeService;
+import com.hcmut.lms.assessment.service.judge.dto.CodingJudgeEvaluation;
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.common.helper.CurrentUser;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +25,7 @@ import java.util.UUID;
 public class StudentAssessmentController {
 
     private final StudentAssessmentService studentAssessmentService;
+    private final AssessmentExecutionService assessmentExecutionService;
 
     @GetMapping("/courses/{courseId}/assessments")
     public PageResponse<StudentCourseAssessmentResponse> listCourseAssessments(
@@ -89,5 +95,10 @@ public class StudentAssessmentController {
             @CurrentUser CurrentUserInfo currentUser
     ) {
         return studentAssessmentService.getAttemptResult(attemptId, currentUser.getId());
+    }
+
+    @PostMapping("/coding-questions/{questionId}/run")
+    public CodingJudgeEvaluation runTestcase(@PathVariable UUID questionId, @RequestBody RunTestcaseRequest request) {
+        return assessmentExecutionService.preCheckTestcase(questionId,  request);
     }
 }

@@ -49,6 +49,12 @@ public interface AssessmentSubmissionRepository extends JpaRepository<Assessment
             AssessmentSubmissionStatus status
     );
 
+    List<AssessmentSubmission> findByAssessment_IdInAndStudentIdInAndStatus(
+            List<UUID> assessmentIds,
+            List<UUID> studentIds,
+            AssessmentSubmissionStatus status
+    );
+
     @Query("SELECT COALESCE(MAX(s.attemptNo), 0) FROM AssessmentSubmission s WHERE s.assessment.id = :assessmentId AND s.studentId = :studentId")
     int findMaxAttemptNo(@Param("assessmentId") UUID assessmentId, @Param("studentId") UUID studentId);
 }

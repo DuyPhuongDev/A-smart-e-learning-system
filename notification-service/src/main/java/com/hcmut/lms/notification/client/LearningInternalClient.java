@@ -15,11 +15,11 @@ import java.util.UUID;
 public interface LearningInternalClient {
 
     @GetMapping("/api/learning/internal/enrollments/class/{classId}/students")
-    List<UUID> resolveStudentsByClass(@PathVariable("classId") UUID classId);
+    List<UUID> resolveStudentsByClass(@PathVariable UUID classId);
 
     @PostMapping("/api/learning/internal/enrollments/classes/students")
     BatchClassStudentIdsResponse resolveStudentsByClassBatch(@RequestBody BatchClassStudentIdsRequest request);
 
     @GetMapping("/api/learning/internal/enrollments/course/{courseId}/students")
-    List<UUID> resolveStudentsByCourse(@PathVariable("courseId") UUID courseId);
+    List<UUID> resolveStudentsByCourse(@PathVariable UUID courseId);
 }

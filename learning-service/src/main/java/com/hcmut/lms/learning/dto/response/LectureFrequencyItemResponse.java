@@ -13,9 +13,9 @@ public class LectureFrequencyItemResponse {
     private String title;
     private Integer order;
     private Integer estimateTimeMinutes;
+    private Integer viewCount;
     private int studentCount;
     private long totalSpentSeconds;
     private BigDecimal frequencyRatio;
     private BigDecimal frequencyPercent;
 }
-

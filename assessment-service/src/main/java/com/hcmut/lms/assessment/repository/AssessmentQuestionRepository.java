@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface AssessmentQuestionRepository extends JpaRepository<AssessmentQuestion, UUID> {
@@ -13,7 +14,20 @@ public interface AssessmentQuestionRepository extends JpaRepository<AssessmentQu
     @Query("SELECT aq FROM AssessmentQuestion aq WHERE aq.assessment.id = :assessmentId ORDER BY aq.orderIndex")
     List<AssessmentQuestion> findByAssessmentIdOrderByIndex(@Param("assessmentId") UUID assessmentId);
 
-    void deleteByAssessmentIdAndQuestionId(UUID assessmentId, UUID questionId);
+    @Query("""
+            SELECT aq
+            FROM AssessmentQuestion aq
+            JOIN FETCH aq.question
+            WHERE aq.assessment.id IN :assessmentIds
+            ORDER BY aq.assessment.id, aq.orderIndex
+            """)
+    List<AssessmentQuestion> findByAssessmentIdsOrderByAssessmentAndIndex(@Param("assessmentIds") List<UUID> assessmentIds);
 
     boolean existsByAssessment_IdAndQuestion_Id(UUID assessmentId, UUID questionId);
+
+    Optional<AssessmentQuestion> findByQuestionIdAndAssessmentId(UUID questionId, UUID assessmentId);
+
+    void deleteByAssessmentIdAndQuestionId(UUID assessmentId, UUID questionId);
+
+    int countByAssessment_Id(UUID assessmentId);
 }

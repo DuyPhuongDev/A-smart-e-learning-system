@@ -35,11 +35,11 @@ public class User {
     @Column(length = 20)
     private String phone;
 
-    @Column(name = "last_login")
-    private LocalDateTime lastLogin;
-
     @Column(name = "specialization_id")
     private UUID specializationId;
+
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)

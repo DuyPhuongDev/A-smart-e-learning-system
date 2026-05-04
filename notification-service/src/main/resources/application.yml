@@ -71,6 +71,8 @@ notification:
     inbound-topic: ${KAFKA_NOTIFICATION_INBOUND_TOPIC:lms.events.notification}
     outbound-topic: lms.events.notification.created
 
+front-end: http://localhost:3000
+
 eureka:
   client:
     service-url:

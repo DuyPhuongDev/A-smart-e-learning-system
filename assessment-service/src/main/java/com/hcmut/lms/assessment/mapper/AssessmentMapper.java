@@ -11,6 +11,7 @@ public interface AssessmentMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "weight", ignore = true)
     @Mapping(target = "assessmentStatus", ignore = true)
     @Mapping(target = "assessmentQuestions", ignore = true)
     Assessment toEntity(AssessmentRequest request);

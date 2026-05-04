@@ -23,39 +23,9 @@ public class QuestionController {
 
     private final QuestionService questionService;
 
-    /**
-     * Creates a question. The payload must include a "questionType" discriminator field
-     * (MCQ | CODING | ESSAY) and the type-specific properties.
-     *
-     * Example MCQ payload:
-     * {
-     *   "questionType": "MCQ",
-     *   "difficultLevel": "EASY",
-     *   "point": 1.0,
-     *   "required": true,
-     *   "allowMultiAnswer": false,
-     *   "shuffleOption": true,
-     *   "answerOptions": [
-     *     { "content": "Paris", "correct": true, "orderIndex": 0 },
-     *     { "content": "London", "correct": false, "orderIndex": 1 }
-     *   ]
-     * }
-     */
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public QuestionResponse createQuestion(@Valid @RequestBody QuestionRequest request) {
-        return questionService.createQuestion(request);
-    }
-
     @GetMapping("/{id}")
     public QuestionResponse getQuestion(@PathVariable UUID id) {
         return questionService.getQuestion(id);
-    }
-
-    @PutMapping("/{id}")
-    public QuestionResponse updateQuestion(@PathVariable UUID id,
-                                           @Valid @RequestBody QuestionRequest request) {
-        return questionService.updateQuestion(id, request);
     }
 
     @DeleteMapping("/{id}")

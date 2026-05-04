@@ -3,3 +3,5 @@ ALTER TABLE "submission_testcase_results"
 
 CREATE INDEX IF NOT EXISTS "idx_submission_testcase_results_coding_submission"
     ON "submission_testcase_results" ("coding_submission_id");
+
+DROP TABLE IF EXISTS assessments_gradings;

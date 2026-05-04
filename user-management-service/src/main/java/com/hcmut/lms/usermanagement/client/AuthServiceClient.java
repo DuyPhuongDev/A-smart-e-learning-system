@@ -50,14 +50,14 @@ public interface AuthServiceClient {
     class CreateCredentialsRequest {
         private UUID userId;
         private String email;
-        private String temporaryPassword;
+        private String password;
         
         public CreateCredentialsRequest() {}
         
-        public CreateCredentialsRequest(UUID userId, String email, String temporaryPassword) {
+        public CreateCredentialsRequest(UUID userId, String email, String password) {
             this.userId = userId;
             this.email = email;
-            this.temporaryPassword = temporaryPassword;
+            this.password = password;
         }
         
         public UUID getUserId() { return userId; }
@@ -66,8 +66,8 @@ public interface AuthServiceClient {
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
         
-        public String getTemporaryPassword() { return temporaryPassword; }
-        public void setTemporaryPassword(String temporaryPassword) { this.temporaryPassword = temporaryPassword; }
+        public String getTemporaryPassword() { return password; }
+        public void setTemporaryPassword(String temporaryPassword) { this.password = temporaryPassword; }
     }
     
     class ResetPasswordRequest {

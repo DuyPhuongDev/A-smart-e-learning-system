@@ -1,7 +1,9 @@
 package com.hcmut.lms.coursemanagement.application.service;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.coursemanagement.application.dto.request.SubjectGradingRequest;
 import com.hcmut.lms.coursemanagement.application.dto.request.SubjectRequest;
+import com.hcmut.lms.coursemanagement.application.dto.response.SubjectGradingWeightResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.SubjectPrerequisiteMapResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.SubjectResponse;
 
@@ -16,6 +18,10 @@ public interface SubjectService {
     List<SubjectResponse> getAllSubjects();
     PageResponse<SubjectResponse> getAllSubjects(int page, int size, String keyword);
     void deleteSubject(UUID id);
+
+    List<SubjectGradingWeightResponse> getGradingsForSubject(UUID subjectId);
+
+    List<SubjectGradingWeightResponse> setGradingsForSubject(UUID subjectId, List<SubjectGradingRequest> gradings);
 
     /**
      * Get prerequisite + recommendation mapping for all subjects.
@@ -37,5 +43,3 @@ public interface SubjectService {
      */
     List<SubjectResponse> searchSubjects(String keyword);
 }
-
-

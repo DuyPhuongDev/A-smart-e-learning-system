@@ -7,6 +7,7 @@ import java.util.UUID;
 
 @Getter
 @Builder
+
 public class TestCaseJudgeResult {
     private UUID testCaseId;
     private JudgeVerdict verdict;

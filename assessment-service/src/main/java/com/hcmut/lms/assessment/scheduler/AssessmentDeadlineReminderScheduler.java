@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,14 +33,15 @@ public class AssessmentDeadlineReminderScheduler {
     @Scheduled(cron = "${assessment.events.deadline-reminder-cron:0 */5 * * * *}")
     @Transactional(readOnly = true)
     public void publishDeadlineReminders() {
+
         if (minutesBefore <= 0 || windowMinutes <= 0) {
             return;
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime from = now.plusMinutes(minutesBefore);
-        LocalDateTime to = from.plusMinutes(windowMinutes);
-
+        Instant now = Instant.now();
+        Instant from = now.plusSeconds(minutesBefore * 60);
+        Instant to = from.plusSeconds(windowMinutes*60);
+        log.info("Starting to schedule deadline reminders for assessments from {} to {}", from, to);
         List<Assessment> dueAssessments = assessmentRepository.findByAssessmentStatusAndCloseTimeBetween(
                 AssessmentStatus.PUBLISHED,
                 from,
