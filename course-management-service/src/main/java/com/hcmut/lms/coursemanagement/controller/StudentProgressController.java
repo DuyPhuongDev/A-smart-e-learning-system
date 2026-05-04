@@ -2,6 +2,7 @@ package com.hcmut.lms.coursemanagement.controller;
 
 import com.hcmut.lms.common.helper.CurrentUser;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
+import com.hcmut.lms.coursemanagement.application.dto.response.SemesterGpaResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.StudentLearningProgressResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.StudentSubjectDetailResponse;
 import com.hcmut.lms.coursemanagement.application.service.StudentProgressService;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -31,5 +33,12 @@ public class StudentProgressController {
             @PathVariable UUID subjectId, @CurrentUser CurrentUserInfo currentUser) {
         StudentSubjectDetailResponse response = studentProgressService.getStudentSubjectDetail(subjectId, currentUser.getId());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me/gpa-trend")
+    public ResponseEntity<List<SemesterGpaResponse>> getGpaTrend(
+            @RequestParam(required = false) UUID specializationId,
+            @CurrentUser CurrentUserInfo currentUser) {
+        return ResponseEntity.ok(studentProgressService.getGpaTrend(currentUser.getId(), specializationId));
     }
 }

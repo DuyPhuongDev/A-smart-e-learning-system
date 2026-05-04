@@ -4,6 +4,7 @@ import com.hcmut.lms.common.util.StudentGradeUtil;
 import com.hcmut.lms.coursemanagement.application.config.CurriculumFallbackConfig;
 import com.hcmut.lms.coursemanagement.application.dto.request.BatchClassLookupRequest;
 import com.hcmut.lms.coursemanagement.application.dto.response.ClassSectionResponse;
+import com.hcmut.lms.coursemanagement.application.dto.response.SemesterGpaResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.StudentLearningProgressResponse;
 import com.hcmut.lms.coursemanagement.application.dto.response.StudentSubjectDetailResponse;
 import com.hcmut.lms.coursemanagement.application.service.ClassSectionService;
@@ -766,6 +767,77 @@ public class StudentProgressServiceImpl implements StudentProgressService {
 
   private record SubjectProgressMeta(UUID semesterId, UUID academicYearId, String semesterCode, String academicYear,
                                      Integer semesterOrder, Integer academicYearOrder) {
+  }
+
+  @Override
+  public List<SemesterGpaResponse> getGpaTrend(UUID userId, UUID specializationId) {
+    StudentLearningProgressResponse progress = getStudentLearningProgress(userId, specializationId);
+    if (progress.getSections() == null || progress.getSections().isEmpty()) return List.of();
+
+    // Flatten all subjects grouped by semesterCode
+    Map<String, List<StudentLearningProgressResponse.StudentProgressSubjectItem>> bySemester = new LinkedHashMap<>();
+    for (var section : progress.getSections()) {
+      if (section.getSubjects() == null) continue;
+      for (var subject : section.getSubjects()) {
+        String semCode = subject.getSemesterCode();
+        if (semCode == null || semCode.isBlank()) continue;
+        bySemester.computeIfAbsent(semCode, k -> new ArrayList<>()).add(subject);
+      }
+    }
+
+    // Sort semesters by semKey
+    List<String> sortedSemesters = bySemester.keySet().stream()
+        .sorted(Comparator.comparingInt(s -> {
+          Integer key = computeSemKeyFromSemesterCode(s);
+          return key != null ? key : Integer.MAX_VALUE;
+        }))
+        .toList();
+
+    List<SemesterGpaResponse> result = new ArrayList<>();
+    double runningWeighted10 = 0.0;
+    double runningWeighted4 = 0.0;
+    int runningCredits = 0;
+
+    for (String semCode : sortedSemesters) {
+      List<StudentLearningProgressResponse.StudentProgressSubjectItem> subjects = bySemester.get(semCode);
+
+      double semWeighted10 = 0.0;
+      double semWeighted4 = 0.0;
+      int totalCredits = 0;
+      int gradedCredits = 0;
+
+      for (var subj : subjects) {
+        if (subj.getCredits() != null && subj.getCredits() > 0) {
+          totalCredits += subj.getCredits();
+          if (subj.getGrade10() != null) {
+            semWeighted10 += subj.getGrade10() * subj.getCredits();
+            semWeighted4 += StudentGradeUtil.convertTo4Scale(subj.getGrade10()) * subj.getCredits();
+            gradedCredits += subj.getCredits();
+          }
+        }
+      }
+
+      runningWeighted10 += semWeighted10;
+      runningWeighted4 += semWeighted4;
+      runningCredits += gradedCredits;
+
+      double semGpa10 = gradedCredits > 0 ? Math.round(semWeighted10 / gradedCredits * 100.0) / 100.0 : 0.0;
+      double semGpa4 = gradedCredits > 0 ? Math.round(semWeighted4 / gradedCredits * 100.0) / 100.0 : 0.0;
+      double cumGpa10 = runningCredits > 0 ? Math.round(runningWeighted10 / runningCredits * 100.0) / 100.0 : 0.0;
+      double cumGpa4 = runningCredits > 0 ? Math.round(runningWeighted4 / runningCredits * 100.0) / 100.0 : 0.0;
+
+      result.add(SemesterGpaResponse.builder()
+          .semesterCode(semCode)
+          .semesterGpa10(semGpa10)
+          .semesterGpa4(semGpa4)
+          .cumulativeGpa10(cumGpa10)
+          .cumulativeGpa4(cumGpa4)
+          .totalCredits(totalCredits)
+          .gradedCredits(gradedCredits)
+          .build());
+    }
+
+    return result;
   }
 
   private UUID resolveFallbackIntakeYearId(String reason, UUID userId) {

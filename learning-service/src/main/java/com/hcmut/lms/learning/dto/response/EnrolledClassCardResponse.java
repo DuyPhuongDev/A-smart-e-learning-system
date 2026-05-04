@@ -50,4 +50,6 @@ public class EnrolledClassCardResponse {
     private String code;
     private Integer maxStudents;
     private Integer currentStudents;
+    private Integer submittedAssignmentCount;
+    private Integer pendingAssignmentCount;
 }

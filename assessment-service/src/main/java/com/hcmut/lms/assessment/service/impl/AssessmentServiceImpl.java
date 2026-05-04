@@ -12,9 +12,11 @@ import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
 import com.hcmut.lms.assessment.dto.request.assessment.UpdateWeightRequest;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
+import com.hcmut.lms.assessment.domain.entity.submission.AssessmentSubmissionStatus;
 import com.hcmut.lms.assessment.dto.response.AssessmentGrade;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
+import com.hcmut.lms.assessment.dto.response.PendingAssessmentCountResponse;
 import com.hcmut.lms.assessment.dto.response.QuestionResponse;
 import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
@@ -69,6 +71,31 @@ public class AssessmentServiceImpl implements AssessmentService {
         List<Assessment> assessments = assessmentRepository.findByClassIdOrderByCreatedAtAsc(classId);
 
         return assessments.stream().map(AssessmentGrade::toAssessmentGradeResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AssessmentResponse> getAssessmentsByClassIds(List<UUID> classIds) {
+        if (classIds == null || classIds.isEmpty()) return List.of();
+        return assessmentRepository.findByClassIdInOrderByCloseTimeAsc(classIds)
+                .stream()
+                .map(assessmentMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PendingAssessmentCountResponse> getPendingAssessmentCounts(List<UUID> classIds, UUID studentId) {
+        if (classIds == null || classIds.isEmpty()) return List.of();
+        List<Object[]> rows = assessmentRepository.countSubmittedAndPendingByClassIds(
+                classIds, studentId, AssessmentStatus.PUBLISHED, AssessmentSubmissionStatus.SUBMITTED);
+        return rows.stream()
+                .map(row -> PendingAssessmentCountResponse.builder()
+                        .classId((UUID) row[0])
+                        .submittedCount(((Number) row[1]).intValue())
+                        .count(((Number) row[2]).intValue())
+                        .build())
+                .toList();
     }
 
     @Override

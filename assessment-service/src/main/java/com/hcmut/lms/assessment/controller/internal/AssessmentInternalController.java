@@ -1,12 +1,10 @@
 package com.hcmut.lms.assessment.controller.internal;
 
-import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentType;
 import com.hcmut.lms.assessment.dto.response.AssessmentGrade;
+import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
+import com.hcmut.lms.assessment.dto.response.PendingAssessmentCountResponse;
 import com.hcmut.lms.assessment.service.AssessmentService;
-import lombok.Builder;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,5 +23,17 @@ public class AssessmentInternalController {
     public List<AssessmentGrade> getGradesByClass(@PathVariable UUID id) {
         return assessmentService.getGradesByClass(id);
     }
-}
 
+    @PostMapping("/batch")
+    @ResponseStatus(HttpStatus.OK)
+    public List<AssessmentResponse> getAssessmentsByClassIds(@RequestBody List<UUID> classIds) {
+        return assessmentService.getAssessmentsByClassIds(classIds);
+    }
+
+    @PostMapping("/batch/pending-counts")
+    @ResponseStatus(HttpStatus.OK)
+    public List<PendingAssessmentCountResponse> getPendingAssessmentCounts(
+            @RequestBody PendingAssessmentCountRequest request) {
+        return assessmentService.getPendingAssessmentCounts(request.getClassIds(), request.getStudentId());
+    }
+}
