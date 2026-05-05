@@ -26,4 +26,6 @@ public interface LearningPathService {
   LearningPathGraphResponse getGraph(UUID studentId, UUID learningPathId);
 
   List<LearningPathSubjectResponse> searchSubjects(UUID studentId, UUID learningPathId, String keyword);
+
+  LearningPathSyncProgressResponse syncLearningPathProgress(UUID studentId, UUID learningPathId);
 }

@@ -141,14 +141,10 @@ public class LearningGoalValidationServiceImpl implements LearningGoalValidation
           "method", "skipped", "probabilityScore", probabilityScore, "note",
           "Skipped due to failed preliminary checks");
     } else {
-      int totalSemesters = feasibility.creditTimeResult().mainSemesters() + feasibility.creditTimeResult()
-          .summerSemesters();
 
       probabilityAnalysis = probabilityAnalysisService.analyzeProbability(
-          studentId, tempGoal.getSpecializationId(),
-          remainingSubjectIds, remainingSubjectCredits,
-          currentGpa, earnedCredits, remainingCredits, tempGoal.getTargetGpa(),
-          totalSemesters, IntensityCreditCapSupport.mainSemesterCapStrict(tempGoal.getPrefMainSemLearnIntensity()));
+          studentId, remainingSubjectIds, remainingSubjectCredits,
+          currentGpa, earnedCredits, remainingCredits, tempGoal.getTargetGpa(), IntensityCreditCapSupport.mainSemesterCapStrict(tempGoal.getPrefMainSemLearnIntensity()));
 
       probabilityScore = getDouble(probabilityAnalysis.get("probabilityScore")) != null
           ? getDouble(probabilityAnalysis.get("probabilityScore")) : 0.5;

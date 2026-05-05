@@ -66,7 +66,7 @@ public class LearningPathSubject extends BaseEntity {
   @Column(name = "prerequisites_graph")
   private List<PrerequisiteNode> prerequisitesGraph;
 
-  @Column(name = "is_completed", nullable = false)
+  @Column(name = "is_completed")
   private Boolean isCompleted;
 
   @Column(name = "study_order")

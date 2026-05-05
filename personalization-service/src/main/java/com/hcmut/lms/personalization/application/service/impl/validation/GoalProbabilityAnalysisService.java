@@ -18,16 +18,12 @@ public class GoalProbabilityAnalysisService {
     private final PredictiveModelAnalyzerService predictiveModelAnalyzer;
 
     public Map<String, Object> analyzeProbability(
-        UUID studentId,
-        String specializationId,
-        List<UUID> remainingSubjectIds,
+        UUID studentId, List<UUID> remainingSubjectIds,
         Map<UUID, Integer> remainingSubjectCredits,
         BigDecimal currentGpa,
         int earnedCredits,
         int remainingCredits,
-        BigDecimal targetGpa,
-        int remainingSemesters,
-        Integer mainCreditCap
+        BigDecimal targetGpa, Integer mainCreditCap
     ) {
         log.info("Analyzing probability for student {}", studentId);
 

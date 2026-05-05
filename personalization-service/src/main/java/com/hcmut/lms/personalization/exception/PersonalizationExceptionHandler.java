@@ -30,7 +30,7 @@ public class PersonalizationExceptionHandler {
         log.error(e.getMessage(), e);
         return ErrorResponse.builder()
                 .status(HttpStatus.BAD_REQUEST.value())
-                .message("Yêu cầu không hợp lệ. Vui lòng kiểm tra lại.")
+                .message(e.getMessage())
                 .build();
     }
 

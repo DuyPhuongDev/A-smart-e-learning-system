@@ -64,9 +64,10 @@ public class LearningPathResponseAssembler {
         .map(subject -> toSubjectResponse(subject, curriculumData.subjectMap(), difficultyMap))
         .toList();
 
+    UUID currentSemesterId = findCurrentSemesterId(allSemesters);
     LearningPathGraphResponse graph = buildGraph(subjects, semesterOrderBySection, curriculumData.subjectMap(),
-        sections, sectionDisplayInfo, findCurrentSemesterId(allSemesters));
-    List<LearningPathValidationConflictResponse> validationConflicts = buildValidationConflicts(sections, subjects);
+        sections, sectionDisplayInfo, currentSemesterId);
+    List<LearningPathValidationConflictResponse> validationConflicts = buildValidationConflicts(sections, subjects, currentSemesterId);
 
     LearningPathResponse response = learningPathMapper.toPathResponse(path);
     response.setSections(sectionResponses);
@@ -247,7 +248,7 @@ public class LearningPathResponseAssembler {
     for (var entry : lpSubjectBySubjectId.entrySet()) {
       UUID subjectId = entry.getKey();
       LearningPathSubject lpSubject = entry.getValue();
-      boolean isCompleted = Boolean.TRUE.equals(lpSubject.getIsCompleted());
+      Boolean isCompleted = lpSubject.getIsCompleted();
       Integer semesterOrder = semesterOrderBySection.get(lpSubject.getLearningPathSectionId());
 
       nodeBySubject.put(subjectId, PrerequisiteGraphNodeResponse.builder()
@@ -463,7 +464,7 @@ public class LearningPathResponseAssembler {
         }
       }
       if (component.size() > 1) {
-        componentVisited.forEach(visited::add);
+        visited.addAll(componentVisited);
         component.sort(Comparator.comparingInt(n -> n.getSemesterOrder() != null ? n.getSemesterOrder() : 0));
         groups.add(component);
       }
@@ -517,7 +518,7 @@ public class LearningPathResponseAssembler {
     String subjectCode = lpSubject.getSubjectCode();
     String subjectName = lpSubject.getSubjectName();
     Integer credits = lpSubject.getCredits();
-    boolean isCompleted = Boolean.TRUE.equals(lpSubject.getIsCompleted());
+    Boolean isCompleted = lpSubject.getIsCompleted();
 
     Integer semesterOrder = semesterOrderBySection.getOrDefault(lpSubject.getLearningPathSectionId(), null);
     if (semesterOrder == null) {
@@ -551,21 +552,30 @@ public class LearningPathResponseAssembler {
   }
 
   List<LearningPathValidationConflictResponse> buildValidationConflicts(
-      List<LearningPathSection> sections, List<LearningPathSubject> subjects) {
+      List<LearningPathSection> sections, List<LearningPathSubject> subjects, UUID currentSemesterId) {
     Map<UUID, Integer> creditsBySection = new HashMap<>();
     for (LearningPathSubject subject : subjects) {
       creditsBySection.merge(subject.getLearningPathSectionId(), subject.getCredits(), Integer::sum);
     }
 
+    int currentSemesterOrder = sections.stream()
+        .filter(s -> currentSemesterId != null && currentSemesterId.equals(s.getSemesterId()))
+        .mapToInt(LearningPathSection::getSemesterOrder)
+        .findFirst()
+        .orElse(Integer.MIN_VALUE);
+
     List<LearningPathValidationConflictResponse> conflicts = new ArrayList<>();
     for (LearningPathSection section : sections) {
+      if (currentSemesterOrder != Integer.MIN_VALUE && section.getSemesterOrder() <= currentSemesterOrder) {
+        continue;
+      }
       int credits = creditsBySection.getOrDefault(section.getLearningPathSectionId(), 0);
       if (credits > MAX_RECOMMENDED_CREDITS_PER_SEMESTER) {
         conflicts.add(LearningPathValidationConflictResponse.builder()
             .conflictType("credit-limit")
             .semesterOrder(section.getSemesterOrder())
-            .description("Total credits exceed recommended limit")
-            .suggestedResolution("Move one elective to another semester")
+            .description("Tổng số tín chỉ trong kỳ này là " + credits + ", vượt quá giới hạn khuyến nghị là " + MAX_RECOMMENDED_CREDITS_PER_SEMESTER)
+            .suggestedResolution("Xem xét giảm số tín chỉ trong kỳ này xuống dưới " + MAX_RECOMMENDED_CREDITS_PER_SEMESTER + " để có kế hoạch học tập cân đối hơn.")
             .relatedSubjectIds(Collections.emptyList())
             .build());
       }

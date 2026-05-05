@@ -290,10 +290,6 @@ public class LearningPathGenerationService {
   }
 
   private record ValidationResult(boolean isFeasible, String reason, String riskLevel) {
-    public String getRiskLevel() {
-      return riskLevel;
-    }
-
     public String getReason() {
       return reason;
     }

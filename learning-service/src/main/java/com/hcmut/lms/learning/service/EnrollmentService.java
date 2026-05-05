@@ -2,10 +2,13 @@ package com.hcmut.lms.learning.service;
 
 import com.hcmut.lms.common.dto.PageResponse;
 import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
+import com.hcmut.lms.learning.dto.request.CreateTestEnrollmentRequest;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
+import com.hcmut.lms.learning.dto.response.StudentEnrollmentWithSubjectResponse;
+import com.hcmut.lms.learning.dto.response.UpcomingAssessmentResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -48,9 +51,27 @@ public interface EnrollmentService {
    */
   List<StudentEnrollmentResponse> getStudentEnrollmentsWithSubjects(UUID studentId);
 
+  /**
+   * Get all enrollments for a student with resolved subject IDs.
+   * Batch resolves classId -> subjectId via course-management-service in a single Feign call.
+   */
+  List<StudentEnrollmentWithSubjectResponse> getStudentEnrollmentsWithSubjectIds(UUID studentId);
+
   List<UUID> getStudentIdsByClassId(UUID classId);
 
   List<InternalClassStudentIdsResponse> getStudentIdsByClassIds(List<UUID> classIds);
 
   List<UUID> getStudentIdsByCourseId(UUID courseId);
+
+  /**
+   * Get upcoming assessments across all enrolled classes for a student.
+   * Returns at most 5 assessments ordered by closest closeTime.
+   */
+  List<UpcomingAssessmentResponse> getUpcomingAssessments(UUID studentId);
+
+  /**
+   * Create a test enrollment directly with grade data, bypassing normal enrollment validation.
+   * Used internally by personalization-service for test data generation.
+   */
+  void createTestEnrollment(CreateTestEnrollmentRequest request);
 }
