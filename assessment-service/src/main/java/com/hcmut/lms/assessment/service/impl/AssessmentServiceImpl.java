@@ -1,21 +1,20 @@
 package com.hcmut.lms.assessment.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcmut.lms.assessment.client.CourseManagementInternalClient;
 import com.hcmut.lms.assessment.client.dto.ClassGradingWeightDto;
-import com.hcmut.lms.assessment.domain.entity.assessment.Assessment;
-import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentQuestion;
-import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
-import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentType;
+import com.hcmut.lms.assessment.domain.entity.assessment.*;
+import com.hcmut.lms.assessment.domain.entity.question.EssayQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
-import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.UpdateWeightRequest;
+import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
+import com.hcmut.lms.assessment.dto.request.assessment.*;
+import com.hcmut.lms.assessment.dto.request.question.EssayQuestionRequest;
+import com.hcmut.lms.assessment.dto.request.question.FileUploadRequest;
+import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
-import com.hcmut.lms.assessment.dto.response.AssessmentGrade;
-import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
-import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
-import com.hcmut.lms.assessment.dto.response.QuestionResponse;
+import com.hcmut.lms.assessment.dto.response.*;
 import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
 import com.hcmut.lms.assessment.exception.ResourceNotFoundException;
 import com.hcmut.lms.assessment.mapper.AssessmentMapper;
@@ -35,10 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -162,6 +158,94 @@ public class AssessmentServiceImpl implements AssessmentService {
         Assessment assessment = findAssessmentById(id);
         assessment.setWeight(request.getWeight());
         return AssessmentGrade.toAssessmentGradeResponse(assessment);
+    }
+
+    @Override
+    @Transactional
+    public AssignmentResponse createAssignment(AssignmentRequest request) {
+
+        Assessment assessment = Assessment.builder()
+                .classId(request.getClassId())
+                .weight(BigDecimal.ZERO)
+                .title(request.getTitle())
+                .assessmentType(AssessmentType.ASSIGNMENT)
+                .assessmentStatus(AssessmentStatus.DRAFT)
+                .gradingRule(GradingRule.LAST_ATTEMPT)
+                .timeLimit(30)
+                .maxAttempts(-1)
+                .passingScore(0)
+                .startTime(request.getStartTime())
+                .closeTime(request.getCloseTime())
+                .canReview(true)
+                .showCorrectAnswers(false)
+                .timeCanReview(TimeCanReview.ALWAYS)
+                .build();
+
+        Assessment saved = assessmentRepository.save(assessment);
+
+        EssayQuestionRequest essayQuestionRequest = EssayQuestionRequest.builder()
+                .questionType(QuestionType.ESSAY)
+                .content(request.getDescription())
+                .maxFileSize(50)
+                .fileUploads(request.getFiles())
+                .build();
+
+        Question question = questionService.makeQuestion(essayQuestionRequest);
+
+        Question savedQuestion = questionRepository.save(question);
+
+        AssessmentQuestion assessmentQuestion = AssessmentQuestion.builder()
+                .assessment(saved)
+                .question(savedQuestion)
+                .orderIndex(0)
+                .point(BigDecimal.TEN)
+                .build();
+
+
+        saved.getAssessmentQuestions().add(assessmentQuestion);
+
+        assessmentRepository.save(assessment);
+
+        return AssignmentResponse.builder()
+                .assessmentId(saved.getId())
+                .questionId(question.getId())
+                .title(assessment.getTitle())
+                .description(question.getContent())
+                .startTime(assessment.getStartTime())
+                .endTime(assessment.getCloseTime())
+                .fileUploads(getFiles((EssayQuestion) savedQuestion))
+                .build();
+
+    }
+
+    @Override
+    public AssignmentResponse getAssignmentDetail(UUID id) {
+        Assessment assessment = findAssessmentById(id);
+        Question question = questionRepository.findAllByAssessmentId(assessment.getId()).stream().findFirst().orElseThrow(
+                () -> new ResourceNotFoundException("Question", id)
+        );
+        return AssignmentResponse.builder()
+                .assessmentId(assessment.getId())
+                .questionId(question.getId())
+                .title(assessment.getTitle())
+                .description(question.getContent())
+                .startTime(assessment.getStartTime())
+                .endTime(assessment.getCloseTime())
+                .fileUploads(getFiles((EssayQuestion) question))
+                .build();
+
+    }
+
+    private List<FileUploadRequest> getFiles(EssayQuestion entity) {
+        String json = entity.getInstructionFiles(); // Đây vẫn là chuỗi "[{...}]"
+
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            // Phải dùng TypeReference để Jackson biết đường ép về List Object
+            return mapper.readValue(json, new TypeReference<List<FileUploadRequest>>() {});
+        } catch (JsonProcessingException e) {
+            return Collections.emptyList();
+        }
     }
 
     @Override

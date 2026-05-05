@@ -1,10 +1,7 @@
 package com.hcmut.lms.assessment.controller;
 
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
-import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.UpdateWeightRequest;
+import com.hcmut.lms.assessment.dto.request.assessment.*;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
 import com.hcmut.lms.assessment.dto.response.*;
 import com.hcmut.lms.assessment.service.AssessmentService;
@@ -134,4 +131,19 @@ public class AssessmentController {
     public AssessmentGrade updateWeight(@PathVariable UUID id, @Valid @RequestBody UpdateWeightRequest request) {
         return assessmentService.updateGrade(id, request);
     }
+
+    @PostMapping("/create-assignment")
+    public AssignmentResponse createAssignment(@Valid @RequestBody AssignmentRequest request) {
+        return assessmentService.createAssignment(request);
+    }
+
+    @GetMapping("/{id}/assignment-detail")
+    public AssignmentResponse getAssignmentDetail(@PathVariable UUID id) {
+        return assessmentService.getAssignmentDetail(id);
+    }
+
+//    @PutMapping("/{id}/assignment-detail")
+//    public AssignmentResponse getAssignmentDetail(@Valid @RequestBody AssignmentRequest request) {
+//        return assessmentService.createAssignment(request);
+//    }
 }

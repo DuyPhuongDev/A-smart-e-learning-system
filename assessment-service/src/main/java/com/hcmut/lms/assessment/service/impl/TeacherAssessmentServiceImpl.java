@@ -331,10 +331,6 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 EssaySubmission essaySubmission = resolveEssaySubmission(questionSubmission);
                 if (essaySubmission != null) {
                     builder.submittedText(essaySubmission.getAnswerText());
-                    builder.submittedFileUrl(essaySubmission.getAnswerFileUrl());
-                    builder.submittedFileFormat(essaySubmission.getFileFormat());
-                    builder.submittedNumPages(essaySubmission.getNumPages());
-                    builder.submittedWordCount(essaySubmission.getWordCount());
                 }
             }
 
@@ -370,8 +366,8 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 .attemptNo(attempt.getAttemptNo())
                 .submittedAt(attempt.getSubmitTime())
                 .takenTime(attempt.getTakenTime())
-                .score(nonNull(attempt.getScore()))
-                .maxScore(maxScore)
+                .score(nonNull(attempt.getActualScore()))
+                .maxScore(BigDecimal.TEN) // hihi
                 .gradingStatus(gradingStatus)
                 .questions(questionDetails)
                 .build();
@@ -679,7 +675,7 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 .lateCount(lateCount)
                 .missingCount(missingCount)
                 .averageScore(averageScore)
-                .maxScore(maxScore)
+                .maxScore(BigDecimal.TEN) // hihi
                 .difficultyPercent(difficultyPercent)
                 .questions(questionReports)
                 .build();
@@ -861,27 +857,27 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
 
         return switch (rule) {
             case HIGH_SCORE -> attempts.stream()
-                    .filter(attempt -> attempt.getScore() != null)
+                    .filter(attempt -> attempt.getActualScore() != null)
                     .max(Comparator
-                            .comparing(AssessmentSubmission::getScore)
+                            .comparing(AssessmentSubmission::getActualScore)
                             .thenComparing(AssessmentSubmission::getSubmitTime, Comparator.nullsLast(Comparator.naturalOrder())))
-                    .map(AssessmentSubmission::getScore)
+                    .map(AssessmentSubmission::getActualScore)
                     .orElse(null);
             case LAST_ATTEMPT -> attempts.stream()
                     .max(Comparator
                             .comparing(AssessmentSubmission::getAttemptNo, Comparator.nullsLast(Comparator.naturalOrder()))
                             .thenComparing(AssessmentSubmission::getSubmitTime, Comparator.nullsLast(Comparator.naturalOrder())))
-                    .map(AssessmentSubmission::getScore)
+                    .map(AssessmentSubmission::getActualScore)
                     .orElse(null);
             case FIRST_ATTEMPT -> attempts.stream()
                     .min(Comparator
                             .comparing(AssessmentSubmission::getAttemptNo, Comparator.nullsLast(Comparator.naturalOrder()))
                             .thenComparing(AssessmentSubmission::getSubmitTime, Comparator.nullsLast(Comparator.naturalOrder())))
-                    .map(AssessmentSubmission::getScore)
+                    .map(AssessmentSubmission::getActualScore)
                     .orElse(null);
             case AVG_SCORE -> {
                 List<BigDecimal> scores = attempts.stream()
-                        .map(AssessmentSubmission::getScore)
+                        .map(AssessmentSubmission::getActualScore)
                         .filter(Objects::nonNull)
                         .toList();
                 if (scores.isEmpty()) {

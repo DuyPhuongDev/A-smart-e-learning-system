@@ -6,6 +6,7 @@ import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "essay_submissions")
@@ -20,15 +21,8 @@ public class EssaySubmission extends QuestionSubmission {
     @Column(name = "answer_text", columnDefinition = "text")
     private String answerText;
 
-    @Column(name = "answer_file_url")
-    private String answerFileUrl;
+    @Column(name = "submission_files", columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
+    private String submissionFiles;
 
-    @Column(name = "file_format")
-    private String fileFormat;
-
-    @Column(name = "num_pages")
-    private Integer numPages;
-
-    @Column(name = "word_count")
-    private Integer wordCount;
 }

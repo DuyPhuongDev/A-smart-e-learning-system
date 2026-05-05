@@ -1,6 +1,7 @@
 package com.hcmut.lms.assessment.dto.response.student;
 
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
+import com.hcmut.lms.assessment.dto.request.question.FileUploadRequest;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -34,9 +35,7 @@ public class AttemptQuestionResponse {
 
     private Integer maxFileSize;
     private List<String> acceptedFileTypes;
+    private List<FileUploadRequest> instructionFiles;
     private String submittedText;
-    private String submittedFileUrl;
-    private String submittedFileFormat;
-    private Integer submittedNumPages;
-    private Integer submittedWordCount;
+    private List<FileUploadRequest> submittedFiles;
 }
