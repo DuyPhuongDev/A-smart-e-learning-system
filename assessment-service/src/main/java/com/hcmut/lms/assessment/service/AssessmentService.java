@@ -42,6 +42,10 @@ public interface AssessmentService {
 
     List<AssessmentGrade> getGradesByClass(UUID classId);
 
+    List<AssessmentResponse> getAssessmentsByClassIds(List<UUID> classIds);
+
+    List<PendingAssessmentCountResponse> getPendingAssessmentCounts(List<UUID> classIds, UUID studentId);
+
     AssessmentGrade updateGrade(UUID id, UpdateWeightRequest request);
 
     AssignmentResponse createAssignment(AssignmentRequest request);

@@ -1,5 +1,6 @@
 package com.hcmut.lms.coursemanagement.application.service.impl;
 
+import com.hcmut.lms.common.util.StudentGradeUtil;
 import com.hcmut.lms.coursemanagement.client.dto.StudentEnrollmentResponse;
 import com.hcmut.lms.coursemanagement.domain.entity.curriculum.CurriculumSection;
 import com.hcmut.lms.coursemanagement.domain.entity.curriculum.CurriculumSubject;
@@ -107,7 +108,7 @@ public class CurriculumSubjectAllocationService {
         continue;
       }
 
-      Double grade4 = enrollment.getFinalGrade() != null ? gradeUtil.convertTo4Scale(enrollment.getFinalGrade()) : null;
+      Double grade4 = enrollment.getFinalGrade() != null ? StudentGradeUtil.convertTo4Scale(enrollment.getFinalGrade()) : null;
       Double grade10 = enrollment.getFinalGrade();
       candidates.add(new AllocationCandidate(subjectId, credits, grade4, grade10));
     }

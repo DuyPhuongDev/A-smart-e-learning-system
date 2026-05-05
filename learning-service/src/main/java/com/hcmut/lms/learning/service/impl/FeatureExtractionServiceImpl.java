@@ -1,5 +1,6 @@
 package com.hcmut.lms.learning.service.impl;
 
+import com.hcmut.lms.common.util.StudentGradeUtil;
 import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.client.dto.BatchClassDatasetLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
@@ -8,7 +9,6 @@ import com.hcmut.lms.learning.client.dto.SubjectPrerequisiteMapResponse;
 import com.hcmut.lms.learning.client.dto.SubjectWindowDatasetLookupRequest;
 import com.hcmut.lms.learning.dto.internal.ExtractedFeatures;
 import com.hcmut.lms.learning.entity.enrollment.Enrollment;
-import com.hcmut.lms.learning.entity.semester.GradeSemesterMetrics;
 import com.hcmut.lms.learning.entity.subject.SubjectSemesterMetrics;
 import com.hcmut.lms.learning.mapper.FeatureExtractionMapper;
 import com.hcmut.lms.learning.repository.EnrollmentRepository;
@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.hcmut.lms.learning.util.GradeConversionUtil.convertTo4Point;
 
 @Service
 @Slf4j
@@ -114,7 +113,7 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
       for (Enrollment e : priorEnrollments) {
         ClassSectionDatasetResponse meta = classMetadataMap.get(e.getClassId());
         int credits = meta != null && meta.getCredits() != null ? meta.getCredits() : 0;
-        double grade4pt = convertTo4Point(e.getFinalGrade());
+        double grade4pt = StudentGradeUtil.convertTo4Scale(e.getFinalGrade());
         sumWeightedGrade += grade4pt * credits;
         sumCredits += credits;
       }
@@ -144,7 +143,7 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
           for (Enrollment e : prevSemEnrollments) {
             ClassSectionDatasetResponse meta = classMetadataMap.get(e.getClassId());
             int credits = meta != null && meta.getCredits() != null ? meta.getCredits() : 0;
-            double grade4pt = convertTo4Point(e.getFinalGrade());
+            double grade4pt = StudentGradeUtil.convertTo4Scale(e.getFinalGrade());
             sumWG += grade4pt * credits;
             sumC += credits;
           }
@@ -166,7 +165,6 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
       SubjectSemesterMetrics metrics = metricsOpt.get();
       subjectHistMedianSmooth = metrics.getSmoothedMedian4pt();
       subjectHistCount = metrics.getSampleCount() != null ? metrics.getSampleCount() : 0;
-      subjectHistMissing = metrics.getIsFallback() || subjectHistCount == 0;
       if (log.isDebugEnabled()) {
         log.debug("Using pre-computed metrics for subjectId={} semesterId={}: " +
             "smoothedMedian4pt={}, sampleCount={}, isFallback={}",
@@ -213,12 +211,12 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
         for (Enrollment e : relativeEnrollments) {
           ClassSectionDatasetResponse meta = classMetadataMap.get(e.getClassId());
           int credits = meta != null && meta.getCredits() != null ? meta.getCredits() : 0;
-          double grade4pt = convertTo4Point(e.getFinalGrade());
+          double grade4pt = StudentGradeUtil.convertTo4Scale(e.getFinalGrade());
           sumWeightedGrade += grade4pt * credits;
           sumCredits += credits;
         }
         relativeAvgCourseGrade = sumCredits > 0 ? sumWeightedGrade / sumCredits : relativeEnrollments.stream()
-            .mapToDouble(e -> convertTo4Point(e.getFinalGrade()))
+            .mapToDouble(e -> StudentGradeUtil.convertTo4Scale(e.getFinalGrade()))
             .average()
             .orElse(0.0);
       }
@@ -226,7 +224,7 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
 
     // Fallback: when no related courses with grades, use previous semester GPA if available
     if (!hasRelativeEnrollments) {
-      relativeAvgCourseGrade = previousSemGradeAvg > 0.0 ? previousSemGradeAvg : 0.0;
+      relativeAvgCourseGrade = Math.max(previousSemGradeAvg, 0.0);
     }
 
     Map<String, Object> features = featureExtractionMapper.toFeatureMap(ExtractedFeatures.builder()
@@ -253,8 +251,8 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
    */
   private double getSemesterGlobalMedian4pt(UUID semesterId) {
     return gradeSemesterMetricsService.findBySemesterId(semesterId)
-        .map(m -> convertTo4Point(m.getMedianGrade()))
-        .orElse(convertTo4Point(SubjectSemesterMetrics.DEFAULT_MEAN_GRADE));
+        .map(m -> StudentGradeUtil.convertTo4Scale(m.getMedianGrade()))
+        .orElse(StudentGradeUtil.convertTo4Scale(SubjectSemesterMetrics.DEFAULT_MEAN_GRADE));
   }
 
   /**
@@ -315,7 +313,7 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
   }
 
   private double computeMedian4pt(List<Enrollment> courseHistory) {
-    List<Double> grades4pt = courseHistory.stream().map(e -> convertTo4Point(e.getFinalGrade())).sorted().toList();
+    List<Double> grades4pt = courseHistory.stream().map(e -> StudentGradeUtil.convertTo4Scale(e.getFinalGrade())).sorted().toList();
 
     int size = grades4pt.size();
     if (size == 0) return 0.0;

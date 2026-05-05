@@ -1,6 +1,5 @@
 package com.hcmut.lms.personalization.application.dto.request;
 
-import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +13,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ValuationOccupationRequest {
-  @NotEmpty
   private List<UUID> subjectIds;
 
   private List<String> occupationCodes;

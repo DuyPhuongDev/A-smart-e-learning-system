@@ -1,7 +1,9 @@
 package com.hcmut.lms.personalization.client;
 
+import com.hcmut.lms.personalization.client.dto.ClassSectionTestDataResponse;
 import com.hcmut.lms.personalization.client.dto.CurriculumFullResponse;
 import com.hcmut.lms.personalization.client.dto.CurriculumResolutionResponse;
+import com.hcmut.lms.personalization.client.dto.EnsureClassSectionRequest;
 import com.hcmut.lms.personalization.client.dto.GraduationRequirementResponse;
 import com.hcmut.lms.personalization.client.dto.PrerequisiteChainRequest;
 import com.hcmut.lms.personalization.client.dto.PrerequisiteChainResponse;
@@ -52,4 +54,10 @@ public interface CourseManagementClient {
 
   @GetMapping("/curriculums/resolve")
   CurriculumResolutionResponse resolveCurriculum(@RequestParam UUID specializationId, @RequestParam Integer intakeYear);
+
+  @GetMapping("/subjects/ids")
+  List<UUID> getAllSubjectIds();
+
+  @PostMapping("/class-sections/ensure")
+  ClassSectionTestDataResponse ensureClassSection(@RequestBody EnsureClassSectionRequest request);
 }

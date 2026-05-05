@@ -69,6 +69,31 @@ public class AssessmentServiceImpl implements AssessmentService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<AssessmentResponse> getAssessmentsByClassIds(List<UUID> classIds) {
+        if (classIds == null || classIds.isEmpty()) return List.of();
+        return assessmentRepository.findByClassIdInOrderByCloseTimeAsc(classIds)
+                .stream()
+                .map(assessmentMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PendingAssessmentCountResponse> getPendingAssessmentCounts(List<UUID> classIds, UUID studentId) {
+        if (classIds == null || classIds.isEmpty()) return List.of();
+        List<Object[]> rows = assessmentRepository.countSubmittedAndPendingByClassIds(
+                classIds, studentId, AssessmentStatus.PUBLISHED, AssessmentSubmissionStatus.SUBMITTED);
+        return rows.stream()
+                .map(row -> PendingAssessmentCountResponse.builder()
+                        .classId((UUID) row[0])
+                        .submittedCount(((Number) row[1]).intValue())
+                        .count(((Number) row[2]).intValue())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public AssessmentResponse getAssessment(UUID id) {
         Assessment assessment = findAssessmentById(id);
         return assessmentMapper.toResponse(assessment);

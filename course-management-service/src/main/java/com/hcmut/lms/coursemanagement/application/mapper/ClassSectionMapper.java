@@ -32,6 +32,7 @@ public interface ClassSectionMapper {
     @Mapping(target = "subjectName", source = "subject.name")
     @Mapping(target = "subjectCode", source = "subject.code")
     @Mapping(target = "credits", source = "subject.credits")
+    @Mapping(target = "subjectGradingType", source = "subject.gradingType", qualifiedByName = "gradingTypeToString")
     @Mapping(target = "semesterId", source = "semester.id")
     @Mapping(target = "semesterCode", source = "semester.semesterCode")
     @Mapping(target = "status", source = "status", qualifiedByName = "classStatusToString")
@@ -90,6 +91,11 @@ public interface ClassSectionMapper {
     @Named("courseLevelToString")
     default String courseLevelToString(CourseLevel level) {
         return level != null ? level.name() : null;
+    }
+
+    @Named("gradingTypeToString")
+    default String gradingTypeToString(com.hcmut.lms.coursemanagement.domain.entity.subject.SubjectGradingType gradingType) {
+        return gradingType != null ? gradingType.name() : null;
     }
 }
 

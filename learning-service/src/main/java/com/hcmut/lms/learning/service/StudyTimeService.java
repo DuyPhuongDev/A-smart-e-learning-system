@@ -4,6 +4,7 @@ import com.hcmut.lms.learning.dto.request.StudyTimeRequest;
 import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
 import com.hcmut.lms.learning.dto.response.StudentStudyTimeSummaryResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
+import com.hcmut.lms.learning.dto.response.AggregatedStudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
 import com.hcmut.lms.common.helper.CurrentUserInfo;
 
@@ -36,4 +37,9 @@ public interface StudyTimeService {
     LectureFrequencyResponse getLectureFrequencyForTeacher(UUID classId, CurrentUserInfo currentUserInfo);
 
     List<StudentStudyTimeSummaryResponse> getStudentStudyTimesForTeacher(UUID classId, CurrentUserInfo currentUserInfo);
+
+    /**
+     * Get daily aggregated study time across all enrolled classes for the last N days.
+     */
+    List<AggregatedStudyTimeResponse> getAggregatedSummary(UUID studentId, int days);
 }

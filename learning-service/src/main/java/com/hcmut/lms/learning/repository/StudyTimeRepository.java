@@ -101,4 +101,21 @@ public interface StudyTimeRepository extends JpaRepository<StudyTime, UUID> {
             GROUP BY st.studentId
             """)
     List<Object[]> sumDurationByClassGroupedByStudent(@Param("classId") UUID classId);
+
+    /**
+     * Get study time summary by date for a student across multiple classes.
+     */
+    @Query("SELECT DATE(st.startedAt) as date, " +
+           "COALESCE(SUM(st.durationSeconds), 0) as totalSeconds, " +
+           "COUNT(st.id) as sessionCount " +
+           "FROM StudyTime st " +
+           "WHERE st.studentId = :studentId AND st.classId IN :classIds " +
+           "AND st.startedAt >= :startDate AND st.startedAt < :endDate " +
+           "GROUP BY DATE(st.startedAt) " +
+           "ORDER BY date DESC")
+    List<Object[]> getAggregatedSummaryByDate(
+            @Param("studentId") UUID studentId,
+            @Param("classIds") List<UUID> classIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }

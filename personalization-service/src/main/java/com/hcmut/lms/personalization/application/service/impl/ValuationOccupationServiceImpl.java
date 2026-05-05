@@ -184,10 +184,8 @@ public class ValuationOccupationServiceImpl implements ValuationOccupationServic
       return;
     }
 
-    Set<UUID> existingIds = requirementEmbeddingRepository.findExistingRequirementIds(
-            allRequirements.stream().map(OnetFlattenedRequirement::getOnetFlattenedRequirementsId).toList())
-        .stream()
-        .collect(Collectors.toSet());
+    Set<UUID> existingIds = new HashSet<>(requirementEmbeddingRepository.findExistingRequirementIds(
+        allRequirements.stream().map(OnetFlattenedRequirement::getOnetFlattenedRequirementsId).toList()));
 
     List<OnetFlattenedRequirement> missing = allRequirements.stream()
         .filter(requirement -> !existingIds.contains(requirement.getOnetFlattenedRequirementsId()))

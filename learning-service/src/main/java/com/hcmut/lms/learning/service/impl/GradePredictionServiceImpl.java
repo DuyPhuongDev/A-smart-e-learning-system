@@ -1,5 +1,6 @@
 package com.hcmut.lms.learning.service.impl;
 
+import com.hcmut.lms.common.util.StudentGradeUtil;
 import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.dto.internal.CachedModel;
 import com.hcmut.lms.learning.dto.internal.PredictionResult;
@@ -15,7 +16,6 @@ import com.hcmut.lms.learning.service.GradePredictionService;
 import com.hcmut.lms.learning.service.ModelCacheService;
 import com.hcmut.lms.learning.service.OnnxInferenceService;
 import com.hcmut.lms.learning.service.SubjectSemesterMetricsService;
-import com.hcmut.lms.learning.util.GradeConversionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -171,7 +171,7 @@ public class GradePredictionServiceImpl implements GradePredictionService {
       SubjectSemesterMetrics metrics, Double threshold) {
 
     // Convert mean from 10-point to 4-point scale
-    double meanGrade4pt = GradeConversionUtil.convertTo4Point(metrics.getMeanGrade());
+    double meanGrade4pt = StudentGradeUtil.convertTo4Scale(metrics.getMeanGrade());
 
     // stdDev is already stored on 4-point scale (no conversion needed)
     double stdDev4pt = metrics.getStdDev();

@@ -11,7 +11,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Hệ thống tạo lộ trình học tập thành công, tính khả thi từ MEDIUM trở lên, lộ trình có đầy đủ môn chưa hoàn thành xếp vào các học kỳ phù hợp",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Hệ thống tạo lộ trình học tập thành công, tính khả thi từ MEDIUM trở lên, lộ trình có đầy đủ môn chưa hoàn thành xếp vào các học kỳ phù hợp",,Not Run,Critical,Integration,,,
 TC_LP_002,S02,Learning Path Generation,Sinh viên mới chưa có dữ liệu điểm tạo lộ trình học tập,"Sinh viên 2410001 (First Year 001) mới nhập học khóa 24, chưa có dữ liệu điểm. Dữ liệu JSON: sql-generation-body-request-for-student-with-no-learning-progress.json","1. Đăng nhập bằng tài khoản sinh viên 2410001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -24,7 +24,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Hệ thống tạo lộ trình cho sinh viên mới, tất cả môn trong chương trình học được xếp vào lộ trình, tính khả thi phụ thuộc số học kỳ còn lại",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Hệ thống tạo lộ trình cho sinh viên mới, tất cả môn trong chương trình học được xếp vào lộ trình, tính khả thi phụ thuộc số học kỳ còn lại",,Not Run,Critical,Integration,,,
 TC_LP_003,S03,Learning Path Generation,Sinh viên năm nhất tạo lộ trình học tập,"Sinh viên 2110002 (FIRSTYEAR STUDENT) chỉ hoàn thành năm nhất (HK221+HK222), toàn điểm B-range. Dữ liệu JSON: sql-generation-body-request-for-student-with-first-year-only.json","1. Đăng nhập bằng tài khoản sinh viên 2110002
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -32,12 +32,12 @@ TC_LP_003,S03,Learning Path Generation,Sinh viên năm nhất tạo lộ trình 
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình được tạo","Mã SV: 2110002
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 0
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình được tạo với các môn năm 2-4, chuỗi tiên quyết được tôn trọng, tính khả thi GOOD hoặc MEDIUM",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Lộ trình được tạo với các môn năm 2-4, chuỗi tiên quyết được tôn trọng, tính khả thi GOOD hoặc MEDIUM",,Not Run,Critical,Integration,,,
 TC_LP_004,S04,Learning Path Generation,Sinh viên năm hai tạo lộ trình học tập,"Sinh viên 2110003 (SECONDYEAR STUDENT) hoàn thành năm 1-2 (HK221-HK231), toàn điểm B-range. Dữ liệu JSON: sql-generation-body-request-for-student-with-second-year-only.json","1. Đăng nhập bằng tài khoản sinh viên 2110003
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -50,7 +50,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình được tạo với các môn năm 3-4, ít môn hơn S03, tính khả thi GOOD",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Lộ trình được tạo với các môn năm 3-4, ít môn hơn S03, tính khả thi GOOD",,Not Run,Critical,Integration,,,
 TC_LP_005,S05,Learning Path Generation,Sinh viên GPA cao tạo lộ trình học tập,"Sinh viên 2110004 (HIGH ACHIEVER) toàn điểm A/A+, gần như hoàn hảo. Dữ liệu JSON: sql-generation-body-request-for-student-with-high-gpa.json","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -58,25 +58,25 @@ TC_LP_005,S05,Learning Path Generation,Sinh viên GPA cao tạo lộ trình họ
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình được tạo","Mã SV: 2110004
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 0
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Tính khả thi GOOD, GPA dự đoán cao, rủi ro thấp, lộ trình tối ưu vì GPA hiện tại đã vượt mục tiêu",,Not Run,Critical,Integration,,
-TC_LP_006,S06,Learning Path Generation,Sinh viên GPA thấp tạo lộ trình học tập,"Sinh viên 2110005 (STRUGGLING STUDENT) toàn điểm C/C+/D. Dữ liệu JSON: sql-generation-body-request-for-student-with-low-gpa.json","1. Đăng nhập bằng tài khoản sinh viên 2110005
+GPA mục tiêu: 3.0","Tính khả thi GOOD, GPA dự đoán cao, rủi ro thấp, lộ trình tối ưu vì GPA hiện tại đã vượt mục tiêu",,Not Run,Critical,Integration,,,
+TC_LP_006,S06,Learning Path Generation,Sinh viên GPA thấp tạo lộ trình học tập,Sinh viên 2110005 (STRUGGLING STUDENT) toàn điểm C/C+/D. Dữ liệu JSON: sql-generation-body-request-for-student-with-low-gpa.json,"1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
 4. Xác nhận kết quả tính khả thi
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình được tạo","Mã SV: 2110005
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Tính khả thi MEDIUM hoặc WEAK (GPA mục tiêu 3.0 cao hơn GPA hiện tại ~2.0), có khuyến nghị giảm GPA mục tiêu hoặc tăng tải",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Tính khả thi MEDIUM hoặc WEAK (GPA mục tiêu 3.0 cao hơn GPA hiện tại ~2.0), có khuyến nghị giảm GPA mục tiêu hoặc tăng tải",,Not Run,Critical,Integration,,,
 TC_LP_007,S07,Learning Path Generation,Sinh viên gần hoàn thành tạo lộ trình học tập,"Sinh viên 2110006 (ALMOST DONE) gần hoàn thành chương trình, có CO4029 và HK251. Dữ liệu JSON: sql-generation-body-request-for-student-almost-done.json","1. Đăng nhập bằng tài khoản sinh viên 2110006
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -89,20 +89,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình ngắn, ít môn còn lại, tính khả thi GOOD, hoàn thành nhanh",,Not Run,High,Integration,,
-TC_LP_008,S08,Learning Path Generation,Sinh viên thiếu môn tiên quyết tạo lộ trình học tập,"Sinh viên 2110007 (PREREQ GAP) thiếu các môn tiên quyết quan trọng (CO2003, CO2007, CO2013). Dữ liệu JSON: sql-generation-body-request-for-student-with-prerequisite-gap.json","1. Đăng nhập bằng tài khoản sinh viên 2110007
-2. Truy cập trang Learning Path
-3. Tạo mục tiêu học tập với cấu hình chuẩn
-4. Xác nhận kết quả tính khả thi
-5. Tạo lộ trình học tập
-6. Kiểm tra lộ trình được tạo","Mã SV: 2110007
-Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
-Ưu tiên #1: Ra trường đúng hạn
-Ưu tiên #2: Đạt GPA mong muốn
-Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Hệ thống phát hiện thiếu tiên quyết, bổ sung môn tiên quyết vào lộ trình trước các môn phụ thuộc, tính khả thi MEDIUM hoặc WEAK nếu chuỗi tiên quyết quá dài",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Lộ trình ngắn, ít môn còn lại, tính khả thi GOOD, hoàn thành nhanh",,Not Run,High,Integration,,,
 TC_LP_009,S09,Learning Path Generation,Sinh viên giỏi đại cương yếu chuyên ngành tạo lộ trình,"Sinh viên 2110008 (GENED STRONG) điểm cao ở đại cương (SP, LA, MT) nhưng thấp ở chuyên ngành (CO). Dữ liệu JSON: sql-generation-body-request-for-student-strong-gen-ed-weak-major.json","1. Đăng nhập bằng tài khoản sinh viên 2110008
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -110,13 +97,13 @@ TC_LP_009,S09,Learning Path Generation,Sinh viên giỏi đại cương yếu ch
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình được tạo","Mã SV: 2110008
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 0
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình tập trung môn chuyên ngành còn lại, GPA dự đoán thấp hơn do chuyên ngành khó, tính khả thi MEDIUM",,Not Run,High,Integration,,
-TC_LP_010,S10,Learning Path Generation,Sinh viên có học hè tạo lộ trình học tập,"Sinh viên 2110009 (SUMMER ACCELERATED) đã có HK223 và HK243 học hè. Dữ liệu JSON: sql-generation-body-request-for-student-with-summer-courses.json","1. Đăng nhập bằng tài khoản sinh viên 2110009
+GPA mục tiêu: 3.0","Lộ trình tập trung môn chuyên ngành còn lại, GPA dự đoán thấp hơn do chuyên ngành khó, tính khả thi MEDIUM",,Not Run,High,Integration,,,
+TC_LP_010,S10,Learning Path Generation,Sinh viên có học hè tạo lộ trình học tập,Sinh viên 2110009 (SUMMER ACCELERATED) đã có HK223 và HK243 học hè. Dữ liệu JSON: sql-generation-body-request-for-student-with-summer-courses.json,"1. Đăng nhập bằng tài khoản sinh viên 2110009
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
 4. Xác nhận kết quả tính khả thi
@@ -128,7 +115,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình phản ánh môn đã học hè, ít môn còn lại hơn, tính khả thi GOOD hoặc MEDIUM",,Not Run,High,Integration,,
+GPA mục tiêu: 3.0","Lộ trình phản ánh môn đã học hè, ít môn còn lại hơn, tính khả thi GOOD hoặc MEDIUM",,Not Run,High,Integration,,,
 TC_LP_011,S11,Learning Path Generation,Sinh viên bỏ năm (gap year) tạo lộ trình học tập,"Sinh viên 2110011 (GAP YEAR) thiếu dữ liệu năm 2 (HK231-HK233), nhảy từ năm 1 sang năm 3-4. Dữ liệu JSON: sql-generation-body-request-for-student-with-gap-year.json","1. Đăng nhập bằng tài khoản sinh viên 2110011
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -136,12 +123,12 @@ TC_LP_011,S11,Learning Path Generation,Sinh viên bỏ năm (gap year) tạo l�
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình được tạo","Mã SV: 2110011
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Hệ thống nhận diện gap year, bổ sung môn năm 2 còn thiếu, chuỗi tiên quyết dài, tính khả thi WEAK hoặc MEDIUM",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Hệ thống nhận diện gap year, bổ sung môn năm 2 còn thiếu, chuỗi tiên quyết dài, tính khả thi WEAK hoặc MEDIUM",,Not Run,Critical,Integration,,,
 TC_LP_012,S12,Learning Path Generation,Sinh viên rớt môn tạo lộ trình học tập,"Sinh viên 2110010 (FAILED SUBJECTS) có môn F (3.2, 3.5, 3.8) và môn học lại (CO2003, CO2017 xuất hiện 2 lần). Dữ liệu JSON: sql-generation-body-request-for-student-with-failed-subjects.json","1. Đăng nhập bằng tài khoản sinh viên 2110010
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cấu hình chuẩn
@@ -149,12 +136,12 @@ TC_LP_012,S12,Learning Path Generation,Sinh viên rớt môn tạo lộ trình h
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình được tạo","Mã SV: 2110010
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 0
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Hệ thống xử lý môn rớt và học lại, môn F được xếp lại vào lộ trình, tính khả thi MEDIUM, GPA dự đoán thấp",,Not Run,Critical,Integration,,
+GPA mục tiêu: 3.0","Hệ thống xử lý môn rớt và học lại, môn F được xếp lại vào lộ trình, tính khả thi MEDIUM, GPA dự đoán thấp",,Not Run,Critical,Integration,,,
 TC_LP_013,S01,Learning Path Generation,Ưu tiên GPA > Nghề nghiệp > Ra trường đúng hạn,"Sinh viên 2110001 (baseline), cùng dữ liệu với TC_LP_001","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên GPA #1
@@ -162,12 +149,12 @@ TC_LP_013,S01,Learning Path Generation,Ưu tiên GPA > Nghề nghiệp > Ra trư
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình","Mã SV: 2110001
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 0
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Lộ trình sử dụng grade-based scoring, chọn môn có phổ điểm tốt, ưu tiên môn dễ đạt điểm cao, tải mỗi học kỳ vừa phải",,Not Run,Critical,Integration,Thử nghiệm hoán vị P1
+GPA mục tiêu: 2.5","Lộ trình sử dụng grade-based scoring, chọn môn có phổ điểm tốt, ưu tiên môn dễ đạt điểm cao, tải mỗi học kỳ vừa phải",,Not Run,Critical,Integration,Thử nghiệm hoán vị P1,,
 TC_LP_014,S01,Learning Path Generation,Ưu tiên GPA > Ra trường đúng hạn > Nghề nghiệp,"Sinh viên 2110001 (baseline), cùng dữ liệu với TC_LP_001","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên GPA #1, OnTime #2
@@ -175,12 +162,12 @@ TC_LP_014,S01,Learning Path Generation,Ưu tiên GPA > Ra trường đúng hạn
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình","Mã SV: 2110001
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Ra trường đúng hạn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình sử dụng grade-based scoring, tối ưu cân bằng giữa GPA và thời gian, có thể chọn thêm môn dễ để tăng GPA",,Not Run,High,Integration,Thử nghiệm hoán vị P2
+GPA mục tiêu: 3.5","Lộ trình sử dụng grade-based scoring, tối ưu cân bằng giữa GPA và thời gian, có thể chọn thêm môn dễ để tăng GPA",,Not Run,High,Integration,Thử nghiệm hoán vị P2,,
 TC_LP_015,S01,Learning Path Generation,Ưu tiên Nghề nghiệp > GPA > Ra trường đúng hạn,"Sinh viên 2110001 (baseline), cùng dữ liệu với TC_LP_001","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên Nghề nghiệp #1 (không chọn nghề cụ thể)
@@ -188,12 +175,12 @@ TC_LP_015,S01,Learning Path Generation,Ưu tiên Nghề nghiệp > GPA > Ra trư
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình","Mã SV: 2110001
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 0
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Lộ trình sử dụng occupation-based scoring (trung bình tất cả nghề), chọn môn có giá trị nghề nghiệp cao, kết quả khác với P1/P2",,Not Run,Critical,Integration,Thử nghiệm hoán vị P3 - occupation-based scoring
+GPA mục tiêu: 2.0","Lộ trình sử dụng occupation-based scoring (trung bình tất cả nghề), chọn môn có giá trị nghề nghiệp cao, kết quả khác với P1/P2",,Not Run,Critical,Integration,Thử nghiệm hoán vị P3 - occupation-based scoring,,
 TC_LP_016,S01,Learning Path Generation,Ưu tiên Nghề nghiệp > Ra trường đúng hạn > GPA,"Sinh viên 2110001 (baseline), cùng dữ liệu với TC_LP_001","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên Nghề nghiệp #1, OnTime #2
@@ -201,12 +188,12 @@ TC_LP_016,S01,Learning Path Generation,Ưu tiên Nghề nghiệp > Ra trường 
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình","Mã SV: 2110001
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
 Nghề nghiệp: (không chọn)
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Ra trường đúng hạn
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","Lộ trình sử dụng occupation-based scoring, ưu tiên hoàn thành nhanh + kiến thức nghề, có thể chọn môn khó hơn nhưng giá trị cao",,Not Run,High,Integration,Thử nghiệm hoán vị P4
+GPA mục tiêu: 4.0","Lộ trình sử dụng occupation-based scoring, ưu tiên hoàn thành nhanh + kiến thức nghề, có thể chọn môn khó hơn nhưng giá trị cao",,Not Run,High,Integration,Thử nghiệm hoán vị P4,,
 TC_LP_017,S01,Learning Path Generation,Ưu tiên Ra trường đúng hạn > GPA > Nghề nghiệp,"Sinh viên 2110001 (baseline), cùng dữ liệu với TC_LP_001","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên OnTime #1
@@ -215,11 +202,11 @@ TC_LP_017,S01,Learning Path Generation,Ưu tiên Ra trường đúng hạn > GPA
 6. Kiểm tra lộ trình","Mã SV: 2110001
 Cường độ HK chính: Standard (16-17 TC)
 Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình sử dụng grade-based scoring (OnTime #1 nhưng Occ không phải #1), tối ưu để hoàn thành đúng hạn, môn được xếp chặt hơn",,Not Run,High,Integration,Thử nghiệm hoán vị P5 (giống cấu hình chuẩn)
+GPA mục tiêu: 3.0","Lộ trình sử dụng grade-based scoring (OnTime #1 nhưng Occ không phải #1), tối ưu để hoàn thành đúng hạn, môn được xếp chặt hơn",,Not Run,High,Integration,Thử nghiệm hoán vị P5 (giống cấu hình chuẩn),,
 TC_LP_018,S01,Learning Path Generation,Ưu tiên Ra trường đúng hạn > Nghề nghiệp > GPA,"Sinh viên 2110001 (baseline), cùng dữ liệu với TC_LP_001","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên OnTime #1, Occ #2
@@ -227,12 +214,12 @@ TC_LP_018,S01,Learning Path Generation,Ưu tiên Ra trường đúng hạn > Ngh
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình","Mã SV: 2110001
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 0
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","Lộ trình sử dụng grade-based scoring, tối ưu thời gian + kiến thức nghề, GPA có thể thấp hơn do chọn môn khó nhưng giá trị",,Not Run,High,Integration,Thử nghiệm hoán vị P6
+GPA mục tiêu: 2.5","Lộ trình sử dụng grade-based scoring, tối ưu thời gian + kiến thức nghề, GPA có thể thấp hơn do chọn môn khó nhưng giá trị",,Not Run,High,Integration,Thử nghiệm hoán vị P6,,
 TC_LP_019,S02,Learning Path Generation,Sinh viên mới - Cường độ thấp (Low),"Sinh viên 2410001 chưa có dữ liệu điểm, cường độ Low ≤13 TC","1. Đăng nhập bằng tài khoản sinh viên 2410001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Low
@@ -240,12 +227,12 @@ TC_LP_019,S02,Learning Path Generation,Sinh viên mới - Cường độ thấp 
 5. Tạo lộ trình học tập
 6. Kiểm tra số môn mỗi học kỳ ≤ 13 TC","Mã SV: 2410001
 Cường độ HK chính: Low (≤13 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 0
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Mỗi học kỳ chính ≤13 TC, lộ trình kéo dài hơn, tính khả thi WEAK hoặc MEDIUM do quá nhiều môn cần hoàn thành với tải thấp",,Not Run,Critical,Integration,Biên kiểm cường độ Low
+GPA mục tiêu: 2.5","Mỗi học kỳ chính ≤13 TC, lộ trình kéo dài hơn, tính khả thi WEAK hoặc MEDIUM do quá nhiều môn cần hoàn thành với tải thấp",,Not Run,Critical,Integration,Biên kiểm cường độ Low,,
 TC_LP_020,S02,Learning Path Generation,Sinh viên mới - Cường độ cao (Heavy),"Sinh viên 2410001 chưa có dữ liệu điểm, cường độ Heavy 18-22 TC","1. Đăng nhập bằng tài khoản sinh viên 2410001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Heavy
@@ -258,7 +245,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Mỗi học kỳ chính 18-22 TC, lộ trình ngắn hơn, rủi ro cao (risk_level cao), tính khả thi MEDIUM hoặc GOOD nhưng với rủi ro",,Not Run,Critical,Integration,Biên kiểm cường độ Heavy
+GPA mục tiêu: 2.0","Mỗi học kỳ chính 18-22 TC, lộ trình ngắn hơn, rủi ro cao (risk_level cao), tính khả thi MEDIUM hoặc GOOD nhưng với rủi ro",,Not Run,Critical,Integration,Biên kiểm cường độ Heavy,,
 TC_LP_021,S04,Learning Path Generation,Sinh viên năm hai - Cường độ thấp (Low),"Sinh viên 2110003 hoàn thành năm 1-2, cường độ Low ≤13 TC","1. Đăng nhập bằng tài khoản sinh viên 2110003
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Low
@@ -266,12 +253,12 @@ TC_LP_021,S04,Learning Path Generation,Sinh viên năm hai - Cường độ th�
 5. Tạo lộ trình học tập
 6. Kiểm tra số môn mỗi học kỳ ≤ 13 TC","Mã SV: 2110003
 Cường độ HK chính: Low (≤13 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
+Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Mỗi học kỳ ≤13 TC, lộ trình kéo dài, có thể không ra trường đúng hạn, tính khả thi WEAK hoặc MEDIUM",,Not Run,High,Integration,Biên kiểm cường độ Low cho sinh viên còn nhiều môn
+GPA mục tiêu: 2.5","Mỗi học kỳ ≤13 TC, lộ trình kéo dài, có thể không ra trường đúng hạn, tính khả thi WEAK hoặc MEDIUM",,Not Run,High,Integration,Biên kiểm cường độ Low cho sinh viên còn nhiều môn,,
 TC_LP_022,S04,Learning Path Generation,Sinh viên năm hai - Cường độ cao (Heavy),"Sinh viên 2110003 hoàn thành năm 1-2, cường độ Heavy 18-22 TC","1. Đăng nhập bằng tài khoản sinh viên 2110003
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Heavy
@@ -284,7 +271,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Mỗi học kỳ 18-22 TC, hoàn thành nhanh, rủi ro cao, tính khả thi GOOD hoặc MEDIUM, risk_level high",,Not Run,High,Integration,Biên kiểm cường độ Heavy cho sinh viên còn nhiều môn
+GPA mục tiêu: 3.5","Mỗi học kỳ 18-22 TC, hoàn thành nhanh, rủi ro cao, tính khả thi GOOD hoặc MEDIUM, risk_level high",,Not Run,High,Integration,Biên kiểm cường độ Heavy cho sinh viên còn nhiều môn,,
 TC_LP_023,S05,Learning Path Generation,Sinh viên GPA cao - Cường độ thấp (Low),"Sinh viên 2110004 toàn điểm A/A+, cường độ Low ≤13 TC","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Low
@@ -292,12 +279,12 @@ TC_LP_023,S05,Learning Path Generation,Sinh viên GPA cao - Cường độ thấ
 5. Tạo lộ trình học tập
 6. Kiểm tra số môn mỗi học kỳ ≤ 13 TC","Mã SV: 2110004
 Cường độ HK chính: Low (≤13 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 0
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình nhẹ, GPA dự đoán vẫn cao do lịch sử tốt, nhưng thời gian dài hơn, tính khả thi phụ thuộc số học kỳ còn lại",,Not Run,Medium,Integration,Kiểm tra sinh viên GPA cao với tải nhẹ
+GPA mục tiêu: 3.5","Lộ trình nhẹ, GPA dự đoán vẫn cao do lịch sử tốt, nhưng thời gian dài hơn, tính khả thi phụ thuộc số học kỳ còn lại",,Not Run,Medium,Integration,Kiểm tra sinh viên GPA cao với tải nhẹ,,
 TC_LP_024,S05,Learning Path Generation,Sinh viên GPA cao - Cường độ cao (Heavy),"Sinh viên 2110004 toàn điểm A/A+, cường độ Heavy 18-22 TC","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Heavy
@@ -305,12 +292,12 @@ TC_LP_024,S05,Learning Path Generation,Sinh viên GPA cao - Cường độ cao (
 5. Tạo lộ trình học tập
 6. Kiểm tra số môn mỗi học kỳ 18-22 TC","Mã SV: 2110004
 Cường độ HK chính: Heavy (18-22 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
+Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình ngắn, GPA dự đoán cao, rủi ro trung bình do sinh viên đã chứng minh khả năng, tính khả thi GOOD",,Not Run,Medium,Integration,Kiểm tra sinh viên GPA cao với tải nặng
+GPA mục tiêu: 3.5","Lộ trình ngắn, GPA dự đoán cao, rủi ro trung bình do sinh viên đã chứng minh khả năng, tính khả thi GOOD",,Not Run,Medium,Integration,Kiểm tra sinh viên GPA cao với tải nặng,,
 TC_LP_025,S06,Learning Path Generation,Sinh viên GPA thấp - Cường độ thấp (Low),"Sinh viên 2110005 toàn điểm C/D, cường độ Low ≤13 TC","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Low
@@ -318,12 +305,12 @@ TC_LP_025,S06,Learning Path Generation,Sinh viên GPA thấp - Cường độ th
 5. Tạo lộ trình học tập
 6. Kiểm tra số môn mỗi học kỳ ≤ 13 TC","Mã SV: 2110005
 Cường độ HK chính: Low (≤13 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Tính khả thi WEAK do GPA thấp + tải thấp + GPA mục tiêu cao, khuyến nghị EXTEND_TIMELINE hoặc LOWER_GPA_TARGET",,Not Run,Critical,Integration,Kiểm tra trường hợp khó nhất: GPA thấp + tải thấp
+GPA mục tiêu: 2.5","Tính khả thi WEAK do GPA thấp + tải thấp + GPA mục tiêu cao, khuyến nghị EXTEND_TIMELINE hoặc LOWER_GPA_TARGET",,Not Run,Critical,Integration,Kiểm tra trường hợp khó nhất: GPA thấp + tải thấp,,
 TC_LP_026,S06,Learning Path Generation,Sinh viên GPA thấp - Cường độ cao (Heavy),"Sinh viên 2110005 toàn điểm C/D, cường độ Heavy 18-22 TC","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với cường độ Heavy
@@ -331,12 +318,12 @@ TC_LP_026,S06,Learning Path Generation,Sinh viên GPA thấp - Cường độ ca
 5. Tạo lộ trình học tập
 6. Kiểm tra số môn mỗi học kỳ 18-22 TC","Mã SV: 2110005
 Cường độ HK chính: Heavy (18-22 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 0
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Tính khả thi MEDIUM, rủi ro cao (Heavy + GPA thấp), GPA dự đoán thấp hơn mục tiêu, khuyến nghị REDUCE_LOAD_FOR_GPA hoặc CHOOSE_MANAGEABLE_COURSES",,Not Run,Critical,Integration,Kiểm tra rủi ro khi GPA thấp + tải nặng
+GPA mục tiêu: 2.0","Tính khả thi MEDIUM, rủi ro cao (Heavy + GPA thấp), GPA dự đoán thấp hơn mục tiêu, khuyến nghị REDUCE_LOAD_FOR_GPA hoặc CHOOSE_MANAGEABLE_COURSES",,Not Run,Critical,Integration,Kiểm tra rủi ro khi GPA thấp + tải nặng,,
 TC_LP_027,S01,Learning Path Generation,Baseline - Không chọn nghề nghiệp (ưu tiên Nghề nghiệp #1),"Sinh viên 2110001, ưu tiên Nghề nghiệp #1 nhưng không chọn nghề cụ thể","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên Nghề nghiệp #1, không chọn nghề
@@ -349,7 +336,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Sử dụng occupation-based scoring với trung bình tất cả nghề, chọn môn có giá trị nghề trung bình cao nhất",,Not Run,High,Integration,Nghề nghiệp không chọn = average valuation
+GPA mục tiêu: 2.0","Sử dụng occupation-based scoring với trung bình tất cả nghề, chọn môn có giá trị nghề trung bình cao nhất",,Not Run,High,Integration,Nghề nghiệp không chọn = average valuation,,
 TC_LP_028,S01,Learning Path Generation,Baseline - Nhà Phát triển Phần mềm (ưu tiên Nghề nghiệp #1),"Sinh viên 2110001, ưu tiên Nghề nghiệp #1, chọn nghề Software Developers","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với nghề Software Developers (15-1252.00)
@@ -362,7 +349,7 @@ Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Sử dụng occupation-specific scoring, chọn môn phù hợp Software Dev (CO môn lập trình, kiến trúc), lộ trình khác với TC_LP_027",,Not Run,Critical,Integration,So sánh occupation-specific vs average valuation
+GPA mục tiêu: 3.0","Sử dụng occupation-specific scoring, chọn môn phù hợp Software Dev (CO môn lập trình, kiến trúc), lộ trình khác với TC_LP_027",,Not Run,Critical,Integration,So sánh occupation-specific vs average valuation,,
 TC_LP_029,S01,Learning Path Generation,Baseline - Nhà Khoa học Dữ liệu (ưu tiên Nghề nghiệp #1),"Sinh viên 2110001, ưu tiên Nghề nghiệp #1, chọn nghề Data Scientists","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với nghề Data Scientists (15-2051.00)
@@ -375,7 +362,7 @@ Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Sử dụng occupation-specific scoring, chọn môn phù hợp Data Science (MT, CO ML/AI), lộ trình khác Software Dev",,Not Run,High,Integration,So sánh chọn môn giữa các nghề
+GPA mục tiêu: 2.5","Sử dụng occupation-specific scoring, chọn môn phù hợp Data Science (MT, CO ML/AI), lộ trình khác Software Dev",,Not Run,High,Integration,So sánh chọn môn giữa các nghề,,
 TC_LP_030,S01,Learning Path Generation,Baseline - Chuyên viên Phân tích Bảo mật (ưu tiên Nghề nghiệp #1),"Sinh viên 2110001, ưu tiên Nghề nghiệp #1, chọn nghề Information Security Analysts","1. Đăng nhập bằng tài khoản sinh viên 2110001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với nghề Info Security (15-1212.00)
@@ -388,7 +375,7 @@ Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Sử dụng occupation-specific scoring, chọn môn phù hợp Info Security (CO bảo mật, mạng), lộ trình khác 2 TC trên",,Not Run,High,Integration,So sánh chọn môn giữa các nghề
+GPA mục tiêu: 3.5","Sử dụng occupation-specific scoring, chọn môn phù hợp Info Security (CO bảo mật, mạng), lộ trình khác 2 TC trên",,Not Run,High,Integration,So sánh chọn môn giữa các nghề,,
 TC_LP_031,S05,Learning Path Generation,GPA cao - Không chọn nghề (ưu tiên Nghề nghiệp #1),"Sinh viên 2110004 GPA cao, ưu tiên Nghề nghiệp #1, không chọn nghề","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với ưu tiên Nghề nghiệp #1, không chọn nghề
@@ -401,7 +388,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Occupation-based scoring + GPA cao → GOOD feasibility, môn được chọn theo giá trị nghề trung bình, GPA dự đoán cao",,Not Run,Medium,Integration,
+GPA mục tiêu: 3.0","Occupation-based scoring + GPA cao → GOOD feasibility, môn được chọn theo giá trị nghề trung bình, GPA dự đoán cao",,Not Run,Medium,Integration,,,
 TC_LP_032,S05,Learning Path Generation,GPA cao - Nhà Phát triển Phần mềm (ưu tiên Nghề nghiệp #1),"Sinh viên 2110004 GPA cao, ưu tiên Nghề nghiệp #1, chọn Software Developers","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với nghề Software Developers
@@ -414,7 +401,7 @@ Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Occupation-specific scoring cho Software Dev, GOOD feasibility, GPA dự đoán cao, lộ trình tối ưu cho phát triển phần mềm",,Not Run,Medium,Integration,
+GPA mục tiêu: 3.5","Occupation-specific scoring cho Software Dev, GOOD feasibility, GPA dự đoán cao, lộ trình tối ưu cho phát triển phần mềm",,Not Run,Medium,Integration,,,
 TC_LP_033,S05,Learning Path Generation,GPA cao - Nhà Khoa học Dữ liệu (ưu tiên Nghề nghiệp #1),"Sinh viên 2110004 GPA cao, ưu tiên Nghề nghiệp #1, chọn Data Scientists","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với nghề Data Scientists
@@ -427,7 +414,7 @@ Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Occupation-specific scoring cho Data Science, GOOD feasibility, lộ trình ưu tiên môn ML/AI/thống kê",,Not Run,Medium,Integration,
+GPA mục tiêu: 2.5","Occupation-specific scoring cho Data Science, GOOD feasibility, lộ trình ưu tiên môn ML/AI/thống kê",,Not Run,Medium,Integration,,,
 TC_LP_034,S05,Learning Path Generation,GPA cao - Chuyên viên Bảo mật (ưu tiên Nghề nghiệp #1),"Sinh viên 2110004 GPA cao, ưu tiên Nghề nghiệp #1, chọn Info Security Analysts","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với nghề Info Security
@@ -440,7 +427,7 @@ Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Occupation-specific scoring cho Info Security, GOOD feasibility, lộ trình ưu tiên môn bảo mật/mạng",,Not Run,Medium,Integration,
+GPA mục tiêu: 3.0","Occupation-specific scoring cho Info Security, GOOD feasibility, lộ trình ưu tiên môn bảo mật/mạng",,Not Run,Medium,Integration,,,
 TC_LP_035,S05,Learning Path Generation,Sinh viên GPA cao - GPA mục tiêu 2.0 (ưu tiên GPA #1),"Sinh viên 2110004 GPA cao (~3.8), GPA mục tiêu chỉ 2.0","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 2.0
@@ -453,7 +440,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 2.0","GPA mục tiêu thấp hơn GPA hiện tại, tính khả thi GOOD, hệ thống có thể chọn môn khó hơn mà vẫn đạt mục tiêu, GPA dự đoán > 2.0",,Not Run,High,Integration,GPA mục tiêu thấp hơn khả năng
+GPA mục tiêu: 2.0","GPA mục tiêu thấp hơn GPA hiện tại, tính khả thi GOOD, hệ thống có thể chọn môn khó hơn mà vẫn đạt mục tiêu, GPA dự đoán > 2.0",,Not Run,High,Integration,GPA mục tiêu thấp hơn khả năng,,
 TC_LP_036,S05,Learning Path Generation,Sinh viên GPA cao - GPA mục tiêu 2.5 (ưu tiên GPA #1),"Sinh viên 2110004 GPA cao, GPA mục tiêu 2.5","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 2.5
@@ -466,7 +453,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 2.5","GOOD feasibility, GPA dự đoán > 2.5, lộ trình linh hoạt vì mục tiêu dễ đạt",,Not Run,Medium,Integration,
+GPA mục tiêu: 2.5","GOOD feasibility, GPA dự đoán > 2.5, lộ trình linh hoạt vì mục tiêu dễ đạt",,Not Run,Medium,Integration,,,
 TC_LP_037,S05,Learning Path Generation,Sinh viên GPA cao - GPA mục tiêu 3.5 (ưu tiên GPA #1),"Sinh viên 2110004 GPA cao, GPA mục tiêu 3.5","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 3.5
@@ -479,7 +466,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.5","GOOD feasibility, GPA dự đoán gần 3.5, lộ trình chọn môn cẩn thận để duy trì GPA cao",,Not Run,High,Integration,GPA mục tiêu cao nhưng khả thi
+GPA mục tiêu: 3.5","GOOD feasibility, GPA dự đoán gần 3.5, lộ trình chọn môn cẩn thận để duy trì GPA cao",,Not Run,High,Integration,GPA mục tiêu cao nhưng khả thi,,
 TC_LP_038,S05,Learning Path Generation,Sinh viên GPA cao - GPA mục tiêu 4.0 (ưu tiên GPA #1),"Sinh viên 2110004 GPA cao, GPA mục tiêu 4.0 (tối đa)","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 4.0
@@ -492,7 +479,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 4.0","Tính khả thi MEDIUM hoặc GOOD (GPA hiện tại cao), GPA dự đoán < 4.0, khuyến nghị MAINTAIN_LOAD hoặc FOCUS_HIGH_CREDIT",,Not Run,Critical,Integration,GPA mục tiêu tối đa - biên kiểm
+GPA mục tiêu: 4.0","Tính khả thi MEDIUM hoặc GOOD (GPA hiện tại cao), GPA dự đoán < 4.0, khuyến nghị MAINTAIN_LOAD hoặc FOCUS_HIGH_CREDIT",,Not Run,Critical,Integration,GPA mục tiêu tối đa - biên kiểm,,
 TC_LP_039,S06,Learning Path Generation,Sinh viên GPA thấp - GPA mục tiêu 2.0 (ưu tiên GPA #1),"Sinh viên 2110005 GPA thấp (~2.0), GPA mục tiêu 2.0","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 2.0
@@ -505,7 +492,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 2.0","GOOD feasibility, GPA mục tiêu bằng GPA hiện tại, dễ đạt, lộ trình linh hoạt",,Not Run,High,Integration,GPA mục tiêu = GPA hiện tại
+GPA mục tiêu: 2.0","GOOD feasibility, GPA mục tiêu bằng GPA hiện tại, dễ đạt, lộ trình linh hoạt",,Not Run,High,Integration,GPA mục tiêu = GPA hiện tại,,
 TC_LP_040,S06,Learning Path Generation,Sinh viên GPA thấp - GPA mục tiêu 3.0 (ưu tiên GPA #1),"Sinh viên 2110005 GPA thấp, GPA mục tiêu 3.0 (cao hơn khả năng)","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 3.0
@@ -518,7 +505,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","MEDIUM hoặc WEAK feasibility, GPA yêu cầu cho môn còn lại > khả năng, khuyến nghị LOWER_GPA_TARGET hoặc REDUCE_LOAD_FOR_GPA",,Not Run,Critical,Integration,GPA mục tiêu cao hơn khả năng
+GPA mục tiêu: 3.0","MEDIUM hoặc WEAK feasibility, GPA yêu cầu cho môn còn lại > khả năng, khuyến nghị LOWER_GPA_TARGET hoặc REDUCE_LOAD_FOR_GPA",,Not Run,Critical,Integration,GPA mục tiêu cao hơn khả năng,,
 TC_LP_041,S06,Learning Path Generation,Sinh viên GPA thấp - GPA mục tiêu 3.5 (ưu tiên GPA #1),"Sinh viên 2110005 GPA thấp, GPA mục tiêu 3.5","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 3.5
@@ -530,7 +517,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.5","WEAK feasibility (GPA requiredGpa > 4.0), khuyến nghị LOWER_GPA_TARGET, EXTEND_REDUCE_PRESSURE",,Not Run,Critical,Integration,GPA mục tiêu không thể đạt - WEAK
+GPA mục tiêu: 3.5","WEAK feasibility (GPA requiredGpa > 4.0), khuyến nghị LOWER_GPA_TARGET, EXTEND_REDUCE_PRESSURE",,Not Run,Critical,Integration,GPA mục tiêu không thể đạt - WEAK,,
 TC_LP_042,S06,Learning Path Generation,Sinh viên GPA thấp - GPA mục tiêu 4.0 (ưu tiên GPA #1),"Sinh viên 2110005 GPA thấp, GPA mục tiêu 4.0 (không thể đạt)","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với GPA mục tiêu 4.0
@@ -542,7 +529,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 4.0","WEAK feasibility, GPA Requirement check fail (requiredGpa > 4.0), khuyến nghị LOWER_GPA_TARGET kèm thông điệp động thái",,Not Run,Critical,Integration,GPA mục tiêu không thể - biên kiểm WEAK feasibility
+GPA mục tiêu: 4.0","WEAK feasibility, GPA Requirement check fail (requiredGpa > 4.0), khuyến nghị LOWER_GPA_TARGET kèm thông điệp động thái",,Not Run,Critical,Integration,GPA mục tiêu không thể - biên kiểm WEAK feasibility,,
 TC_LP_043,S02,Learning Path Generation,Sinh viên mới - Không học hè,"Sinh viên 2410001 chưa có dữ liệu điểm, không đăng ký học hè","1. Đăng nhập bằng tài khoản sinh viên 2410001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với 0 HK hè
@@ -551,11 +538,11 @@ TC_LP_043,S02,Learning Path Generation,Sinh viên mới - Không học hè,"Sinh
 6. Kiểm tra thời lượng lộ trình","Mã SV: 2410001
 Cường độ HK chính: Standard (16-17 TC)
 Số HK hè: 0
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình dài hơn (chỉ dùng HK chính), Credit/Time feasibility có thể WEAK nếu quá nhiều tín chỉ còn lại, so sánh với TC_LP_002 (có 1 HK hè)",,Not Run,Critical,Integration,Biên kiểm: không học hè vs có học hè
+GPA mục tiêu: 2.5","Lộ trình dài hơn (chỉ dùng HK chính), Credit/Time feasibility có thể WEAK nếu quá nhiều tín chỉ còn lại, so sánh với TC_LP_002 (có 1 HK hè)",,Not Run,Critical,Integration,Biên kiểm: không học hè vs có học hè,,
 TC_LP_044,S02,Learning Path Generation,Sinh viên mới - 3 HK hè cường độ Heavy,"Sinh viên 2410001 chưa có dữ liệu điểm, đăng ký 3 HK hè Heavy","1. Đăng nhập bằng tài khoản sinh viên 2410001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với 3 HK hè Heavy
@@ -568,7 +555,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Lộ trình ngắn hơn đáng kể (thêm 3×8=24 TC từ hè), tính khả thi GOOD hoặc MEDIUM, rủi ro trung bình, so sánh thời lượng với TC_LP_043",,Not Run,Critical,Integration,Biên kiểm: tối đa học hè
+GPA mục tiêu: 3.5","Lộ trình ngắn hơn đáng kể (thêm 3×8=24 TC từ hè), tính khả thi GOOD hoặc MEDIUM, rủi ro trung bình, so sánh thời lượng với TC_LP_043",,Not Run,Critical,Integration,Biên kiểm: tối đa học hè,,
 TC_LP_045,S06,Learning Path Generation,Sinh viên GPA thấp - Không học hè,"Sinh viên 2110005 GPA thấp, không đăng ký học hè","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với 0 HK hè
@@ -577,11 +564,11 @@ TC_LP_045,S06,Learning Path Generation,Sinh viên GPA thấp - Không học hè,
 6. Kiểm tra tính khả thi","Mã SV: 2110005
 Cường độ HK chính: Standard (16-17 TC)
 Số HK hè: 0
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","WEAK hoặc MEDIUM, Credit/Time khả năng fail, khuyến nghị USE_SUMMER hoặc EXTEND_TIMELINE",,Not Run,High,Integration,
+GPA mục tiêu: 2.0","WEAK hoặc MEDIUM, Credit/Time khả năng fail, khuyến nghị USE_SUMMER hoặc EXTEND_TIMELINE",,Not Run,High,Integration,,,
 TC_LP_046,S06,Learning Path Generation,Sinh viên GPA thấp - 3 HK hè cường độ Heavy,"Sinh viên 2110005 GPA thấp, đăng ký 3 HK hè Heavy","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với 3 HK hè Heavy
@@ -590,37 +577,11 @@ TC_LP_046,S06,Learning Path Generation,Sinh viên GPA thấp - 3 HK hè cường
 6. Kiểm tra tính khả thi - so sánh với TC_LP_045","Mã SV: 2110005
 Cường độ HK chính: Standard (16-17 TC)
 Số HK hè: 3, cường độ: Heavy (7-8 TC)
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Tính khả thi tốt hơn TC_LP_045, Credit/Time pass, nhưng GPA Requirement vẫn có thể fail, khuyến nghị USE_SUMMER đã được áp dụng",,Not Run,High,Integration,Học hè cải thiện Credit/Time feasibility
-TC_LP_047,S08,Learning Path Generation,Sinh viên thiếu tiên quyết - Không học hè,"Sinh viên 2110007 thiếu môn tiên quyết, không học hè","1. Đăng nhập bằng tài khoản sinh viên 2110007
-2. Truy cập trang Learning Path
-3. Tạo mục tiêu học tập với 0 HK hè
-4. Xác nhận tính khả thi
-5. Tạo lộ trình học tập
-6. Kiểm tra Prerequisite Chain check","Mã SV: 2110007
-Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 0
-Nghề nghiệp: (không chọn)
-Ưu tiên #1: Ra trường đúng hạn
-Ưu tiên #2: Đạt GPA mong muốn
-Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Prerequisite Chain check có thể fail (chuỗi dài + ít học kỳ), WEAK feasibility, khuyến nghị EXTEND_FOR_PREREQUISITES",,Not Run,Critical,Integration,Tiền quyết dài + không học hè
-TC_LP_048,S08,Learning Path Generation,Sinh viên thiếu tiên quyết - 3 HK hè cường độ Heavy,"Sinh viên 2110007 thiếu môn tiên quyết, 3 HK hè Heavy","1. Đăng nhập bằng tài khoản sinh viên 2110007
-2. Truy cập trang Learning Path
-3. Tạo mục tiêu học tập với 3 HK hè Heavy
-4. Xác nhận tính khả thi
-5. Tạo lộ trình học tập
-6. Kiểm tra Prerequisite Chain - so sánh với TC_LP_047","Mã SV: 2110007
-Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 3, cường độ: Heavy (7-8 TC)
-Nghề nghiệp: (không chọn)
-Ưu tiên #1: Ra trường đúng hạn
-Ưu tiên #2: Đạt GPA mong muốn
-Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Tính khả thi tốt hơn TC_LP_047, nhiều học kỳ hơn cho chuỗi tiên quyết, MEDIUM hoặc GOOD, học hè giúp bù đắp thời gian",,Not Run,Critical,Integration,Tiền quyết dài + học hè bù đắp
+GPA mục tiêu: 2.5","Tính khả thi tốt hơn TC_LP_045, Credit/Time pass, nhưng GPA Requirement vẫn có thể fail, khuyến nghị USE_SUMMER đã được áp dụng",,Not Run,High,Integration,Học hè cải thiện Credit/Time feasibility,,
 TC_LP_049,S12,Learning Path Generation,Sinh viên rớt môn - Không học hè,"Sinh viên 2110010 có môn F, không học hè","1. Đăng nhập bằng tài khoản sinh viên 2110010
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với 0 HK hè
@@ -629,11 +590,11 @@ TC_LP_049,S12,Learning Path Generation,Sinh viên rớt môn - Không học hè,
 6. Kiểm tra môn học lại trong lộ trình","Mã SV: 2110010
 Cường độ HK chính: Standard (16-17 TC)
 Số HK hè: 0
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Môn F được xếp lại, GPA dự đoán thấp, WEAK hoặc MEDIUM, Credit/Time có thể fail do môn học lại thêm tín chỉ",,Not Run,High,Integration,Rớt môn + không học hè
+GPA mục tiêu: 2.5","Môn F được xếp lại, GPA dự đoán thấp, WEAK hoặc MEDIUM, Credit/Time có thể fail do môn học lại thêm tín chỉ",,Not Run,High,Integration,Rớt môn + không học hè,,
 TC_LP_050,S12,Learning Path Generation,Sinh viên rớt môn - 3 HK hè cường độ Heavy,"Sinh viên 2110010 có môn F, 3 HK hè Heavy","1. Đăng nhập bằng tài khoản sinh viên 2110010
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu học tập với 3 HK hè Heavy
@@ -642,11 +603,11 @@ TC_LP_050,S12,Learning Path Generation,Sinh viên rớt môn - 3 HK hè cường
 6. Kiểm tra môn học lại và thời lượng - so sánh với TC_LP_049","Mã SV: 2110010
 Cường độ HK chính: Standard (16-17 TC)
 Số HK hè: 3, cường độ: Heavy (7-8 TC)
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","Môn F được xếp lại, học hè giúp bù tín chỉ môn học lại, tính khả thi tốt hơn TC_LP_049, MEDIUM",,Not Run,High,Integration,Rớt môn + học hè bù
+GPA mục tiêu: 2.0","Môn F được xếp lại, học hè giúp bù tín chỉ môn học lại, tính khả thi tốt hơn TC_LP_049, MEDIUM",,Not Run,High,Integration,Rớt môn + học hè bù,,
 TC_LP_051,S06,Learning Path Generation,Edge: Sinh viên GPA thấp + GPA mục tiêu 4.0 + ưu tiên GPA #1 → WEAK,"Sinh viên 2110005 GPA thấp, GPA 4.0 không thể đạt, ưu tiên GPA #1","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: GPA 4.0, ưu tiên GPA #1
@@ -658,31 +619,19 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 4.0","WEAK feasibility, GPA Requirement check fail (requiredGpa > 4.0), khuyến nghị LOWER_GPA_TARGET + EXTEND_REDUCE_PRESSURE + RECONSIDER_GPA",,Not Run,Critical,Integration,Edge case: GPA không thể đạt
+GPA mục tiêu: 4.0","WEAK feasibility, GPA Requirement check fail (requiredGpa > 4.0), khuyến nghị LOWER_GPA_TARGET + EXTEND_REDUCE_PRESSURE + RECONSIDER_GPA",,Not Run,Critical,Integration,Edge case: GPA không thể đạt,,
 TC_LP_052,S07,Learning Path Generation,Edge: Sinh viên gần xong + Heavy + ưu tiên OnTime #1 → GOOD,"Sinh viên 2110006 gần hoàn thành, Heavy, ưu tiên OnTime #1","1. Đăng nhập bằng tài khoản sinh viên 2110006
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, ưu tiên OnTime #1
 4. Xác nhận tính khả thi GOOD
 5. Kiểm tra lộ trình ngắn","Mã SV: 2110006
 Cường độ HK chính: Heavy (18-22 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","GOOD feasibility, lộ trình rất ngắn (ít môn còn lại), Heavy giúp hoàn thành nhanh nhất, risk_level medium hoặc low do ít môn",,Not Run,High,Integration,Edge case: gần xong + tối ưu thời gian
-TC_LP_053,S08,Learning Path Generation,Edge: Thiếu tiên quyết + Low + ưu tiên GPA #1 → WEAK/MEDIUM,"Sinh viên 2110007 thiếu tiên quyết, Low intensity, ưu tiên GPA #1","1. Đăng nhập bằng tài khoản sinh viên 2110007
-2. Truy cập trang Learning Path
-3. Tạo mục tiêu: Low, ưu tiên GPA #1
-4. Xác nhận tính khả thi
-5. Kiểm tra khuyến nghị","Mã SV: 2110007
-Cường độ HK chính: Low (≤13 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
-Ưu tiên #1: Đạt GPA mong muốn
-Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
-Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","WEAK hoặc MEDIUM, thiếu tiên quyết + tải thấp = chuỗi dài + ít HK, khuyến nghị EXTEND_FOR_PREREQUISITES + EXTEND_TIMELINE",,Not Run,Critical,Integration,Edge case: tiên quyết + tải thấp
+GPA mục tiêu: 2.0","GOOD feasibility, lộ trình rất ngắn (ít môn còn lại), Heavy giúp hoàn thành nhanh nhất, risk_level medium hoặc low do ít môn",,Not Run,High,Integration,Edge case: gần xong + tối ưu thời gian,,
 TC_LP_054,S02,Learning Path Generation,Edge: Sinh viên mới + Low + không học hè → WEAK,"Sinh viên 2410001 chưa có dữ liệu, Low intensity, không học hè","1. Đăng nhập bằng tài khoản sinh viên 2410001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Low, 0 HK hè
@@ -690,11 +639,11 @@ TC_LP_054,S02,Learning Path Generation,Edge: Sinh viên mới + Low + không h�
 5. Kiểm tra Credit/Time check","Mã SV: 2410001
 Cường độ HK chính: Low (≤13 TC)
 Số HK hè: 0
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.0","WEAK feasibility, Credit/Time check fail (quá nhiều TC còn lại với tải thấp + không học hè), khuyến nghị EXTEND_TIMELINE hoặc tăng cường độ",,Not Run,Critical,Integration,Edge case: quá nhiều môn + tải thấp nhất
+GPA mục tiêu: 2.0","WEAK feasibility, Credit/Time check fail (quá nhiều TC còn lại với tải thấp + không học hè), khuyến nghị EXTEND_TIMELINE hoặc tăng cường độ",,Not Run,Critical,Integration,Edge case: quá nhiều môn + tải thấp nhất,,
 TC_LP_055,S12,Learning Path Generation,Edge: Rớt môn + Heavy + ưu tiên GPA #1 + GPA 3.5 → MEDIUM,"Sinh viên 2110010 có môn F, Heavy, GPA mục tiêu 3.5","1. Đăng nhập bằng tài khoản sinh viên 2110010
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, GPA 3.5, ưu tiên GPA #1
@@ -706,7 +655,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.5","MEDIUM feasibility, GPA khó đạt do môn rớt, Heavy tăng rủi ro, khuyến nghị REDUCE_LOAD_FOR_GPA + CHOOSE_MANAGEABLE_COURSES",,Not Run,High,Integration,Edge case: rớt môn + GPA cao + tải nặng
+GPA mục tiêu: 3.5","MEDIUM feasibility, GPA khó đạt do môn rớt, Heavy tăng rủi ro, khuyến nghị REDUCE_LOAD_FOR_GPA + CHOOSE_MANAGEABLE_COURSES",,Not Run,High,Integration,Edge case: rớt môn + GPA cao + tải nặng,,
 TC_LP_056,S11,Learning Path Generation,Edge: Gap year + Heavy + ưu tiên OnTime #1 + 3 HK hè → GOOD,"Sinh viên 2110011 gap year, Heavy, 3 HK hè, ưu tiên OnTime #1","1. Đăng nhập bằng tài khoản sinh viên 2110011
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, 3 HK hè, ưu tiên OnTime #1
@@ -714,11 +663,11 @@ TC_LP_056,S11,Learning Path Generation,Edge: Gap year + Heavy + ưu tiên OnTime
 5. Kiểm tra lộ trình","Mã SV: 2110011
 Cường độ HK chính: Heavy (18-22 TC)
 Số HK hè: 3, cường độ: Heavy (7-8 TC)
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","GOOD feasibility, Heavy + 3 HK hè bù đắp gap year, nhiều TC khả dụng, risk_level high nhưng hoàn thành đúng hạn",,Not Run,High,Integration,Edge case: bù gap year bằng tải nặng
+GPA mục tiêu: 2.5","GOOD feasibility, Heavy + 3 HK hè bù đắp gap year, nhiều TC khả dụng, risk_level high nhưng hoàn thành đúng hạn",,Not Run,High,Integration,Edge case: bù gap year bằng tải nặng,,
 TC_LP_057,S04,Learning Path Generation,Edge: Năm hai + Light + GPA 2.0 → GOOD,"Sinh viên 2110003 năm 2, Light, GPA mục tiêu 2.0","1. Đăng nhập bằng tài khoản sinh viên 2110003
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Light, GPA 2.0
@@ -730,7 +679,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 2.0","GOOD feasibility, GPA mục tiêu thấp dễ đạt, Light đủ để hoàn thành, rủi ro thấp",,Not Run,Medium,Integration,Edge case: GPA mục tiêu thấp
+GPA mục tiêu: 2.0","GOOD feasibility, GPA mục tiêu thấp dễ đạt, Light đủ để hoàn thành, rủi ro thấp",,Not Run,Medium,Integration,Edge case: GPA mục tiêu thấp,,
 TC_LP_058,S09,Learning Path Generation,Edge: Giỏi đại cương yếu chuyên ngành + Standard + ưu tiên Nghề nghiệp #1 + Software Dev,"Sinh viên 2110008, ưu tiên Nghề nghiệp #1, chọn Software Dev","1. Đăng nhập bằng tài khoản sinh viên 2110008
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: ưu tiên Nghề nghiệp #1, Software Dev
@@ -742,7 +691,7 @@ Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","MEDIUM hoặc GOOD, occupation scoring chọn môn chuyên ngành Software Dev, nhưng GPA dự đoán thấp do yếu chuyên ngành, khuyến nghị REDUCE_FOR_DEPTH",,Not Run,High,Integration,Edge case: yếu chuyên ngành + ưu tiên nghề
+GPA mục tiêu: 3.0","MEDIUM hoặc GOOD, occupation scoring chọn môn chuyên ngành Software Dev, nhưng GPA dự đoán thấp do yếu chuyên ngành, khuyến nghị REDUCE_FOR_DEPTH",,Not Run,High,Integration,Edge case: yếu chuyên ngành + ưu tiên nghề,,
 TC_LP_059,S10,Learning Path Generation,Edge: Đã học hè + Heavy + ưu tiên OnTime #1 + 3 HK hè → GOOD,"Sinh viên 2110009 đã có học hè, Heavy, thêm 3 HK hè, ưu tiên OnTime #1","1. Đăng nhập bằng tài khoản sinh viên 2110009
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, 3 HK hè, ưu tiên OnTime #1
@@ -750,11 +699,11 @@ TC_LP_059,S10,Learning Path Generation,Edge: Đã học hè + Heavy + ưu tiên 
 5. Kiểm tra lộ trình","Mã SV: 2110009
 Cường độ HK chính: Heavy (18-22 TC)
 Số HK hè: 3, cường độ: Heavy (7-8 TC)
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","GOOD feasibility, đã có học hè + thêm HK hè = rất nhiều TC khả dụng, hoàn thành rất nhanh, risk_level high",,Not Run,Medium,Integration,Edge case: tối đa hóa tốc độ
+GPA mục tiêu: 2.5","GOOD feasibility, đã có học hè + thêm HK hè = rất nhiều TC khả dụng, hoàn thành rất nhanh, risk_level high",,Not Run,Medium,Integration,Edge case: tối đa hóa tốc độ,,
 TC_LP_060,S03,Learning Path Generation,Edge: Năm nhất + Standard + ưu tiên GPA #2 + GPA 3.5 → MEDIUM,"Sinh viên 2110002 chỉ năm nhất, Standard, GPA 3.5, ưu tiên GPA #2","1. Đăng nhập bằng tài khoản sinh viên 2110002
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: GPA 3.5, ưu tiên GPA #2 (OnTime #1)
@@ -766,7 +715,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 3.5","MEDIUM feasibility, GPA 3.5 cao hơn GPA hiện tại (~2.8-3.0 B-range), còn nhiều môn khó phía trước, khuyến nghị REVIEW_LOAD + PRIORITIZE_CORE",,Not Run,High,Integration,Edge case: năm nhất + GPA cao
+GPA mục tiêu: 3.5","MEDIUM feasibility, GPA 3.5 cao hơn GPA hiện tại (~2.8-3.0 B-range), còn nhiều môn khó phía trước, khuyến nghị REVIEW_LOAD + PRIORITIZE_CORE",,Not Run,High,Integration,Edge case: năm nhất + GPA cao,,
 TC_LP_061,S12,Learning Path Generation,Kết hợp: Rớt môn + Heavy + ưu tiên GPA #1,"Sinh viên 2110010 có môn F và học lại, Heavy intensity, ưu tiên GPA #1","1. Đăng nhập bằng tài khoản sinh viên 2110010
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, ưu tiên GPA #1
@@ -774,12 +723,12 @@ TC_LP_061,S12,Learning Path Generation,Kết hợp: Rớt môn + Heavy + ưu ti�
 5. Tạo lộ trình học tập
 6. Kiểm tra môn học lại và GPA dự đoán","Mã SV: 2110010
 Cường độ HK chính: Heavy (18-22 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 3, cường độ: Heavy (7-8 TC)
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Grade-based scoring chọn môn dễ đạt điểm, nhưng Heavy + rớt môn = rủi ro cao, MEDIUM, khuyến nghị REDUCE_LOAD_FOR_GPA",,Not Run,High,Integration,Kết hợp: rớt + GPA + Heavy
+GPA mục tiêu: 2.5","Grade-based scoring chọn môn dễ đạt điểm, nhưng Heavy + rớt môn = rủi ro cao, MEDIUM, khuyến nghị REDUCE_LOAD_FOR_GPA",,Not Run,High,Integration,Kết hợp: rớt + GPA + Heavy,,
 TC_LP_062,S11,Learning Path Generation,Kết hợp: Gap year + Standard + ưu tiên OnTime #1,"Sinh viên 2110011 gap year, Standard, ưu tiên OnTime #1","1. Đăng nhập bằng tài khoản sinh viên 2110011
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Standard, ưu tiên OnTime #1
@@ -787,25 +736,12 @@ TC_LP_062,S11,Learning Path Generation,Kết hợp: Gap year + Standard + ưu ti
 5. Tạo lộ trình học tập
 6. Kiểm tra chuỗi tiên quyết","Mã SV: 2110011
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 0
+Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","Standard không đủ bù gap year, Prerequisite Chain có thể fail, WEAK hoặc MEDIUM, khuyến nghị INCREASE_LOAD hoặc USE_SUMMER",,Not Run,High,Integration,Kết hợp: gap year + OnTime
-TC_LP_063,S08,Learning Path Generation,Kết hợp: Thiếu tiên quyết + Standard + ưu tiên Nghề nghiệp #1 + Data Scientist,"Sinh viên 2110007 thiếu tiên quyết, ưu tiên Nghề nghiệp #1, chọn Data Scientists","1. Đăng nhập bằng tài khoản sinh viên 2110007
-2. Truy cập trang Learning Path
-3. Tạo mục tiêu: ưu tiên Nghề nghiệp #1, Data Scientists
-4. Xác nhận tính khả thi
-5. Tạo lộ trình học tập
-6. Kiểm tra lộ trình có môn phù hợp Data Science không","Mã SV: 2110007
-Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
-Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
-Ưu tiên #2: Đạt GPA mong muốn
-Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Occupation scoring chọn môn Data Science, nhưng thiếu tiên quyết ảnh hưởng xếp lịch, MEDIUM hoặc WEAK, khuyến nghị EXTEND_FOR_PREREQUISITES",,Not Run,High,Integration,Kết hợp: tiên quyết + nghề nghiệp
+GPA mục tiêu: 2.0","Standard không đủ bù gap year, Prerequisite Chain có thể fail, WEAK hoặc MEDIUM, khuyến nghị INCREASE_LOAD hoặc USE_SUMMER",,Not Run,High,Integration,Kết hợp: gap year + OnTime,,
 TC_LP_064,S09,Learning Path Generation,Kết hợp: Giỏi đại cương yếu chuyên ngành + Heavy + ưu tiên Occ>OnTime>GPA,"Sinh viên 2110008, Heavy, ưu tiên P4 (Occ>OnTime>GPA)","1. Đăng nhập bằng tài khoản sinh viên 2110008
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, ưu tiên P4
@@ -814,11 +750,11 @@ TC_LP_064,S09,Learning Path Generation,Kết hợp: Giỏi đại cương yếu 
 6. Kiểm tra lộ trình","Mã SV: 2110008
 Cường độ HK chính: Heavy (18-22 TC)
 Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Ra trường đúng hạn
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","Occupation-based scoring + Heavy, chọn môn có giá trị nghề cao, GPA có thể thấp, MEDIUM hoặc GOOD, risk_level medium-high",,Not Run,Medium,Integration,Kết hợp: yếu chuyên ngành + Heavy + P4
+GPA mục tiêu: 3.5","Occupation-based scoring + Heavy, chọn môn có giá trị nghề cao, GPA có thể thấp, MEDIUM hoặc GOOD, risk_level medium-high",,Not Run,Medium,Integration,Kết hợp: yếu chuyên ngành + Heavy + P4,,
 TC_LP_065,S05,Learning Path Generation,Kết hợp: GPA cao + Light + ưu tiên GPA #1 + GPA 3.5,"Sinh viên 2110004 GPA cao, Light, GPA 3.5, ưu tiên GPA #1","1. Đăng nhập bằng tài khoản sinh viên 2110004
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Light, GPA 3.5, ưu tiên GPA #1
@@ -830,7 +766,7 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.5","GOOD feasibility, GPA dự đoán ~3.5+ do lịch sử tốt, Light giúp tập trung mỗi môn, MAINTAIN_LOAD + FOCUS_HIGH_CREDIT",,Not Run,Medium,Integration,Kết hợp: GPA cao + nhẹ + mục tiêu cao
+GPA mục tiêu: 3.5","GOOD feasibility, GPA dự đoán ~3.5+ do lịch sử tốt, Light giúp tập trung mỗi môn, MAINTAIN_LOAD + FOCUS_HIGH_CREDIT",,Not Run,Medium,Integration,Kết hợp: GPA cao + nhẹ + mục tiêu cao,,
 TC_LP_066,S06,Learning Path Generation,Kết hợp: GPA thấp + Heavy + ưu tiên OnTime #1 + 3 HK hè,"Sinh viên 2110005 GPA thấp, Heavy, 3 HK hè, ưu tiên OnTime #1","1. Đăng nhập bằng tài khoản sinh viên 2110005
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, 3 HK hè, ưu tiên OnTime #1
@@ -838,23 +774,23 @@ TC_LP_066,S06,Learning Path Generation,Kết hợp: GPA thấp + Heavy + ưu ti�
 5. Kiểm tra lộ trình","Mã SV: 2110005
 Cường độ HK chính: Heavy (18-22 TC)
 Số HK hè: 3, cường độ: Heavy (7-8 TC)
-Nghề nghiệp: (không chọn)
+Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","MEDIUM hoặc GOOD (Credit/Time pass nhờ Heavy + hè), nhưng GPA dự đoán thấp, risk_level high, khuyến nghị MAX_LOAD_AND_SUMMER + ACCEPT_GPA_TRADEOFF",,Not Run,Critical,Integration,Kết hợp: GPA thấp + tối đa thời gian
+GPA mục tiêu: 2.0","MEDIUM hoặc GOOD (Credit/Time pass nhờ Heavy + hè), nhưng GPA dự đoán thấp, risk_level high, khuyến nghị MAX_LOAD_AND_SUMMER + ACCEPT_GPA_TRADEOFF",,Not Run,Critical,Integration,Kết hợp: GPA thấp + tối đa thời gian,,
 TC_LP_067,S07,Learning Path Generation,Kết hợp: Gần xong + Light + ưu tiên GPA #1 + GPA 3.0,"Sinh viên 2110006 gần hoàn thành, Light, ưu tiên GPA #1","1. Đăng nhập bằng tài khoản sinh viên 2110006
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Light, ưu tiên GPA #1
 4. Xác nhận tính khả thi
 5. Kiểm tra GPA dự đoán","Mã SV: 2110006
 Cường độ HK chính: Light (14-15 TC)
-Số HK hè: 1, cường độ: Standard
-Nghề nghiệp: (không chọn)
+Số HK hè: 0
+Nghề nghiệp: 15-2051.00 - Nhà Khoa học Dữ liệu
 Ưu tiên #1: Đạt GPA mong muốn
 Ưu tiên #2: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","GOOD feasibility, ít môn + Light = tập trung điểm cao, GPA dự đoán tốt, MAINTAIN_LOAD",,Not Run,Medium,Integration,Kết hợp: gần xong + nhẹ + GPA
+GPA mục tiêu: 2.5","GOOD feasibility, ít môn + Light = tập trung điểm cao, GPA dự đoán tốt, MAINTAIN_LOAD",,Not Run,Medium,Integration,Kết hợp: gần xong + nhẹ + GPA,,
 TC_LP_068,S02,Learning Path Generation,Kết hợp: Sinh viên mới + Heavy + ưu tiên Nghề nghiệp #1 + Software Dev + 3 HK hè,"Sinh viên 2410001 mới, Heavy, Software Dev, 3 HK hè","1. Đăng nhập bằng tài khoản sinh viên 2410001
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: Heavy, Software Dev, 3 HK hè, ưu tiên Nghề nghiệp #1
@@ -867,7 +803,7 @@ Nghề nghiệp: 15-1252.00 - Nhà Phát triển Phần mềm
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Ra trường đúng hạn
-GPA mục tiêu: 3.0","Occupation-specific scoring cho Software Dev, Heavy + 3 HK hè = tối đa TC, GOOD hoặc MEDIUM, risk_level high, lộ trình ưu tiên môn lập trình/software",,Not Run,Critical,Integration,Kết hợp: mới vào + nghề + tải max + hè
+GPA mục tiêu: 3.5","Occupation-specific scoring cho Software Dev, Heavy + 3 HK hè = tối đa TC, GOOD hoặc MEDIUM, risk_level high, lộ trình ưu tiên môn lập trình/software",,Not Run,Critical,Integration,Kết hợp: mới vào + nghề + tải max + hè,,
 TC_LP_069,S04,Learning Path Generation,Kết hợp: Năm hai + Standard + ưu tiên Occ>OnTime>GPA + Info Security,"Sinh viên 2110003 năm 2, ưu tiên P4, Info Security","1. Đăng nhập bằng tài khoản sinh viên 2110003
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: ưu tiên P4, Info Security
@@ -875,12 +811,12 @@ TC_LP_069,S04,Learning Path Generation,Kết hợp: Năm hai + Standard + ưu ti
 5. Tạo lộ trình học tập
 6. Kiểm tra lộ trình","Mã SV: 2110003
 Cường độ HK chính: Standard (16-17 TC)
-Số HK hè: 1, cường độ: Standard
+Số HK hè: 0
 Nghề nghiệp: 15-1212.00 - Chuyên viên Phân tích Bảo mật Thông tin
 Ưu tiên #1: Kiến thức chuyên sâu & nghề nghiệp
 Ưu tiên #2: Ra trường đúng hạn
 Ưu tiên #3: Đạt GPA mong muốn
-GPA mục tiêu: 3.0","Occupation-specific scoring cho Info Security, chọn môn bảo mật/mạng, GOOD hoặc MEDIUM, GPA dự đoán B-range",,Not Run,Medium,Integration,Kết hợp: năm 2 + nghề + P4
+GPA mục tiêu: 2.5","Occupation-specific scoring cho Info Security, chọn môn bảo mật/mạng, GOOD hoặc MEDIUM, GPA dự đoán B-range",,Not Run,Medium,Integration,Kết hợp: năm 2 + nghề + P4,,
 TC_LP_070,S10,Learning Path Generation,Kết hợp: Đã học hè + Standard + ưu tiên OnTime>GPA>Occ + GPA 2.5,"Sinh viên 2110009 đã có học hè, Standard, GPA 2.5, ưu tiên P5","1. Đăng nhập bằng tài khoản sinh viên 2110009
 2. Truy cập trang Learning Path
 3. Tạo mục tiêu: GPA 2.5, ưu tiên P5
@@ -892,4 +828,4 @@ Nghề nghiệp: (không chọn)
 Ưu tiên #1: Ra trường đúng hạn
 Ưu tiên #2: Đạt GPA mong muốn
 Ưu tiên #3: Kiến thức chuyên sâu & nghề nghiệp
-GPA mục tiêu: 2.5","GOOD feasibility, GPA mục tiêu thấp, đã có học hè giúp giảm tải, STICK_TO_PLAN + AVOID_LONG_BREAKS",,Not Run,Medium,Integration,Kết hợp: đã học hè + GPA thấp mục tiêu
+GPA mục tiêu: 2.5","GOOD feasibility, GPA mục tiêu thấp, đã có học hè giúp giảm tải, STICK_TO_PLAN + AVOID_LONG_BREAKS",,Not Run,Medium,Integration,Kết hợp: đã học hè + GPA thấp mục tiêu,,

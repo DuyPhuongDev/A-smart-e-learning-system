@@ -217,6 +217,7 @@ public class LearningPathPersistenceService {
       for (StudentProgressDataService.CompletedSubjectDetail completedSubject : sortedCompleted) {
         int completedCredits = SubjectCreditUtil.safeCompletedCredits(completedSubject);
 
+        BigDecimal avgGrade = completedSubject.grade4() != null ? BigDecimal.valueOf(completedSubject.grade4()) : null;
         LearningPathSubject subject = LearningPathSubject.builder()
             .learningPathId(path.getLearningPathId())
             .learningPathSectionId(savedSection.getLearningPathSectionId())
@@ -226,15 +227,12 @@ public class LearningPathPersistenceService {
             .credits(completedCredits)
             .difficultyLevel("easy")
             .avgPassRate(null)
-            .avgGrade(
-                completedSubject.grade4() != null
-                    ? BigDecimal.valueOf(completedSubject.grade4())
-                    : null)
+            .avgGrade(avgGrade)
             .importanceScore(BigDecimal.ZERO)
             .prerequisitesGraph(Collections.emptyList())
-            .isCompleted(Boolean.TRUE.equals(completedSubject.isPassed()))
+            .isCompleted(completedSubject.isPassed())
             .studyOrder(completedSubject.studyOrder())
-            .completionGrade(completedSubject.grade4() != null ? BigDecimal.valueOf(completedSubject.grade4()) : null)
+            .completionGrade(avgGrade)
             .attemptNo(completedSubject.attemptNo())
             .isHighestResult(completedSubject.isHighestResult())
             .build();
@@ -264,7 +262,7 @@ public class LearningPathPersistenceService {
             .avgGrade(null)
             .importanceScore(BigDecimal.valueOf(safePriority2(candidate)))
             .prerequisitesGraph(buildPrerequisiteGraph(candidate))
-            .isCompleted(false)
+            .isCompleted(null)
             .isHighestResult(true)
             .studyOrder(studyOrderIndex)
             .predictedGrade(predictedGrade != null ? BigDecimal.valueOf(predictedGrade).setScale(2, RoundingMode.HALF_UP) : null)

@@ -1,5 +1,6 @@
 package com.hcmut.lms.learning.service.impl;
 
+import com.hcmut.lms.common.util.StudentGradeUtil;
 import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.client.dto.BatchClassDatasetLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
@@ -23,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.hcmut.lms.learning.util.GradeConversionUtil.convertTo4Point;
 
 @Service
 @RequiredArgsConstructor
@@ -245,7 +245,7 @@ public class GradePredictionDatasetServiceImpl implements GradePredictionDataset
     for (Enrollment e : sorted) {
       ClassSectionDatasetResponse meta = validMeta.get(e.getClassId());
       double raw = e.getFinalGrade();
-      double grade4 = convertTo4Point(raw);
+      double grade4 = StudentGradeUtil.convertTo4Scale(raw);
 
       String attemptKey = e.getStudentId() + "|" + meta.getSubjectId();
       int attemptIndex = attemptCounter.getOrDefault(attemptKey, 0);

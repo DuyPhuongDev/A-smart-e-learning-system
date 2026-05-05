@@ -126,7 +126,7 @@ public class LearningGoalServiceImpl implements LearningGoalService {
 
     // 2. Replace summer semesters if provided
     if (request.getSummerSemesters() != null) {
-      LearningIntensity mainIntensity = learningGoal.getPrefMainSemLearnIntensity();
+//      LearningIntensity mainIntensity = learningGoal.getPrefMainSemLearnIntensity();
       Set<UUID> seenSemesterIds = new HashSet<>();
       List<PreferredSummerSemester> newEntries = new ArrayList<>();
       for (CreatePreferredSummerSemesterRequest dto : request.getSummerSemesters()) {
@@ -136,10 +136,10 @@ public class LearningGoalServiceImpl implements LearningGoalService {
         seenSemesterIds.add(dto.getSemesterId());
 
         SummerLearningIntensity summerIntensity = parseSummerIntensity(dto.getLearnIntensity());
-        if (mainIntensity != null && intensityRank(summerIntensity.name()) > intensityRank(mainIntensity.name())) {
-          throw new IllegalArgumentException(
-              "Summer semester intensity cannot exceed prefMainSemLearnIntensity");
-        }
+//        if (mainIntensity != null && intensityRank(summerIntensity.name()) > intensityRank(mainIntensity.name())) {
+//          throw new IllegalArgumentException(
+//              "Summer semester intensity cannot exceed prefMainSemLearnIntensity");
+//        }
         PreferredSummerSemester entry = new PreferredSummerSemester();
         entry.setPreferredSummerSemesterId(UUID.randomUUID());
         entry.setLearningGoal(learningGoal);
@@ -150,11 +150,11 @@ public class LearningGoalServiceImpl implements LearningGoalService {
       learningGoal.getPreferredSummerSemesters().clear();
       entityManager.flush();
       learningGoal.getPreferredSummerSemesters().addAll(newEntries);
-    } else {
-      // When summer semesters are not being replaced, validate intensity against existing DB entries
-      if (request.getPrefMainSemLearnIntensity() != null) {
-        enforceIntensityUpdateRule(learningGoal, request.getPrefMainSemLearnIntensity());
-      }
+//    } else {
+//      // When summer semesters are not being replaced, validate intensity against existing DB entries
+//      if (request.getPrefMainSemLearnIntensity() != null) {
+//        enforceIntensityUpdateRule(learningGoal, request.getPrefMainSemLearnIntensity());
+//      }
     }
 
     // 3. Validate consistency
@@ -230,10 +230,10 @@ public class LearningGoalServiceImpl implements LearningGoalService {
     }
 
     SummerLearningIntensity summerIntensity = parseSummerIntensity(request.getLearnIntensity());
-    if (learningGoal.getPrefMainSemLearnIntensity() != null && intensityRank(summerIntensity.name()) > intensityRank(
-        learningGoal.getPrefMainSemLearnIntensity().name())) {
-      throw new IllegalArgumentException("Summer semester intensity cannot exceed prefMainSemLearnIntensity");
-    }
+//    if (learningGoal.getPrefMainSemLearnIntensity() != null && intensityRank(summerIntensity.name()) > intensityRank(
+//        learningGoal.getPrefMainSemLearnIntensity().name())) {
+//      throw new IllegalArgumentException("Summer semester intensity cannot exceed prefMainSemLearnIntensity");
+//    }
 
     PreferredSummerSemester saved = preferredSummerSemesterRepository.save(PreferredSummerSemester.builder()
         .preferredSummerSemesterId(UUID.randomUUID())
@@ -291,9 +291,9 @@ public class LearningGoalServiceImpl implements LearningGoalService {
       newSemesterIds.add(request.getSemesterId());
 
       SummerLearningIntensity summerIntensity = parseSummerIntensity(request.getLearnIntensity());
-      if (mainIntensity != null && intensityRank(summerIntensity.name()) > intensityRank(mainIntensity.name())) {
-        throw new IllegalArgumentException("Summer semester intensity cannot exceed prefMainSemLearnIntensity");
-      }
+//      if (mainIntensity != null && intensityRank(summerIntensity.name()) > intensityRank(mainIntensity.name())) {
+//        throw new IllegalArgumentException("Summer semester intensity cannot exceed prefMainSemLearnIntensity");
+//      }
 
       toSave.add(PreferredSummerSemester.builder()
           .preferredSummerSemesterId(UUID.randomUUID())
@@ -377,30 +377,30 @@ public class LearningGoalServiceImpl implements LearningGoalService {
     }
   }
 
-  private void enforceIntensityUpdateRule(LearningGoal learningGoal, String newIntensityRaw) {
-    LearningIntensity newIntensity = parseIntensity(newIntensityRaw);
-    List<PreferredSummerSemester> summerSemesters = learningGoal.getPreferredSummerSemesters();
-
-    boolean hasHigherSummerIntensity = summerSemesters.stream()
-        .map(PreferredSummerSemester::getLearningIntensity)
-        .filter(Objects::nonNull)
-        .anyMatch(value -> intensityRank(value.name()) > intensityRank(newIntensity.name()));
-
-    if (hasHigherSummerIntensity) {
-      throw new IllegalArgumentException(
-          "Cannot update prefMainSemLearnIntensity below existing preferred summer semester intensity");
-    }
-  }
-
-  private int intensityRank(String intensity) {
-    return switch (IntensityParsingSupport.normalizeTrimmedTitleCase(intensity)) {
-      case "Low" -> 1;
-      case "Light" -> 2;
-      case "Standard" -> 3;
-      case "Heavy" -> 4;
-      default -> throw new IllegalArgumentException("Invalid intensity value: " + intensity);
-    };
-  }
+//  private void enforceIntensityUpdateRule(LearningGoal learningGoal, String newIntensityRaw) {
+//    LearningIntensity newIntensity = parseIntensity(newIntensityRaw);
+//    List<PreferredSummerSemester> summerSemesters = learningGoal.getPreferredSummerSemesters();
+//
+//    boolean hasHigherSummerIntensity = summerSemesters.stream()
+//        .map(PreferredSummerSemester::getLearningIntensity)
+//        .filter(Objects::nonNull)
+//        .anyMatch(value -> intensityRank(value.name()) > intensityRank(newIntensity.name()));
+//
+//    if (hasHigherSummerIntensity) {
+//      throw new IllegalArgumentException(
+//          "Cannot update prefMainSemLearnIntensity below existing preferred summer semester intensity");
+//    }
+//  }
+//
+//  private int intensityRank(String intensity) {
+//    return switch (IntensityParsingSupport.normalizeTrimmedTitleCase(intensity)) {
+//      case "Low" -> 1;
+//      case "Light" -> 2;
+//      case "Standard" -> 3;
+//      case "Heavy" -> 4;
+//      default -> throw new IllegalArgumentException("Invalid intensity value: " + intensity);
+//    };
+//  }
 
   private LearningGoalResponse toResponse(LearningGoal learningGoal) {
     LearningGoalResponse response = learningGoalMapper.toResponse(learningGoal);
