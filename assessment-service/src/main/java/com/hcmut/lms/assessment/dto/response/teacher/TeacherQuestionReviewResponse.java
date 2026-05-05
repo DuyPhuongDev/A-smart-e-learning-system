@@ -2,6 +2,7 @@ package com.hcmut.lms.assessment.dto.response.teacher;
 
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
 import com.hcmut.lms.assessment.domain.entity.submission.QuestionSubmissionStatus;
+import com.hcmut.lms.assessment.dto.request.question.FileUploadRequest;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -37,9 +38,7 @@ public class TeacherQuestionReviewResponse {
 
     private Integer maxFileSize;
     private List<String> acceptedFileTypes;
+    private List<FileUploadRequest> instructionFiles;
     private String submittedText;
-    private String submittedFileUrl;
-    private String submittedFileFormat;
-    private Integer submittedNumPages;
-    private Integer submittedWordCount;
+    private List<FileUploadRequest> submittedFiles;
 }

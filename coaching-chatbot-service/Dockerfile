@@ -24,7 +24,7 @@ COPY coaching-chatbot-service/src coaching-chatbot-service/src
 
 # Build
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn clean package -DskipTests -pl :coachingchatbot-service -am
+    mvn clean package -DskipTests -pl :coaching-chatbot-service -am
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

@@ -20,18 +20,18 @@ COPY coaching-chatbot-service/pom.xml coaching-chatbot-service/
 
 # Copy source code
 COPY common/src common/src
-COPY authentication-service/src authentication-service/src
+COPY assessment-service/src assessment-service/src
 
 # Build
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn clean package -DskipTests -pl :authentication-service -am
+    mvn clean package -DskipTests -pl :assessment-service -am
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Copy jar from build stage
-COPY --from=build /workspace/app/authentication-service/target/*.jar app.jar
+COPY --from=build /workspace/app/assessment-service/target/*.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8084
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

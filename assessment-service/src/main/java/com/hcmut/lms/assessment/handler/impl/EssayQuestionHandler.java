@@ -1,5 +1,7 @@
 package com.hcmut.lms.assessment.handler.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcmut.lms.assessment.domain.entity.answer.EssayAcceptedFileType;
 import com.hcmut.lms.assessment.domain.entity.question.EssayQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
@@ -43,6 +45,14 @@ public class EssayQuestionHandler implements QuestionHandler {
                 .sampleAnswer(req.getSampleAnswer())
                 .maxFileSize(req.getMaxFileSize())
                 .build();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            String jsonFiles = objectMapper.writeValueAsString(req.getFileUploads());
+            question.setInstructionFiles(jsonFiles);
+        } catch (JsonProcessingException e) {
+            question.setInstructionFiles("[]"); // Giá trị mặc định nếu lỗi
+        }
 
         if (req.getAcceptedFileTypes() != null) {
             req.getAcceptedFileTypes().forEach(ft ->

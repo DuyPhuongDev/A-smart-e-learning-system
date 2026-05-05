@@ -10,8 +10,7 @@ import com.hcmut.lms.coursemanagement.client.dto.AssessmentGrade;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSection;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSectionGrading;
 import com.hcmut.lms.coursemanagement.domain.entity.classSection.ClassSectionGradingId;
-import com.hcmut.lms.coursemanagement.domain.entity.subject.Grading;
-import com.hcmut.lms.coursemanagement.domain.entity.subject.GradingType;
+import com.hcmut.lms.coursemanagement.domain.entity.subject.*;
 import com.hcmut.lms.coursemanagement.exception.DomainException;
 import com.hcmut.lms.coursemanagement.repository.ClassSectionGradingRepository;
 import com.hcmut.lms.coursemanagement.repository.ClassSectionRepository;
@@ -23,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -35,8 +35,8 @@ import java.util.stream.Collectors;
 public class ClassGradingServiceImpl implements ClassGradingService {
 
     private static final float DEFAULT_TUTORIAL_WEIGHT    = 10.0f;
-    private static final float DEFAULT_LABS_WEIGHT        = 10.0f;
-    private static final float DEFAULT_ASSIGNMENT_WEIGHT  = 20.0f;
+    private static final float DEFAULT_LABS_WEIGHT        = 0.0f;
+    private static final float DEFAULT_ASSIGNMENT_WEIGHT  = 30.0f;
     private static final float DEFAULT_MIDTERM_WEIGHT     = 20.0f;
     private static final float DEFAULT_FINAL_WEIGHT       = 40.0f;
     private static final float TOTAL_WEIGHT               = 100.0f;
@@ -56,7 +56,7 @@ public class ClassGradingServiceImpl implements ClassGradingService {
     // -------------------------------------------------------------------------
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ClassGradingResponse> getGradingsForClass(UUID classId) {
         log.info("Getting gradings for class: {}", classId);
         ClassSection classSection = verifyClassExists(classId);
@@ -191,19 +191,20 @@ public class ClassGradingServiceImpl implements ClassGradingService {
     // INIT (teacher classes only)
     // -------------------------------------------------------------------------
 
-    @Override
-    public void initDefaultGradings(UUID classId) {
-        log.info("Initializing default gradings for teacher class: {}", classId);
-        ClassSection classSection = verifyClassExists(classId);
-
-        createAndLinkGrading(classSection, "Tutorial",    null, GradingType.TUTORIAL,   DEFAULT_TUTORIAL_WEIGHT);
-        createAndLinkGrading(classSection, "Labs",        null, GradingType.LABS,        DEFAULT_LABS_WEIGHT);
-        createAndLinkGrading(classSection, "Assignment",  null, GradingType.ASSIGNMENT,  DEFAULT_ASSIGNMENT_WEIGHT);
-        createAndLinkGrading(classSection, "Midterm Exam", null, GradingType.MIDTERM,   DEFAULT_MIDTERM_WEIGHT);
-        createAndLinkGrading(classSection, "Final Exam",  null, GradingType.FINAL,       DEFAULT_FINAL_WEIGHT);
-
-        log.info("Default gradings initialized for teacher class: {}", classId);
-    }
+//    private void initDefaultGradings(UUID classId) {
+//        log.info("Initializing default gradings for teacher class: {}", classId);
+//        ClassSection classSection = verifyClassExists(classId);
+//
+//        createAndLinkGrading(classSection, "Tutorial",    null, GradingType.TUTORIAL,   DEFAULT_TUTORIAL_WEIGHT);
+//        createAndLinkGrading(classSection, "Labs",        null, GradingType.LABS,        DEFAULT_LABS_WEIGHT);
+//        createAndLinkGrading(classSection, "Assignment",  null, GradingType.ASSIGNMENT,  DEFAULT_ASSIGNMENT_WEIGHT);
+//        createAndLinkGrading(classSection, "Midterm Exam", null, GradingType.MIDTERM,   DEFAULT_MIDTERM_WEIGHT);
+//        createAndLinkGrading(classSection, "Final Exam",  null, GradingType.FINAL,       DEFAULT_FINAL_WEIGHT);
+//
+//        //
+//
+//        log.info("Default gradings initialized for teacher class: {}", classId);
+//    }
 
     // -------------------------------------------------------------------------
     // PRIVATE HELPERS
@@ -213,6 +214,38 @@ public class ClassGradingServiceImpl implements ClassGradingService {
         return Boolean.FALSE.equals(classSection.getIsOfficial());
     }
 
+    // chac chan co bug
+    private List<SubjectGrading> getOrCreateDefaultSubjectGradings(Subject subject) {
+        log.info("Getting default subject gradings for subject {}", subject.getId());
+        List<SubjectGrading> exists = subjectGradingRepository.findBySubjectId(subject.getId());
+        if (!exists.isEmpty()) {
+            return exists;
+        }
+
+
+        List<Grading> gradings = gradingRepository.findAll();
+
+        List<SubjectGrading> defaults = gradings.stream()
+                .map(grading -> {
+                    SubjectGrading defaultGrading = SubjectGrading.builder()
+                            .id(new SubjectGradingId(subject.getId(), grading.getId()))
+                            .subject(subject)
+                            .grading(grading)
+                            .build();
+                    switch (grading.getGradingType()) {
+                        case TUTORIAL -> defaultGrading.setWeight(DEFAULT_TUTORIAL_WEIGHT);
+                        case LABS ->  defaultGrading.setWeight(DEFAULT_LABS_WEIGHT);
+                        case ASSIGNMENT ->  defaultGrading.setWeight(DEFAULT_ASSIGNMENT_WEIGHT);
+                        case MIDTERM ->   defaultGrading.setWeight(DEFAULT_MIDTERM_WEIGHT);
+                        case FINAL ->   defaultGrading.setWeight(DEFAULT_FINAL_WEIGHT);
+                        case null, default -> defaultGrading.setWeight(0.0f);
+                    }
+                    return defaultGrading;
+                }).toList();
+
+        return  subjectGradingRepository.saveAll(defaults);
+    }
+
     private List<ClassGradingResponse> getSubjectGradingsAsResponse(ClassSection classSection) {
         if (classSection.getSubject() == null) return List.of();
 
@@ -220,7 +253,9 @@ public class ClassGradingServiceImpl implements ClassGradingService {
                 assessmentServiceClient.getGradesByClass(classSection.getId()).stream()
                         .collect(Collectors.groupingBy(AssessmentGrade::getAssessmentType));
 
-        return subjectGradingRepository.findBySubjectId(classSection.getSubject().getId()).stream()
+        List<SubjectGrading> subjectGradings = getOrCreateDefaultSubjectGradings(classSection.getSubject());
+
+        return subjectGradings.stream()
                 .map(sg -> {
                     ClassGradingResponse classGradingResponse = ClassGradingResponse.builder()
                             .gradingId(sg.getGrading().getId())
@@ -245,24 +280,6 @@ public class ClassGradingServiceImpl implements ClassGradingService {
                         .weight(sg.getWeight())
                         .build())
                 .toList();
-    }
-
-    private void createAndLinkGrading(ClassSection classSection, String name, String description,
-                                       GradingType type, float weight) {
-        Grading grading = Grading.builder()
-                .name(name)
-                .description(description)
-                .gradingType(type)
-                .build();
-        grading = gradingRepository.save(grading);
-
-        ClassSectionGrading link = ClassSectionGrading.builder()
-                .id(new ClassSectionGradingId(classSection.getId(), grading.getId()))
-                .classSection(classSection)
-                .grading(grading)
-                .weight(weight)
-                .build();
-        classSectionGradingRepository.save(link);
     }
 
     private ClassSection verifyClassExists(UUID classId) {
