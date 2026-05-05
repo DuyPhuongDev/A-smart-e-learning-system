@@ -1,5 +1,8 @@
 package com.hcmut.lms.assessment.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcmut.lms.assessment.client.CourseManagementInternalClient;
 import com.hcmut.lms.assessment.client.LearningInternalEnrollmentClient;
 import com.hcmut.lms.assessment.client.UserManagementInternalClient;
@@ -22,6 +25,7 @@ import com.hcmut.lms.assessment.domain.entity.submission.Feedback;
 import com.hcmut.lms.assessment.domain.entity.submission.McqSubmission;
 import com.hcmut.lms.assessment.domain.entity.submission.QuestionSubmission;
 import com.hcmut.lms.assessment.domain.entity.submission.QuestionSubmissionStatus;
+import com.hcmut.lms.assessment.dto.request.question.FileUploadRequest;
 import com.hcmut.lms.assessment.dto.request.teacher.TeacherEssayGradeItemRequest;
 import com.hcmut.lms.assessment.dto.request.teacher.TeacherEssayGradesRequest;
 import com.hcmut.lms.assessment.dto.response.teacher.TeacherAssessmentReportItemResponse;
@@ -69,18 +73,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -327,10 +320,12 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 builder.acceptedFileTypes(essayQuestion.getAcceptedFileTypes().stream()
                         .map(fileType -> fileType.getFileType())
                         .toList());
+                builder.instructionFiles(getFiles(essayQuestion.getInstructionFiles()));
 
                 EssaySubmission essaySubmission = resolveEssaySubmission(questionSubmission);
                 if (essaySubmission != null) {
                     builder.submittedText(essaySubmission.getAnswerText());
+                    builder.submittedFiles(getFiles(essaySubmission.getSubmissionFiles()));
                 }
             }
 
@@ -371,6 +366,16 @@ public class TeacherAssessmentServiceImpl implements TeacherAssessmentService {
                 .gradingStatus(gradingStatus)
                 .questions(questionDetails)
                 .build();
+    }
+
+    private List<FileUploadRequest> getFiles(String json) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            // Phải dùng TypeReference để Jackson biết đường ép về List Object
+            return mapper.readValue(json, new TypeReference<List<FileUploadRequest>>() {});
+        } catch (JsonProcessingException e) {
+            return Collections.emptyList();
+        }
     }
 
     @Override

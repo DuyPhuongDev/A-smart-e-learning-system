@@ -186,7 +186,7 @@ public class AssessmentServiceImpl implements AssessmentService {
         EssayQuestionRequest essayQuestionRequest = EssayQuestionRequest.builder()
                 .questionType(QuestionType.ESSAY)
                 .content(request.getDescription())
-                .maxFileSize(50)
+                .maxFileSize(50024)
                 .fileUploads(request.getFiles())
                 .build();
 
