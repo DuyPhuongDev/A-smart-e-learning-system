@@ -92,6 +92,7 @@ logs/
 *.temp
 class_diagram_promt.txt
 *.env
+k8s/secret.yaml
 learning-service/src/main/resources/models
 
 # Claude AI

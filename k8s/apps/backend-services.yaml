@@ -1,0 +1,595 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: lms
+  annotations:
+    cloud.google.com/backend-config: '{"default": "api-gateway-backendconfig"}'
+spec:
+  selector:
+    app: api-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: api-gateway-backendconfig
+  namespace: lms
+spec:
+  healthCheck:
+    checkIntervalSec: 15
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+    type: HTTP
+    requestPath: /actuator/health
+    port: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: lms
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/api-gateway:v1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentication-service
+  namespace: lms
+spec:
+  selector:
+    app: authentication-service
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentication-service
+  namespace: lms
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: authentication-service
+  template:
+    metadata:
+      labels:
+        app: authentication-service
+    spec:
+      containers:
+        - name: authentication-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/authentication-service:v1
+          ports:
+            - containerPort: 8081
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-management-service
+  namespace: lms
+spec:
+  selector:
+    app: user-management-service
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-management-service
+  namespace: lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-management-service
+  template:
+    metadata:
+      labels:
+        app: user-management-service
+    spec:
+      containers:
+        - name: user-management-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/user-management-service:v1
+          ports:
+            - containerPort: 8082
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: course-management-service
+  namespace: lms
+spec:
+  selector:
+    app: course-management-service
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course-management-service
+  namespace: lms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: course-management-service
+  template:
+    metadata:
+      labels:
+        app: course-management-service
+    spec:
+      containers:
+        - name: course-management-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/course-management-service:v1
+          ports:
+            - containerPort: 8083
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+            - name: AWS_SHARED_CREDENTIALS_FILE
+              value: /root/.aws/credentials
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+          volumeMounts:
+            - name: aws-credentials
+              mountPath: /root/.aws
+              readOnly: true
+      volumes:
+        - name: aws-credentials
+          secret:
+            secretName: aws-credentials
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: assessment-service
+  namespace: lms
+spec:
+  selector:
+    app: assessment-service
+  ports:
+    - name: http
+      port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assessment-service
+  namespace: lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: assessment-service
+  template:
+    metadata:
+      labels:
+        app: assessment-service
+    spec:
+      containers:
+        - name: assessment-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/assessment-service:v1
+          ports:
+            - containerPort: 8084
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: learning-service
+  namespace: lms
+spec:
+  selector:
+    app: learning-service
+  ports:
+    - name: http
+      port: 8086
+      targetPort: 8086
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: learning-service
+  namespace: lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: learning-service
+  template:
+    metadata:
+      labels:
+        app: learning-service
+    spec:
+      containers:
+        - name: learning-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/learning-service:v1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8086
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+            - name: AWS_SHARED_CREDENTIALS_FILE
+              value: /root/.aws/credentials
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+          volumeMounts:
+            - name: aws-credentials
+              mountPath: /root/.aws
+              readOnly: true
+      volumes:
+        - name: aws-credentials
+          secret:
+            secretName: aws-credentials
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: personalization-service
+  namespace: lms
+spec:
+  selector:
+    app: personalization-service
+  ports:
+    - name: http
+      port: 8087
+      targetPort: 8087
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: personalization-service
+  namespace: lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: personalization-service
+  template:
+    metadata:
+      labels:
+        app: personalization-service
+    spec:
+      containers:
+        - name: personalization-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/personalization-service:v1
+          ports:
+            - containerPort: 8087
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: lms
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 8090
+      targetPort: 8090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/notification-service:v1
+          ports:
+            - containerPort: 8090
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: communication-service
+  namespace: lms
+spec:
+  selector:
+    app: communication-service
+  ports:
+    - name: http
+      port: 8091
+      targetPort: 8091
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: communication-service
+  namespace: lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: communication-service
+  template:
+    metadata:
+      labels:
+        app: communication-service
+    spec:
+      containers:
+        - name: communication-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/communication-service:v1
+          ports:
+            - containerPort: 8091
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coaching-chatbot-service
+  namespace: lms
+spec:
+  selector:
+    app: coaching-chatbot-service
+  ports:
+    - name: http
+      port: 8092
+      targetPort: 8092
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coaching-chatbot-service
+  namespace: lms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coaching-chatbot-service
+  template:
+    metadata:
+      labels:
+        app: coaching-chatbot-service
+    spec:
+      containers:
+        - name: coaching-chatbot-service
+          image: asia-southeast1-docker.pkg.dev/capstone-project-495404/lms/coaching-chatbot-service:v1
+          ports:
+            - containerPort: 8092
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              value: "true"
+            - name: EUREKA_INSTANCE_IP_ADDRESS
+              value: "$(POD_IP)"
+            - name: EUREKA_INSTANCE_HOSTNAME
+              value: "$(POD_IP)"
+          envFrom:
+            - configMapRef:
+                name: lms-config
+            - secretRef:
+                name: lms-secrets

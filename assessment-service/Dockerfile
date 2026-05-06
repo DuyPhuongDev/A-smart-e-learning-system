@@ -17,16 +17,16 @@ COPY communication-service/pom.xml communication-service/
 COPY coaching-chatbot-service/pom.xml coaching-chatbot-service/
 
 COPY common/src common/src
-COPY authentication-service/src authentication-service/src
+COPY assessment-service/src assessment-service/src
 
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn clean package -DskipTests -pl :authentication-service -am
+    mvn clean package -DskipTests -pl :assessment-service -am
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-COPY --from=build /workspace/app/authentication-service/target/*.jar app.jar
+COPY --from=build /workspace/app/assessment-service/target/*.jar app.jar
 
-EXPOSE 8081
+EXPOSE 8084
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
