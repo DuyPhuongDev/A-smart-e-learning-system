@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcmut.lms.assessment.client.CourseManagementInternalClient;
 import com.hcmut.lms.assessment.client.dto.ClassGradingWeightDto;
 import com.hcmut.lms.assessment.domain.entity.assessment.*;
+import com.hcmut.lms.assessment.domain.entity.submission.AssessmentSubmissionStatus;
 import com.hcmut.lms.assessment.domain.entity.question.EssayQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
