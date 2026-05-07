@@ -1,5 +1,6 @@
 package com.hcmut.lms.learning.service.impl;
 
+import com.hcmut.lms.common.util.StudentGradeUtil;
 import com.hcmut.lms.learning.client.CourseManagementClient;
 import com.hcmut.lms.learning.client.dto.ClassSectionDatasetResponse;
 import com.hcmut.lms.learning.client.dto.SemesterResponse;
@@ -10,7 +11,6 @@ import com.hcmut.lms.learning.repository.EnrollmentRepository;
 import com.hcmut.lms.learning.repository.SubjectSemesterMetricsRepository;
 import com.hcmut.lms.learning.service.GradeSemesterMetricsService;
 import com.hcmut.lms.learning.service.SubjectSemesterMetricsService;
-import com.hcmut.lms.learning.util.GradeConversionUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -293,14 +293,14 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
 
       // Convert grades to 4-point scale for stdDev calculation
       List<Double> grades4pt = windowGrades.stream()
-          .map(GradeConversionUtil::convertTo4Point)
+          .map(StudentGradeUtil::convertTo4Scale)
           .toList();
       double mean4pt = calculateMean(grades4pt);
       double stdDev4pt = calculateStdDev(grades4pt, mean4pt);
 
       // Apply shrinkage smoothing to median
-      double median4pt = GradeConversionUtil.convertTo4Point(median);
-      double semMedian4pt = GradeConversionUtil.convertTo4Point(semStats.median());
+      double median4pt = StudentGradeUtil.convertTo4Scale(median);
+      double semMedian4pt = StudentGradeUtil.convertTo4Scale(semStats.median());
       double smoothedMedian4pt = (median4pt * sampleCount + semMedian4pt * SHRINKAGE_K) / (sampleCount + SHRINKAGE_K);
 
       return SubjectSemesterMetrics.builder()
@@ -340,8 +340,8 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
     // Level 2: Global Subject Baseline
     GlobalSubjectBaseline baseline = globalBaselines.get(subjectId);
     if (baseline != null && baseline.sampleCount() > 0) {
-      double baselineMedian4pt = GradeConversionUtil.convertTo4Point(baseline.median());
-      double semMedian4pt = GradeConversionUtil.convertTo4Point(semStats.median());
+      double baselineMedian4pt = StudentGradeUtil.convertTo4Scale(baseline.median());
+      double semMedian4pt = StudentGradeUtil.convertTo4Scale(semStats.median());
       double smoothedMedian4pt = (baselineMedian4pt * baseline.sampleCount() + semMedian4pt * SHRINKAGE_K)
           / (baseline.sampleCount() + SHRINKAGE_K);
 
@@ -351,8 +351,8 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
     }
 
     // Level 3: System Defaults
-    double defaultMedian4pt = GradeConversionUtil.convertTo4Point(SubjectSemesterMetrics.DEFAULT_MEAN_GRADE);
-    double semMedian4pt = GradeConversionUtil.convertTo4Point(semStats.median());
+    double defaultMedian4pt = StudentGradeUtil.convertTo4Scale(SubjectSemesterMetrics.DEFAULT_MEAN_GRADE);
+    double semMedian4pt = StudentGradeUtil.convertTo4Scale(semStats.median());
     double smoothedMedian4pt = (defaultMedian4pt * 0 + semMedian4pt * SHRINKAGE_K) / (0 + SHRINKAGE_K);
 
     return createFallbackMetrics(
@@ -404,7 +404,7 @@ public class SubjectSemesterMetricsServiceImpl implements SubjectSemesterMetrics
 
         // Calculate stdDev on 4-point scale
         List<Double> grades4pt = grades.stream()
-            .map(GradeConversionUtil::convertTo4Point)
+            .map(StudentGradeUtil::convertTo4Scale)
             .toList();
         double mean4pt = calculateMean(grades4pt);
         double stdDev4pt = calculateStdDev(grades4pt, mean4pt);

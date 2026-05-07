@@ -1,5 +1,8 @@
 package com.hcmut.lms.assessment.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hcmut.lms.assessment.client.LearningInternalEnrollmentClient;
 import com.hcmut.lms.assessment.domain.entity.answer.AnswerOption;
 import com.hcmut.lms.assessment.domain.entity.answer.EssayAcceptedFileType;
@@ -13,6 +16,7 @@ import com.hcmut.lms.assessment.domain.entity.question.McqQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
 import com.hcmut.lms.assessment.domain.entity.submission.*;
+import com.hcmut.lms.assessment.dto.request.question.FileUploadRequest;
 import com.hcmut.lms.assessment.dto.request.student.*;
 import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
 import com.hcmut.lms.assessment.dto.response.GradingResponse;
@@ -80,7 +84,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
             int size
     ) {
         log.info("Student get assessment list for courseId: {}, studentId: {}", courseId, studentId);
-        ensureStudentEnrolled(authorizationHeader, courseId);
+//        ensureStudentEnrolled(authorizationHeader, courseId);
 
         Page<Assessment> assessmentPage = assessmentRepository.findAllByClassId(
                 courseId,
@@ -181,10 +185,12 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 .attemptId(attempt.getId())
                 .assessmentId(assessment.getId())
                 .assessmentTitle(assessment.getTitle())
+                .assessmentType(assessment.getAssessmentType())
                 .attemptNo(attempt.getAttemptNo())
                 .status(attempt.getStatus())
                 .startedAt(attempt.getCreatedAt())
                 .expiresAt(computeAttemptExpiresAt(attempt, assessment))
+                .closedAt(assessment.getCloseTime())
                 .submittedAt(attempt.getSubmitTime())
                 .takenTime(attempt.getTakenTime())
                 .timeLimit(assessment.getTimeLimit())
@@ -430,11 +436,15 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                         .question(question)
                         .build());
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            String jsonFiles = objectMapper.writeValueAsString(request.getFileUploads());
+            submission.setSubmissionFiles(jsonFiles);
+        } catch (JsonProcessingException e) {
+            submission.setSubmissionFiles("[]"); // Giá trị mặc định nếu lỗi
+        }
+
         submission.setAnswerText(request.getTextContent());
-        submission.setAnswerFileUrl(request.getFileUrl());
-        submission.setFileFormat(request.getFileFormat());
-        submission.setNumPages(request.getNumPages());
-        submission.setWordCount(request.getWordCount());
         submission.setScore(null);
         submission.setStatus(QuestionSubmissionStatus.PENDING);
 
@@ -520,18 +530,26 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                 builder.acceptedFileTypes(essayQuestion.getAcceptedFileTypes().stream()
                         .map(EssayAcceptedFileType::getFileType)
                         .toList());
+                builder.instructionFiles(getFiles(essayQuestion.getInstructionFiles()));
 
                 if (concreteSubmission instanceof EssaySubmission essaySubmission) {
                     builder.submittedText(essaySubmission.getAnswerText());
-                    builder.submittedFileUrl(essaySubmission.getAnswerFileUrl());
-                    builder.submittedFileFormat(essaySubmission.getFileFormat());
-                    builder.submittedNumPages(essaySubmission.getNumPages());
-                    builder.submittedWordCount(essaySubmission.getWordCount());
+                    builder.submittedFiles(getFiles(essaySubmission.getSubmissionFiles()));
                 }
             }
         }
 
         return builder.build();
+    }
+
+    private List<FileUploadRequest> getFiles(String json) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            // Phải dùng TypeReference để Jackson biết đường ép về List Object
+            return mapper.readValue(json, new TypeReference<List<FileUploadRequest>>() {});
+        } catch (JsonProcessingException e) {
+            return Collections.emptyList();
+        }
     }
 
     private void removeIncompatibleSubmission(UUID attemptId, UUID questionId, Class<?> expectedType) {
@@ -753,9 +771,7 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
     }
 
     private boolean hasEssayContent(EssaySubmission submission) {
-        boolean hasText = submission.getAnswerText() != null && !submission.getAnswerText().isBlank();
-        boolean hasFile = submission.getAnswerFileUrl() != null && !submission.getAnswerFileUrl().isBlank();
-        return hasText || hasFile;
+        return submission.getAnswerText() != null && !submission.getAnswerText().isBlank();
     }
 
     private SubmissionDto toSubmissionDto(Question question, QuestionSubmission stored, UUID studentId) {
@@ -785,7 +801,6 @@ public class StudentAssessmentServiceImpl implements StudentAssessmentService {
                         .questionId(question.getId())
                         .studentId(studentId)
                         .textContent(essaySubmission.getAnswerText())
-                        .fileUrl(essaySubmission.getAnswerFileUrl())
                         .build();
             }
             case CODING -> {

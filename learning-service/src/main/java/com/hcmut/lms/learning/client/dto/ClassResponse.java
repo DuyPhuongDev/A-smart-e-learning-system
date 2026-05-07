@@ -38,4 +38,5 @@ public class ClassResponse {
     private String code;
     private Integer maxStudents;
     private Integer currentStudents;
+    private String subjectGradingType;
 }

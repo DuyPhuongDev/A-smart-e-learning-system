@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface SubjectOccupationValuationRepository extends JpaRepository<SubjectOccupationValuation, UUID> {
   List<SubjectOccupationValuation> findByTargetOccupationCode(String targetOccupationCode);
 
+  List<SubjectOccupationValuation> findByTargetOccupationCodeOrderByTotalValueDesc(String targetOccupationCode);
+
   List<SubjectOccupationValuation> findBySubjectIdIn(List<UUID> subjectIds);
 
   void deleteBySubjectIdAndTargetOccupationCode(UUID subjectId, String occupationCode);

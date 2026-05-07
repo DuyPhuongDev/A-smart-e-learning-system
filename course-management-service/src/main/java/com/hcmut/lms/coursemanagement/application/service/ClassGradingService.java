@@ -21,7 +21,7 @@ public interface ClassGradingService {
     /**
      * Seed default gradings for teacher-owned classes (isOfficial == true).
      */
-    void initDefaultGradings(UUID classId);
+//    void initDefaultGradings(UUID classId);
 
     List<ClassGradingWeightResponse> getGradingWeightsForClass(UUID classId);
 }

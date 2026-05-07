@@ -1,6 +1,8 @@
 FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 WORKDIR /workspace/app
 
+# Copy POM files to satisfy parent POM validation
+# Only copy pom.xml files that actually exist in the parent pom.xml modules
 COPY pom.xml .
 COPY common/pom.xml common/
 COPY eureka-server/pom.xml eureka-server/
@@ -16,15 +18,18 @@ COPY notification-service/pom.xml notification-service/
 COPY communication-service/pom.xml communication-service/
 COPY coaching-chatbot-service/pom.xml coaching-chatbot-service/
 
+# Copy source code
 COPY common/src common/src
 COPY authentication-service/src authentication-service/src
 
+# Build
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean package -DskipTests -pl :authentication-service -am
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Copy jar from build stage
 COPY --from=build /workspace/app/authentication-service/target/*.jar app.jar
 
 EXPOSE 8081

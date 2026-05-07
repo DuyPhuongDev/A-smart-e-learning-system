@@ -94,5 +94,12 @@ public class LearningPathController {
     return ResponseEntity.ok(recommendedSubjectService.getRecommendedSubjects(
         currentUser.getId(), learningPathId));
   }
+
+  @PostMapping("/{learningPathId}/sync-progress")
+  public ResponseEntity<LearningPathSyncProgressResponse> syncProgress(
+      @CurrentUser CurrentUserInfo currentUser,
+      @PathVariable UUID learningPathId) {
+    return ResponseEntity.ok(learningPathService.syncLearningPathProgress(currentUser.getId(), learningPathId));
+  }
 }
 

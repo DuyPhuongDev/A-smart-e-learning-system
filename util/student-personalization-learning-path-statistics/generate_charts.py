@@ -1,10 +1,10 @@
 """
-Tạo biểu đồ thống kê coverage cho test case Learning Path Generation.
+Tạo biểu đồ thống kê cho bộ bài kiểm tra tính năng Lộ trình Học tập.
 
-Đọc file CSV test case, phân tích các chiều kiểm thử và tạo biểu đồ
-chứng minh mức độ bao phủ của bộ test case đối với tính năng.
+Đọc file CSV chứa các bài kiểm tra, phân tích các khía cạnh được kiểm tra
+và vẽ biểu đồ minh họa mức độ bao quát của bộ bài kiểm tra.
 
-Chạy: uv run generate_charts.py
+Cách chạy: uv run generate_charts.py
 """
 
 import csv
@@ -85,14 +85,14 @@ PRIORITY_FULL = {
 
 def extract_intensity(data_test: str) -> str:
     if "Cường độ HK chính: Low" in data_test:
-        return "Thấp"
+        return "Nhẹ (≤13 TC)"
     if "Cường độ HK chính: Light" in data_test:
-        return "Nhẹ nhàng"
+        return "Vừa (14-15 TC)"
     if "Cường độ HK chính: Standard" in data_test:
-        return "Trung bình"
+        return "Trung bình (16-17 TC)"
     if "Cường độ HK chính: Heavy" in data_test:
-        return "Cao"
-    return "Không xác định"
+        return "Nặng (18-22 TC)"
+    return "Chưa xác định"
 
 
 def extract_gpa_target(data_test: str) -> str:
@@ -116,52 +116,51 @@ def extract_occupation(data_test: str) -> str:
 def extract_summer_semesters(data_test: str) -> str:
     m = re.search(r"Số HK hè:\s*(\d+)", data_test)
     if not m:
-        return "Không xác định"
+        return "Chưa xác định"
     count = int(m.group(1))
     if count == 0:
         return "Không học hè"
     if "cường độ: Heavy" in data_test:
-        return f"{count} HK hè (Cao)"
+        return f"{count} kỳ hè (học nhiều)"
     if "cường độ: Standard" in data_test:
-        return f"{count} HK hè (Trung bình)"
+        return f"{count} kỳ hè (học bình thường)"
     if "cường độ: Light" in data_test:
-        return f"{count} HK hè (Nhẹ)"
-    return f"{count} HK hè"
+        return f"{count} kỳ hè (học nhẹ)"
+    return f"{count} kỳ hè"
 
 
 def extract_feasibility(expected: str) -> str:
     expected_lower = expected.lower()
     if "weak" in expected_lower and "medium" in expected_lower:
-        return "Trung bình / Yếu"
+        return "Trung bình / Khó"
     if "good" in expected_lower and "medium" in expected_lower:
-        return "Trung bình / Tốt"
+        return "Trung bình / Dễ"
     if "weak" in expected_lower:
-        return "Yếu"
+        return "Khó đạt"
     if "good" in expected_lower:
-        return "Tốt"
+        return "Dễ đạt"
     if "medium" in expected_lower:
         return "Trung bình"
-    return "Không xác định"
+    return "Chưa xác định"
 
 
 # ── Vietnamese labels ─────────────────────────────────────────────────────────
 
 SCENARIO_NAMES = {
-    "S01": "S01: Mẫu chuẩn",
+    "S01": "S01: Sinh viên bình thường",
     "S02": "S02: Mới nhập học",
-    "S03": "S03: Chỉ năm nhất",
-    "S04": "S04: Chỉ năm 1-2",
-    "S05": "S05: GPA cao",
-    "S06": "S06: GPA thấp",
-    "S07": "S07: Gần hoàn thành",
-    "S08": "S08: Thiếu môn tiên quyết",
+    "S03": "S03: Mới học năm nhất",
+    "S04": "S04: Đang học năm hai",
+    "S05": "S05: Học giỏi (GPA cao)",
+    "S06": "S06: Học yếu (GPA thấp)",
+    "S07": "S07: Sắp tốt nghiệp",
     "S09": "S09: Giỏi đại cương,\nyếu chuyên ngành",
-    "S10": "S10: Có học hè",
-    "S11": "S11: Bỏ năm (gap year)",
-    "S12": "S12: Có môn rớt",
+    "S10": "S10: Đã từng học hè",
+    "S11": "S11: Từng nghỉ một năm",
+    "S12": "S12: Có môn bị rớt",
 }
 
-INTENSITY_ORDER = ["Thấp", "Nhẹ nhàng", "Trung bình", "Cao"]
+INTENSITY_ORDER = ["Nhẹ (≤13 TC)", "Vừa (14-15 TC)", "Trung bình (16-17 TC)", "Nặng (18-22 TC)"]
 PRIORITY_ORDER = [
     "GPA > Nghề > Đúng hạn",
     "GPA > Đúng hạn > Nghề",
@@ -170,9 +169,9 @@ PRIORITY_ORDER = [
     "Đúng hạn > GPA > Nghề",
     "Đúng hạn > Nghề > GPA",
 ]
-FEASIBILITY_ORDER = ["Tốt", "Trung bình / Tốt", "Trung bình", "Trung bình / Yếu", "Yếu", "Không xác định"]
+FEASIBILITY_ORDER = ["Dễ đạt", "Trung bình / Dễ", "Trung bình", "Trung bình / Khó", "Khó đạt", "Chưa xác định"]
 GPA_ORDER = ["2.0", "2.5", "3.0", "3.5", "4.0"]
-TEST_PRIORITY_ORDER = ["Rất cao", "Cao", "Trung bình"]
+TEST_PRIORITY_ORDER = ["Rất quan trọng", "Quan trọng", "Bình thường"]
 
 
 # ── Color palette ─────────────────────────────────────────────────────────────
@@ -218,8 +217,8 @@ def chart_scenario_coverage(data):
     fig, ax = plt.subplots(figsize=(12, 6))
     bars = ax.barh(labels, values, color=BAR_COLORS[: len(labels)], edgecolor="white")
     ax.bar_label(bars, fontsize=10, fontweight="bold", padding=3)
-    ax.set_xlabel("Số lượng test case", fontsize=12)
-    ax.set_title("Kịch bản Sinh viên", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Số lượng bài kiểm tra", fontsize=12)
+    ax.set_title("Các tình huống sinh viên", fontsize=14, fontweight="bold")
     ax.invert_yaxis()
     ax.set_xlim(0, max(values) + 2)
     for spine in ["top", "right"]:
@@ -245,8 +244,8 @@ def chart_priority_coverage(data):
     ]
     bars = ax.barh(labels, values, color=colors[: len(labels)], edgecolor="white", height=0.55)
     ax.bar_label(bars, fontsize=10, fontweight="bold", padding=3)
-    ax.set_xlabel("Số lượng test case", fontsize=12)
-    ax.set_title("Thứ tự Ưu tiên Học tập", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Số lượng bài kiểm tra", fontsize=12)
+    ax.set_title("Thứ tự ưu tiên của sinh viên", fontsize=14, fontweight="bold")
     ax.invert_yaxis()
     ax.set_xlim(0, max(values) + 2)
     for spine in ["top", "right"]:
@@ -268,8 +267,8 @@ def chart_intensity_coverage(data):
     fig, ax = plt.subplots(figsize=(8, 5))
     bars = ax.bar(labels, values, color=colors[: len(labels)], edgecolor="white", width=0.5)
     ax.bar_label(bars, fontsize=10, fontweight="bold", padding=3)
-    ax.set_ylabel("Số lượng test case", fontsize=12)
-    ax.set_title("Cường độ Học tập", fontsize=14, fontweight="bold")
+    ax.set_ylabel("Số lượng bài kiểm tra", fontsize=12)
+    ax.set_title("Mức độ học tập mỗi kỳ", fontsize=14, fontweight="bold")
     for spine in ["top", "right"]:
         ax.spines[spine].set_visible(False)
     fig.tight_layout()
@@ -289,9 +288,9 @@ def chart_gpa_coverage(data):
     colors = [PALETTE["green"], PALETTE["teal"], PALETTE["blue"], PALETTE["orange"], PALETTE["red"]]
     bars = ax.bar(labels, values, color=colors[: len(labels)], edgecolor="white", width=0.5)
     ax.bar_label(bars, fontsize=10, fontweight="bold", padding=3)
-    ax.set_xlabel("GPA mục tiêu (thang 4.0)", fontsize=12)
-    ax.set_ylabel("Số lượng test case", fontsize=12)
-    ax.set_title("GPA Mục tiêu", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Điểm GPA mong muốn (thang 4.0)", fontsize=12)
+    ax.set_ylabel("Số lượng bài kiểm tra", fontsize=12)
+    ax.set_title("Điểm GPA mong muốn", fontsize=14, fontweight="bold")
     for spine in ["top", "right"]:
         ax.spines[spine].set_visible(False)
     fig.tight_layout()
@@ -312,8 +311,8 @@ def chart_occupation_coverage(data):
     occ_colors = [PALETTE["amber"] if l == "Không chọn nghề" else PALETTE["purple"] for l in labels]
     bars = ax.barh(labels, values, color=occ_colors, edgecolor="white")
     ax.bar_label(bars, fontsize=10, fontweight="bold", padding=3)
-    ax.set_xlabel("Số lượng test case", fontsize=12)
-    ax.set_title("Định hướng Nghề nghiệp", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Số lượng bài kiểm tra", fontsize=12)
+    ax.set_title("Ngành nghề định hướng", fontsize=14, fontweight="bold")
     ax.invert_yaxis()
     ax.set_xlim(0, max(values) + 4)
     for spine in ["top", "right"]:
@@ -335,17 +334,17 @@ def chart_summer_coverage(data):
     fig, ax = plt.subplots(figsize=(10, 5))
     summer_colors = {
         "Không học hè": PALETTE["red"],
-        "1 HK hè (Trung bình)": PALETTE["blue"],
-        "1 HK hè (Cao)": PALETTE["orange"],
-        "1 HK hè (Nhẹ)": PALETTE["green"],
-        "3 HK hè (Cao)": PALETTE["purple"],
-        "3 HK hè (Trung bình)": PALETTE["teal"],
+        "1 kỳ hè (học bình thường)": PALETTE["blue"],
+        "1 kỳ hè (học nhiều)": PALETTE["orange"],
+        "1 kỳ hè (học nhẹ)": PALETTE["green"],
+        "3 kỳ hè (học nhiều)": PALETTE["purple"],
+        "3 kỳ hè (học bình thường)": PALETTE["teal"],
     }
     colors = [summer_colors.get(l, PALETTE["cyan"]) for l in labels]
     bars = ax.barh(labels, values, color=colors, edgecolor="white")
     ax.bar_label(bars, fontsize=10, fontweight="bold", padding=3)
-    ax.set_xlabel("Số lượng test case", fontsize=12)
-    ax.set_title("Kế hoạch Học hè", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Số lượng bài kiểm tra", fontsize=12)
+    ax.set_title("Kế hoạch học trong hè", fontsize=14, fontweight="bold")
     ax.invert_yaxis()
     ax.set_xlim(0, max(values) + 4)
     for spine in ["top", "right"]:
@@ -364,20 +363,20 @@ def chart_feasibility_coverage(data):
     values = [counts[f] for f in labels]
 
     feasibility_colors = {
-        "Tốt": PALETTE["green"],
-        "Trung bình / Tốt": PALETTE["teal"],
+        "Dễ đạt": PALETTE["green"],
+        "Trung bình / Dễ": PALETTE["teal"],
         "Trung bình": PALETTE["blue"],
-        "Trung bình / Yếu": PALETTE["orange"],
-        "Yếu": PALETTE["red"],
-        "Không xác định": PALETTE["amber"],
+        "Trung bình / Khó": PALETTE["orange"],
+        "Khó đạt": PALETTE["red"],
+        "Chưa xác định": PALETTE["amber"],
     }
     colors = [feasibility_colors.get(l, PALETTE["cyan"]) for l in labels]
 
     fig, ax = plt.subplots(figsize=(8, 5))
     bars = ax.bar(labels, values, color=colors, edgecolor="white", width=0.5)
     ax.bar_label(bars, fontsize=10, fontweight="bold", padding=3)
-    ax.set_ylabel("Số lượng test case", fontsize=12)
-    ax.set_title("Mức Khả thi", fontsize=14, fontweight="bold")
+    ax.set_ylabel("Số lượng bài kiểm tra", fontsize=12)
+    ax.set_title("Khả năng đạt được mục tiêu", fontsize=14, fontweight="bold")
     ax.tick_params(axis="x", labelsize=9)
     for spine in ["top", "right"]:
         ax.spines[spine].set_visible(False)
@@ -389,7 +388,7 @@ def chart_feasibility_coverage(data):
 
 
 def chart_test_priority(data):
-    priority_map = {"Critical": "Rất cao", "High": "Cao", "Medium": "Trung bình"}
+    priority_map = {"Critical": "Rất quan trọng", "High": "Quan trọng", "Medium": "Bình thường"}
     priorities = Counter(priority_map.get(r["Mức độ ưu tiên"], r["Mức độ ưu tiên"]) for r in data)
     labels = TEST_PRIORITY_ORDER
     values = [priorities.get(l, 0) for l in labels]
@@ -405,7 +404,7 @@ def chart_test_priority(data):
         startangle=90,
         textprops={"fontsize": 12},
     )
-    ax.set_title("Phân bổ Mức độ Ưu tiên Test Case", fontsize=14, fontweight="bold")
+    ax.set_title("Mức độ quan trọng của các bài kiểm tra", fontsize=14, fontweight="bold")
     fig.tight_layout()
     save(fig, "08_test_priority_distribution.png")
 
@@ -445,10 +444,10 @@ def chart_scenario_priority_heatmap(data):
                 ax.text(j, i, str(val), ha="center", va="center", fontsize=10, fontweight="bold",
                         color="white" if val > 1 else "black")
 
-    ax.set_title("Ma trận: Kịch bản Sinh viên × Thứ tự Ưu tiên",
+    ax.set_title("Tình huống sinh viên và thứ tự ưu tiên",
                  fontsize=14, fontweight="bold")
     cbar = fig.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label("Số test case", fontsize=11)
+    cbar.set_label("Số bài kiểm tra", fontsize=11)
     fig.tight_layout()
     save(fig, "09_scenario_priority_heatmap.png")
 
@@ -486,10 +485,10 @@ def chart_scenario_intensity_heatmap(data):
                 ax.text(j, i, str(val), ha="center", va="center", fontsize=10, fontweight="bold",
                         color="white" if val > 2 else "black")
 
-    ax.set_title("Ma trận: Kịch bản Sinh viên × Cường độ Học tập",
+    ax.set_title("Tình huống sinh viên và mức độ học tập",
                  fontsize=14, fontweight="bold")
     cbar = fig.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label("Số test case", fontsize=11)
+    cbar.set_label("Số bài kiểm tra", fontsize=11)
     fig.tight_layout()
     save(fig, "10_scenario_intensity_heatmap.png")
 
@@ -499,7 +498,7 @@ def chart_scenario_intensity_heatmap(data):
 
 def chart_coverage_summary(data):
     dims = {
-        "Kịch bản\nsinh viên\n(12)": len(set(r["Scenario ID"] for r in data)),
+        "Kịch bản\nsinh viên\n(11)": len(set(r["Scenario ID"] for r in data)),
         "Thứ tự\nưu tiên\n(6 hoán vị)": len(set(extract_priority_order(r["Dữ liệu test"]) for r in data)),
         "Cường độ\nhọc tập\n(4 mức)": len(set(extract_intensity(r["Dữ liệu test"]) for r in data)),
         "GPA\nmục tiêu\n(5 mức)": len(set(extract_gpa_target(r["Dữ liệu test"]) for r in data)),
@@ -508,7 +507,7 @@ def chart_coverage_summary(data):
         "Mức\nkhả thi\n(5 mức)": len(set(extract_feasibility(r["Kết quả mong đợi"]) for r in data)),
     }
     max_vals = {
-        "Kịch bản\nsinh viên\n(12)": 12,
+        "Kịch bản\nsinh viên\n(11)": 11,
         "Thứ tự\nưu tiên\n(6 hoán vị)": 6,
         "Cường độ\nhọc tập\n(4 mức)": 4,
         "GPA\nmục tiêu\n(5 mức)": 5,
@@ -525,8 +524,8 @@ def chart_coverage_summary(data):
     fig, ax = plt.subplots(figsize=(12, 6))
     x = np.arange(len(labels))
     width = 0.35
-    bars1 = ax.bar(x - width / 2, maximum, width, label="Tổng số giá trị", color="#E5E7EB", edgecolor="white")
-    bars2 = ax.bar(x + width / 2, actual, width, label="Đã bao phủ", color=PALETTE["blue"], edgecolor="white")
+    bars1 = ax.bar(x - width / 2, maximum, width, label="Số loại cần kiểm tra", color="#E5E7EB", edgecolor="white")
+    bars2 = ax.bar(x + width / 2, actual, width, label="Số loại đã kiểm tra", color=PALETTE["blue"], edgecolor="white")
 
     for i, (bar, p) in enumerate(zip(bars2, pct)):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.2,
@@ -535,8 +534,8 @@ def chart_coverage_summary(data):
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylabel("Số giá trị duy nhất", fontsize=12)
-    ax.set_title("Tổng hợp Các Chiều Kiểm thử", fontsize=14, fontweight="bold")
+    ax.set_ylabel("Số loại khác nhau", fontsize=12)
+    ax.set_title("Tổng quan các khía cạnh được kiểm tra", fontsize=14, fontweight="bold")
     ax.legend(fontsize=11)
     ax.set_ylim(0, max(maximum) + 3)
     for spine in ["top", "right"]:

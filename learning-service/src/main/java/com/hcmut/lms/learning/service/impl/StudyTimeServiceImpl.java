@@ -9,7 +9,9 @@ import com.hcmut.lms.learning.dto.response.LectureFrequencyItemResponse;
 import com.hcmut.lms.learning.dto.response.LectureFrequencyResponse;
 import com.hcmut.lms.learning.dto.response.StudentStudyTimeSummaryResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeResponse;
+import com.hcmut.lms.learning.dto.response.AggregatedStudyTimeResponse;
 import com.hcmut.lms.learning.dto.response.StudyTimeSummaryResponse;
+import com.hcmut.lms.learning.entity.enrollment.Enrollment;
 import com.hcmut.lms.learning.entity.progress.LearningProgress;
 import com.hcmut.lms.learning.entity.studytime.StudyTime;
 import com.hcmut.lms.learning.exception.BusinessException;
@@ -151,6 +153,40 @@ public class StudyTimeServiceImpl implements StudyTimeService {
     public Integer getTotalStudyTime(UUID studentId, UUID classId) {
         Integer totalSeconds = studyTimeRepository.getTotalStudyTimeByStudentAndClass(studentId, classId);
         return totalSeconds != null ? totalSeconds : 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AggregatedStudyTimeResponse> getAggregatedSummary(UUID studentId, int days) {
+        List<UUID> classIds = enrollmentRepository.findByStudentId(studentId)
+                .stream()
+                .map(Enrollment::getClassId)
+                .distinct()
+                .toList();
+
+        if (classIds.isEmpty()) return List.of();
+
+        LocalDateTime startDateTime = LocalDate.now().minusDays(days).atStartOfDay();
+        LocalDateTime endDateTime = LocalDateTime.now();
+
+        List<Object[]> results = studyTimeRepository.getAggregatedSummaryByDate(
+                studentId, classIds, startDateTime, endDateTime);
+
+        return results.stream()
+                .map(result -> {
+                    LocalDate date = ((java.sql.Date) result[0]).toLocalDate();
+                    long totalSeconds = ((Number) result[1]).longValue();
+                    long sessionCount = ((Number) result[2]).longValue();
+
+                    return AggregatedStudyTimeResponse.builder()
+                            .date(date)
+                            .totalSeconds(totalSeconds)
+                            .totalMinutes(totalSeconds / 60)
+                            .totalHours(Math.round(totalSeconds / 36.0) / 100.0)
+                            .sessionCount(sessionCount)
+                            .build();
+                })
+                .toList();
     }
 
     @Override

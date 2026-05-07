@@ -13,9 +13,9 @@ COPY user-management-service/pom.xml user-management-service/
 COPY course-management-service/pom.xml course-management-service/
 COPY learning-service/pom.xml learning-service/
 COPY assessment-service/pom.xml assessment-service/
-COPY personalization-service/pom.xml personalization-service/
 COPY notification-service/pom.xml notification-service/
 COPY communication-service/pom.xml communication-service/
+COPY personalization-service/pom.xml personalization-service/
 COPY coaching-chatbot-service/pom.xml coaching-chatbot-service/
 
 # Copy source code

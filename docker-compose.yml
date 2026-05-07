@@ -171,7 +171,7 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
     depends_on:
       postgres:
         condition: service_healthy
@@ -197,7 +197,7 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
     depends_on:
       postgres:
         condition: service_healthy
@@ -223,7 +223,7 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
     depends_on:
       postgres:
         condition: service_healthy
@@ -295,7 +295,7 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
       - NOTIFICATION_WS_ALLOWED_ORIGINS=http://localhost:3000
       - MAIL_USERNAME=${MAIL_USERNAME:-}
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
@@ -311,30 +311,30 @@ services:
       - lms-network
 
   # Communication Service
-  communication-service:
-    build:
-      context: .
-      dockerfile: communication-service/Dockerfile
-    container_name: communication-service
-    ports:
-      - "8091:8091"
-    environment:
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=lms_db
-      - DB_USER=lms_user
-      - DB_PASSWORD=lms_password
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-    depends_on:
-      postgres:
-        condition: service_healthy
-      eureka-server:
-        condition: service_started
-      kafka-1:
-        condition: service_started
-    networks:
-      - lms-network
+#  communication-service:
+#    build:
+#      context: .
+#      dockerfile: communication-service/Dockerfile
+#    container_name: communication-service
+#    ports:
+#      - "8091:8091"
+#    environment:
+#      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+#      - DB_HOST=postgres
+#      - DB_PORT=5432
+#      - DB_NAME=lms_db
+#      - DB_USER=lms_user
+#      - DB_PASSWORD=lms_password
+#      - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#      eureka-server:
+#        condition: service_started
+#      kafka-1:
+#        condition: service_started
+#    networks:
+#      - lms-network
 
   # Learning Service (Delivery + Tracking + Enrollment)
   coaching-chatbot-service:
@@ -368,5 +368,4 @@ networks:
 volumes:
   postgres-data:
   qdrant-data:
-  grafana-data:
   kafka-data-1:

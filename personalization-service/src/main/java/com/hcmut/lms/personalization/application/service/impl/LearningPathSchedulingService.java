@@ -35,6 +35,10 @@ public class LearningPathSchedulingService {
       "MI1003", 2  // MI1003 must be in HK2 (2nd semester of academic year)
                                                                                       );
 
+  private static final Set<String> SUBJECTS_BANNED_IN_SUMMER = Set.of(
+      "CO4029"  // Đồ án Chuyên ngành cannot be taken in summer semester
+  );
+
   public List<SemesterSlot> scheduleSubjects(
       List<SubjectCandidate> candidates, List<SemesterResponse> remainingSemesters, int mainCreditCap,
       Map<UUID, Integer> preferredSummerCapBySemesterId, int plannedSummerSemCount, Set<UUID> completedSubjectIds) {
@@ -51,9 +55,6 @@ public class LearningPathSchedulingService {
         dependentGraph,
         candidates.stream().map(SubjectCandidate::getSubjectId).collect(Collectors.toSet()));
 
-    // Sort candidates: priority1 (curriculum chronology), then downstream depth
-    // (subjects that are prerequisites for longer chains are scheduled first),
-    // then section weight as final tiebreaker.
     List<SubjectCandidate> sorted = candidates.stream()
         .sorted(Comparator.comparingInt(SubjectCreditUtil::safePriority1)
             .thenComparingInt(SubjectCreditUtil::safePriority2)
@@ -200,58 +201,94 @@ public class LearningPathSchedulingService {
     int preferredStart = minSemesterOrder;
     if (candidate.getParallels() != null) {
       for (CurriculumFullResponse.SubjectRelation parallel : candidate.getParallels()) {
-        UUID parallelId = parallel.getSubjectId();
-        if (parallelId == null || completed.contains(parallelId)) {
-          continue;
-        }
-        Integer parallelOrder = scheduledSemesterOrders.get(parallelId);
-        if (parallelOrder != null) {
-          preferredStart = Math.max(preferredStart, parallelOrder + 1);
-        }
+        preferredStart = getPreferredStart(completed, scheduledSemesterOrders, preferredStart, parallel);
       }
     }
 
     // Pass 1: try preferred semesters (different from parallel) first
     for (int semesterOrder = preferredStart; semesterOrder <= semesters.size(); semesterOrder++) {
-      SemesterSlot semester = semesters.get(semesterOrder - 1);
-      if (canNotPlaceSubject(candidate, semester, completed, scheduledSemesterOrders, staticMaxDepth, semesters.size())) {
-        continue;
-      }
-
-      placeSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
-
-      if (backtrackAssign(
-          index + 1, ordered, semesters, staticMaxDepth, completed,
-          scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
+      if (tryAssignInSemester(semesterOrder, candidate, index, ordered, semesters,
+          staticMaxDepth, completed, scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
         return true;
       }
-
-      unplaceSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
     }
 
     // Pass 2: fall back to same-semester-as-parallel
     if (preferredStart > minSemesterOrder) {
       for (int semesterOrder = minSemesterOrder; semesterOrder < preferredStart; semesterOrder++) {
-        SemesterSlot semester = semesters.get(semesterOrder - 1);
-        if (canNotPlaceSubject(
-            candidate, semester, completed, scheduledSemesterOrders, staticMaxDepth,
-            semesters.size())) {
-          continue;
-        }
-
-        placeSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
-
-        if (backtrackAssign(
-            index + 1, ordered, semesters, staticMaxDepth, completed,
-            scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
+        if (tryAssignInSemester(semesterOrder, candidate, index, ordered, semesters,
+            staticMaxDepth, completed, scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
           return true;
         }
-
-        unplaceSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
       }
     }
 
     return false;
+  }
+
+  private int getPreferredStart(
+      Set<UUID> completed, Map<UUID, Integer> scheduledSemesterOrders, int preferredStart,
+      CurriculumFullResponse.SubjectRelation parallel) {
+    UUID parallelId = parallel.getSubjectId();
+    if (parallelId == null || completed.contains(parallelId)) {
+      return preferredStart;
+    }
+    Integer parallelOrder = scheduledSemesterOrders.get(parallelId);
+    if (parallelOrder != null) {
+      preferredStart = Math.max(preferredStart, parallelOrder + 1);
+    }
+    return preferredStart;
+  }
+
+  private boolean tryAssignInSemester(
+      int semesterOrder, SubjectCandidate candidate, int index,
+      List<SubjectCandidate> ordered, List<SemesterSlot> semesters,
+      Map<UUID, Integer> staticMaxDepth, Set<UUID> completed,
+      Map<UUID, Integer> scheduledSemesterOrders,
+      Map<Integer, Set<UUID>> scheduledBySemester, int[] exploredNodes) {
+
+    SemesterSlot semester = semesters.get(semesterOrder - 1);
+    if (canNotPlaceSubject(candidate, semester, completed, scheduledSemesterOrders,
+        staticMaxDepth, semesters.size())) {
+      return false;
+    }
+
+    placeSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
+
+    // When CO4029 is placed, immediately try CO4337 in the next semester
+    if ("CO4029".equals(candidate.getSubjectCode())) {
+      SubjectCandidate co4337 = findUnscheduledCO4337(ordered, scheduledSemesterOrders);
+      if (co4337 != null && semesterOrder < semesters.size()) {
+        SemesterSlot nextSemester = semesters.get(semesterOrder);
+        if (!canNotPlaceSubject(co4337, nextSemester, completed, scheduledSemesterOrders,
+            staticMaxDepth, semesters.size())) {
+          placeSubject(co4337, nextSemester, scheduledSemesterOrders, scheduledBySemester);
+          if (backtrackAssign(index + 1, ordered, semesters, staticMaxDepth, completed,
+              scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
+            return true;
+          }
+          unplaceSubject(co4337, nextSemester, scheduledSemesterOrders, scheduledBySemester);
+        }
+      }
+    }
+
+    if (backtrackAssign(index + 1, ordered, semesters, staticMaxDepth, completed,
+        scheduledSemesterOrders, scheduledBySemester, exploredNodes)) {
+      return true;
+    }
+
+    unplaceSubject(candidate, semester, scheduledSemesterOrders, scheduledBySemester);
+    return false;
+  }
+
+  private SubjectCandidate findUnscheduledCO4337(
+      List<SubjectCandidate> ordered, Map<UUID, Integer> scheduled) {
+    for (SubjectCandidate c : ordered) {
+      if ("CO4337".equals(c.getSubjectCode()) && !scheduled.containsKey(c.getSubjectId())) {
+        return c;
+      }
+    }
+    return null;
   }
 
   private int calculateMinSemesterOrder(
@@ -261,15 +298,7 @@ public class LearningPathSchedulingService {
 
     if (candidate.getPrerequisites() != null) {
       for (CurriculumFullResponse.SubjectRelation prereq : candidate.getPrerequisites()) {
-        UUID prereqId = prereq.getSubjectId();
-        if (prereqId == null || completed.contains(prereqId)) {
-          continue;
-        }
-
-        Integer prereqOrder = scheduledSemesterOrders.get(prereqId);
-        if (prereqOrder != null) {
-          minOrder = Math.max(minOrder, prereqOrder + 1);
-        }
+        minOrder = getPreferredStart(completed, scheduledSemesterOrders, minOrder, prereq);
       }
     }
 
@@ -306,6 +335,12 @@ public class LearningPathSchedulingService {
     // This prevents over-stuffing while still allowing a subject that pushes
     // from below cap-1 to the full cap (e.g., a 2-credit subject when at 16/18).
     if (semester.getTotalCredits() >= semester.getCreditCap() - 1) {
+      return true;
+    }
+
+    // Check summer-ban constraints (e.g., CO4029 cannot be in summer)
+    if (SUBJECTS_BANNED_IN_SUMMER.contains(candidate.getSubjectCode())
+        && Boolean.TRUE.equals(semester.getIsSummer())) {
       return true;
     }
 

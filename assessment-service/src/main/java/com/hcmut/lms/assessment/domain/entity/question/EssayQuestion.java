@@ -4,6 +4,7 @@ import com.hcmut.lms.assessment.domain.entity.answer.EssayAcceptedFileType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -25,6 +26,9 @@ public class EssayQuestion extends Question {
     @Column(name = "max_file_size")
     private int maxFileSize;
 
+    @Column(name = "instruction_files", columnDefinition = "jsonb")
+    @ColumnTransformer(write = "?::jsonb")
+    private String instructionFiles;
     @OneToMany(mappedBy = "essayQuestion", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<EssayAcceptedFileType> acceptedFileTypes = new ArrayList<>();

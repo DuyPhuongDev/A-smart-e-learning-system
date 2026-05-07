@@ -18,4 +18,6 @@ public class EssayQuestionRequest extends QuestionRequest {
     private int maxFileSize;
 
     private List<String> acceptedFileTypes;
+
+    private List<FileUploadRequest> fileUploads;
 }

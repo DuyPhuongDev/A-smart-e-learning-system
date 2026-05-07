@@ -1,15 +1,9 @@
 package com.hcmut.lms.assessment.service;
 
 import com.hcmut.lms.assessment.domain.entity.assessment.AssessmentStatus;
-import com.hcmut.lms.assessment.dto.request.assessment.AssessmentQuestionRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.AddQuestionRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.AssessmentRequest;
-import com.hcmut.lms.assessment.dto.request.assessment.UpdateWeightRequest;
+import com.hcmut.lms.assessment.dto.request.assessment.*;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
-import com.hcmut.lms.assessment.dto.response.AssessmentGrade;
-import com.hcmut.lms.assessment.dto.response.AssessmentResponse;
-import com.hcmut.lms.assessment.dto.response.GradingBreakdownResponse;
-import com.hcmut.lms.assessment.dto.response.QuestionResponse;
+import com.hcmut.lms.assessment.dto.response.*;
 import com.hcmut.lms.common.dto.PageResponse;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.validation.Valid;
@@ -48,5 +42,13 @@ public interface AssessmentService {
 
     List<AssessmentGrade> getGradesByClass(UUID classId);
 
+    List<AssessmentResponse> getAssessmentsByClassIds(List<UUID> classIds);
+
+    List<PendingAssessmentCountResponse> getPendingAssessmentCounts(List<UUID> classIds, UUID studentId);
+
     AssessmentGrade updateGrade(UUID id, UpdateWeightRequest request);
+
+    AssignmentResponse createAssignment(AssignmentRequest request);
+
+    AssignmentResponse getAssignmentDetail(UUID id);
 }

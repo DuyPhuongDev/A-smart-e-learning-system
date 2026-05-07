@@ -219,6 +219,7 @@ public class QuestionImportServiceImpl implements QuestionImportService {
                 AssessmentQuestionRequest assessmentQuestionRequest = new AssessmentQuestionRequest();
                 assessmentQuestionRequest.setQuestion(questionRequest);
                 assessmentQuestionRequest.setPoint(point);
+                assessmentQuestionRequest.setOrderIndex(-1);
 
 
                 created = assessmentService.createQuestionsForAssessment(id, assessmentQuestionRequest);

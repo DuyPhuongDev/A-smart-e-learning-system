@@ -1,15 +1,22 @@
 package com.hcmut.lms.learning.service.impl;
 
 import com.hcmut.lms.common.dto.PageResponse;
+import com.hcmut.lms.learning.client.AssessmentClient;
 import com.hcmut.lms.learning.client.CourseManagementClient;
+import com.hcmut.lms.learning.client.dto.AssessmentResponse;
 import com.hcmut.lms.learning.client.dto.BatchClassLookupRequest;
 import com.hcmut.lms.learning.client.dto.ClassEnrollStatus;
 import com.hcmut.lms.learning.client.dto.ClassResponse;
+import com.hcmut.lms.learning.client.dto.PendingCountRequest;
+import com.hcmut.lms.learning.client.dto.PendingCountResponse;
 import com.hcmut.lms.learning.dto.internal.InternalClassStudentIdsResponse;
+import com.hcmut.lms.learning.dto.request.CreateTestEnrollmentRequest;
 import com.hcmut.lms.learning.dto.request.EnrollmentRequest;
 import com.hcmut.lms.learning.dto.response.EnrolledClassCardResponse;
 import com.hcmut.lms.learning.dto.response.EnrollmentResponse;
 import com.hcmut.lms.learning.dto.response.StudentEnrollmentResponse;
+import com.hcmut.lms.learning.dto.response.StudentEnrollmentWithSubjectResponse;
+import com.hcmut.lms.learning.dto.response.UpcomingAssessmentResponse;
 import com.hcmut.lms.learning.entity.enrollment.Enrollment;
 import com.hcmut.lms.learning.exception.BusinessException;
 import com.hcmut.lms.learning.mapper.EnrollmentMapper;
@@ -22,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -35,6 +43,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
   private final EnrollmentRepository enrollmentRepository;
   private final EnrollmentMapper enrollmentMapper;
   private final CourseManagementClient courseManagementClient;
+  private final AssessmentClient assessmentClient;
 
   @Override
   @Transactional
@@ -121,6 +130,20 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     Map<UUID, ClassResponse> classInfoMap = classSections.stream()
         .collect(Collectors.toMap(ClassResponse::getId, Function.identity()));
 
+    // Step 4.5: Fetch pending assignment counts from assessment-service
+    Map<UUID, PendingCountResponse> pendingCountMap = Collections.emptyMap();
+    try {
+      List<PendingCountResponse> pendingCounts = assessmentClient.getPendingAssessmentCounts(
+          PendingCountRequest.builder()
+              .classIds(classIds)
+              .studentId(studentId)
+              .build());
+      pendingCountMap = pendingCounts.stream()
+          .collect(Collectors.toMap(PendingCountResponse::getClassId, Function.identity()));
+    } catch (Exception e) {
+      log.warn("Failed to fetch pending assignment counts: {}", e.getMessage());
+    }
+
     // Step 5: Filter enrollments to only those with matching class sections
     List<Enrollment> filteredEnrollments = allEnrollments.stream()
         .filter(e -> classInfoMap.containsKey(e.getClassId()))
@@ -137,8 +160,11 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         start, end) : Collections.emptyList();
 
     // Step 7: Map to response DTOs
+    final Map<UUID, PendingCountResponse> finalPendingCountMap = pendingCountMap;
     List<EnrolledClassCardResponse> content = pagedEnrollments.stream()
-        .map(enrollment -> mapToCardResponse(enrollment, classInfoMap.get(enrollment.getClassId())))
+        .map(enrollment -> mapToCardResponse(
+            enrollment, classInfoMap.get(enrollment.getClassId()),
+            finalPendingCountMap.get(enrollment.getClassId())))
         .collect(Collectors.toList());
 
     return PageResponse.<EnrolledClassCardResponse>builder()
@@ -232,7 +258,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
   /**
    * Map enrollment and class info to card response
    */
-  private EnrolledClassCardResponse mapToCardResponse(Enrollment enrollment, ClassResponse classInfo) {
+  private EnrolledClassCardResponse mapToCardResponse(Enrollment enrollment, ClassResponse classInfo, PendingCountResponse counts) {
     return EnrolledClassCardResponse.builder()
         // Enrollment info
         .enrollmentId(enrollment.getId())
@@ -260,6 +286,8 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         .teacherId(classInfo.getTeacherId())
         .teacherName(classInfo.getTeacherName())
         .createdAt(classInfo.getCreatedAt())
+        .submittedAssignmentCount(counts != null ? counts.getSubmittedCount() : null)
+        .pendingAssignmentCount(counts != null ? counts.getCount() : null)
         .build();
   }
 
@@ -276,6 +304,55 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     }
 
     return enrollments.stream().map(enrollmentMapper::toStudentEnrollmentResponse).collect(Collectors.toList());
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<StudentEnrollmentWithSubjectResponse> getStudentEnrollmentsWithSubjectIds(UUID studentId) {
+    log.info("Fetching enrollments with subject IDs for student: {}", studentId);
+
+    List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
+
+    if (enrollments.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    Set<UUID> classIds = enrollments.stream()
+        .map(Enrollment::getClassId)
+        .filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+
+    Map<UUID, UUID> classIdToSubjectId = Collections.emptyMap();
+    Map<UUID, String> classIdToGradingType = Collections.emptyMap();
+    if (!classIds.isEmpty()) {
+      try {
+        List<ClassResponse> classes = courseManagementClient.getClassSectionsByIds(
+            BatchClassLookupRequest.builder().classIds(new ArrayList<>(classIds)).build());
+        classIdToSubjectId = classes.stream()
+            .filter(c -> c.getId() != null && c.getSubjectId() != null)
+            .collect(Collectors.toMap(ClassResponse::getId, ClassResponse::getSubjectId));
+        classIdToGradingType = classes.stream()
+            .filter(c -> c.getId() != null)
+            .collect(Collectors.toMap(ClassResponse::getId, c -> c.getSubjectGradingType() != null ? c.getSubjectGradingType() : "GRADED"));
+      } catch (Exception e) {
+        log.warn("Failed to resolve class IDs to subject IDs: {}", e.getMessage());
+      }
+    }
+
+    Map<UUID, UUID> finalClassIdToSubjectId = classIdToSubjectId;
+    Map<UUID, String> finalClassIdToGradingType = classIdToGradingType;
+    return enrollments.stream().map(enrollment -> StudentEnrollmentWithSubjectResponse.builder()
+        .id(enrollment.getId())
+        .studentId(enrollment.getStudentId())
+        .classId(enrollment.getClassId())
+        .subjectId(enrollment.getClassId() != null ? finalClassIdToSubjectId.get(enrollment.getClassId()) : null)
+        .finalGrade(enrollment.getFinalGrade())
+        .attemptNo(enrollment.getAttemptNo())
+        .isPassed(enrollment.getIsPassed())
+        .gradingType(enrollment.getClassId() != null ? finalClassIdToGradingType.get(enrollment.getClassId()) : "GRADED")
+        .enrolledAt(enrollment.getEnrolledAt() != null ? enrollment.getEnrolledAt().toString() : null)
+        .completionTime(enrollment.getCompletionTime() != null ? enrollment.getCompletionTime().toString() : null)
+        .build()).collect(Collectors.toList());
   }
 
     @Override
@@ -336,5 +413,94 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         }
 
         return enrollmentRepository.findDistinctStudentIdsByClassIds(new ArrayList<>(targetClassIds));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UpcomingAssessmentResponse> getUpcomingAssessments(UUID studentId) {
+        List<Enrollment> enrollments = enrollmentRepository.findByStudentId(studentId);
+        if (enrollments.isEmpty()) return List.of();
+
+        List<UUID> classIds = enrollments.stream()
+                .map(Enrollment::getClassId)
+                .distinct()
+                .toList();
+
+        Map<UUID, ClassResponse> classMap;
+        try {
+            List<ClassResponse> classes = courseManagementClient.getClassSectionsByIds(
+                    BatchClassLookupRequest.builder().classIds(classIds).build());
+            classMap = classes.stream()
+                    .collect(Collectors.toMap(ClassResponse::getId, Function.identity()));
+        } catch (Exception e) {
+            log.warn("Failed to fetch class info: {}", e.getMessage());
+            return List.of();
+        }
+
+        List<AssessmentResponse> assessments;
+        try {
+            assessments = assessmentClient.getAssessmentsByClassIds(classIds);
+        } catch (Exception e) {
+            log.warn("Failed to fetch assessments: {}", e.getMessage());
+            return List.of();
+        }
+
+        Instant now = Instant.now();
+        return assessments.stream()
+                .filter(a -> "PUBLISHED".equals(a.getAssessmentStatus()))
+                .filter(a -> a.getCloseTime() != null && a.getCloseTime().isAfter(now))
+                .sorted(Comparator.comparing(AssessmentResponse::getCloseTime))
+                .limit(5)
+                .map(a -> {
+                    ClassResponse cls = classMap.get(a.getClassId());
+                    return UpcomingAssessmentResponse.builder()
+                            .assessmentId(a.getId())
+                            .title(a.getTitle())
+                            .assessmentType(a.getAssessmentType())
+                            .subjectName(cls != null ? cls.getSubjectName() : null)
+                            .subjectCode(cls != null ? cls.getSubjectCode() : null)
+                            .classId(a.getClassId())
+                            .className(cls != null ? cls.getSectionName() : null)
+                            .startTime(a.getStartTime())
+                            .closeTime(a.getCloseTime())
+                            .build();
+                })
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void createTestEnrollment(CreateTestEnrollmentRequest request) {
+        log.info("Creating test enrollment for student={} class={} grade={} passed={}",
+            request.getStudentId(), request.getClassId(), request.getFinalGrade(), request.getIsPassed());
+
+        enrollmentRepository.findByStudentIdAndClassId(request.getStudentId(), request.getClassId())
+            .ifPresentOrElse(
+                existing -> {
+                    existing.setFinalGrade(request.getFinalGrade());
+                    existing.setIsPassed(request.getIsPassed());
+                    if (request.getAttemptNo() != null) {
+                        existing.setAttemptNo(request.getAttemptNo());
+                    }
+                    if (request.getFinalGrade() != null) {
+                        existing.setCompletionTime(LocalDateTime.now());
+                    }
+                    enrollmentRepository.save(existing);
+                    log.info("Updated existing enrollment id={}", existing.getId());
+                },
+                () -> {
+                    Enrollment enrollment = Enrollment.builder()
+                        .studentId(request.getStudentId())
+                        .classId(request.getClassId())
+                        .finalGrade(request.getFinalGrade())
+                        .isPassed(request.getIsPassed())
+                        .attemptNo(request.getAttemptNo() != null ? request.getAttemptNo() : 1)
+                        .progressPercentage(100.0)
+                        .enrolledAt(LocalDateTime.now())
+                        .completionTime(request.getFinalGrade() != null ? LocalDateTime.now() : null)
+                        .build();
+                    enrollmentRepository.save(enrollment);
+                    log.info("Created new test enrollment id={}", enrollment.getId());
+                });
     }
 }
