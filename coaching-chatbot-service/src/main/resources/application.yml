@@ -26,7 +26,7 @@ spring:
         default_schema: coaching_chatbot
 
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     schemas: coaching_chatbot
     default-schema: coaching_chatbot

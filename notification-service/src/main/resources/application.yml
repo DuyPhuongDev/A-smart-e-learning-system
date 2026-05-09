@@ -23,7 +23,7 @@ spring:
         format_sql: true
         default_schema: notification
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     schemas: notification
     default-schema: notification
@@ -71,7 +71,7 @@ notification:
     inbound-topic: ${KAFKA_NOTIFICATION_INBOUND_TOPIC:lms.events.notification}
     outbound-topic: lms.events.notification.created
 
-front-end: http://localhost:3000
+front-end: ${FE_URL:http://localhost:3000}
 
 eureka:
   client:
