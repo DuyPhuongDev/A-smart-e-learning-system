@@ -22,16 +22,16 @@ services:
       timeout: 5s
       retries: 5
 
-  # ========================================
-  # Cloud flared
-  # ========================================
-
-  cloud-flared-tunnel:
-    image: cloudflare/cloudflared:latest
-    container_name: cloud-flared-tunnel
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN}
-    networks:
-      - lms-network
+#  # ========================================
+#  # Cloud flared
+#  # ========================================
+#
+#  cloud-flared-tunnel:
+#    image: cloudflare/cloudflared:latest
+#    container_name: cloud-flared-tunnel
+#    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN}
+#    networks:
+#      - lms-network
 
   # ========================================
   # Kafka Stack
@@ -190,6 +190,8 @@ services:
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
       - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -241,6 +243,8 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -320,8 +324,7 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
-      - FFMPEG_PATH=/usr/bin/ffmpeg
-      - YTDLP_PATH=/usr/bin/yt-dlp
+      - MODEL_CACHE_DIR=/usr/bin/prediction_model_cache
       - QDRANT_HOST=${QDRANT_HOST:-}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
     depends_on:

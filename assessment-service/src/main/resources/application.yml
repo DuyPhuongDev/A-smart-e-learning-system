@@ -28,7 +28,7 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
   flyway:
-    enabled: false
+    enabled: true
     locations: classpath:db/migration
     schemas: assessment_db
     default-schema: assessment_db
