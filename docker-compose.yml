@@ -25,13 +25,13 @@ services:
   #  # ========================================
   #  # Cloud flared
   #  # ========================================
-  #
-  #  cloud-flared-tunnel:
-  #    image: cloudflare/cloudflared:latest
-  #    container_name: cloud-flared-tunnel
-  #    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN}
-  #    networks:
-  #      - lms-network
+
+  cloud-flared-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloud-flared-tunnel
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN}
+    networks:
+      - lms-network
 
   # ========================================
   # Kafka Stack
