@@ -10,10 +10,10 @@ import com.hcmut.lms.assessment.domain.entity.submission.AssessmentSubmissionSta
 import com.hcmut.lms.assessment.domain.entity.question.EssayQuestion;
 import com.hcmut.lms.assessment.domain.entity.question.Question;
 import com.hcmut.lms.assessment.domain.entity.question.QuestionType;
+import com.hcmut.lms.assessment.domain.entity.submission.AssessmentSubmissionStatus;
 import com.hcmut.lms.assessment.dto.request.assessment.*;
 import com.hcmut.lms.assessment.dto.request.question.EssayQuestionRequest;
 import com.hcmut.lms.assessment.dto.request.question.FileUploadRequest;
-import com.hcmut.lms.assessment.dto.request.question.QuestionRequest;
 import com.hcmut.lms.assessment.dto.request.question.ReorderRequest;
 import com.hcmut.lms.assessment.dto.response.*;
 import com.hcmut.lms.assessment.event.AssessmentEventPublisher;
