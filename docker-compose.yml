@@ -2,7 +2,7 @@ services:
   # ========================================
   # Single Shared PostgreSQL Database
   # ========================================
-  
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: lms-postgres
@@ -87,7 +87,7 @@ services:
   # ========================================
   # Infrastructure Services
   # ========================================
-  
+
   # Service Discovery - Eureka Server
   eureka-server:
     build:
@@ -96,6 +96,8 @@ services:
     container_name: eureka-server
     ports:
       - "8761:8761"
+    environment:
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     networks:
       - lms-network
     healthcheck:
@@ -115,6 +117,7 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-this-in-production-min-256-bits}
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       - eureka-server
     networks:
@@ -140,6 +143,7 @@ services:
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-this-in-production-min-256-bits}
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -164,6 +168,7 @@ services:
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
       - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -190,6 +195,7 @@ services:
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
       - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -216,6 +222,7 @@ services:
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
       - KAFKA_BOOTSTRAP_SERVERS=kafka-1:9094
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -241,6 +248,8 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - MODEL_CACHE_DIR=models
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -266,6 +275,7 @@ services:
       - DB_PASSWORD=lms_password
       - GEMINI_API_KEY=${GEMINI_API_KEY:-key_here}
       - GEMINI_EMBEDDING_MODEL=${GEMINI_EMBEDDING_MODEL:-models/gemini-embedding-001}
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -295,6 +305,7 @@ services:
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-no-reply@welearning.local}
       - FE_URL=https://lms.dphuongdev.io.vn
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -324,6 +335,7 @@ services:
       - YTDLP_PATH=/usr/bin/yt-dlp
       - QDRANT_HOST=${QDRANT_HOST:-}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,prometheus,metrics,info
     depends_on:
       postgres:
         condition: service_healthy
@@ -338,4 +350,6 @@ networks:
 
 volumes:
   postgres-data:
+    external: true
+    name: capstone_project_lms-hcmut_be_postgres-data
   kafka-data-1:

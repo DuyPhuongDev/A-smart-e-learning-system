@@ -1,0 +1,93 @@
+@startuml
+title LMS-HCMUT BE - Deployment Diagram
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam wrapWidth 180
+skinparam maxMessageSize 180
+
+node "<<device>>\nPersonal Computer" as ClientDevice {
+  artifact "Web Browser" as Browser
+}
+
+node "<<device>>\nPublic Entry" as EntryDevice {
+  artifact "Cloudflare Edge\n(HTTPS 443)" as Cloudflare
+  artifact "cloud-flared-tunnel\n(container)" as Tunnel
+}
+
+node "<<server>>\nAPI Gateway Server\nUbuntu 24.04 LTS" as ApiServer {
+  node "Docker Engine\n(containerd)" as ApiEngine {
+    artifact "api-gateway container\napi-gateway:latest\n:8080" as APIGW
+  }
+}
+
+node "<<server>>\nInfrastructure Server\nUbuntu 24.04 LTS" as InfraServer {
+  node "Docker Engine\n(containerd)" as InfraEngine {
+    artifact "eureka-server container\nregistry:1.0\n:8761" as Eureka
+    artifact "postgres + pgvector container\npostgres:16\n:5432" as Postgres
+    artifact "kafka-1 container\napache/kafka\n:9094 internal, :29092 host" as Kafka
+    artifact "kafka-ui container\nprovectuslabs/kafka-ui\n:9999" as KafkaUI
+  }
+}
+
+node "<<server>>\nCore Services Server\nUbuntu 24.04 LTS" as CoreServer {
+  node "Docker Engine\n(containerd)" as CoreEngine {
+    artifact "authentication-service\n:8081" as Auth
+    artifact "user-management-service\n:8082" as UserMgmt
+    artifact "course-management-service\n:8083" as Course
+    artifact "assessment-service\n:8084" as Assess
+  }
+}
+
+node "<<server>>\nLearning Services Server\nUbuntu 24.04 LTS" as LearningServer {
+  node "Docker Engine\n(containerd)" as LearningEngine {
+    artifact "learning-service\n:8086" as Learning
+    artifact "personalization-service\n:8087" as Personal
+    artifact "notification-service\n:8090" as Notify
+    artifact "coaching-chatbot-service\n:8092" as Chatbot
+  }
+}
+
+cloud "AWS S3" as S3
+cloud "AWS SQS" as SQS
+cloud "Gemini API" as Gemini
+cloud "Qdrant" as Qdrant
+cloud "SMTP Provider" as SMTP
+
+Browser --> Cloudflare : HTTPS
+Cloudflare --> Tunnel : tunnel traffic
+Tunnel --> APIGW : HTTP
+Browser --> APIGW : localhost/dev access
+
+APIGW --> Eureka : discover routes
+Auth --> Eureka : register/discover
+UserMgmt --> Eureka : register/discover
+Course --> Eureka : register/discover
+Assess --> Eureka : register/discover
+Learning --> Eureka : register/discover
+Personal --> Eureka : register/discover
+Notify --> Eureka : register/discover
+Chatbot --> Eureka : register/discover
+
+Auth --> Postgres : JDBC
+UserMgmt --> Postgres : JDBC
+Course --> Postgres : JDBC
+Assess --> Postgres : JDBC
+Learning --> Postgres : JDBC
+Personal --> Postgres : JDBC
+Notify --> Postgres : JDBC
+Chatbot --> Postgres : JDBC
+
+UserMgmt --> Kafka : pub/sub
+Course --> Kafka : pub/sub
+Assess --> Kafka : pub/sub
+Notify --> Kafka : pub/sub
+KafkaUI --> Kafka : monitor
+
+Learning --> S3 : model/dataset files
+Learning --> SQS : training jobs
+Personal --> Gemini : embeddings/AI
+Chatbot --> Qdrant : vector search
+Notify --> SMTP : send mail
+
+@enduml

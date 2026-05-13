@@ -26,11 +26,13 @@ COPY learning-service/src learning-service/src
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean package -DskipTests -pl :learning-service -am
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Install FFmpeg and yt-dlp for video processing
-RUN apk add --no-cache ffmpeg yt-dlp
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg yt-dlp && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy jar from build stage
 COPY --from=build /workspace/app/learning-service/target/*.jar app.jar
