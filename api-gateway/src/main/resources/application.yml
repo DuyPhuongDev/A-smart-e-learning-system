@@ -9,8 +9,8 @@ spring:
       server:
         globalcors:
           cors-configurations:
-            '[/**]':
-              allowedOrigins: "http://localhost:3000"
+            "[/**]":
+              allowedOrigins: "*"
               allowedMethods:
                 - GET
                 - POST
@@ -29,13 +29,13 @@ spring:
               uri: lb://authentication-service
               predicates:
                 - Path=/api/auth/**
-                    
+
             # User Management Service
             - id: user-management-service
               uri: lb://user-management-service
               predicates:
                 - Path=/api/users/**,/api/roles/**,/api/import-export/**
-                
+
             # Course Management Service
             - id: course-management-service
               uri: lb://course-management-service
@@ -79,7 +79,7 @@ jwt:
 
 # Rate Limiting Configuration
 rate-limit:
-  enabled: false  # Disabled without Redis
+  enabled: false # Disabled without Redis
   requests-per-second: 100
 
 # Eureka Configuration
