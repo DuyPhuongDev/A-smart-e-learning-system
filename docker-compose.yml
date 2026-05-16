@@ -335,6 +335,7 @@ services:
       - DB_NAME=lms_db
       - DB_USER=lms_user
       - DB_PASSWORD=lms_password
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - MODEL_CACHE_DIR=/usr/bin/prediction_model_cache
       - QDRANT_HOST=${QDRANT_HOST:-}
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
