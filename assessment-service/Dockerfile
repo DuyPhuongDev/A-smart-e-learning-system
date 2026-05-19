@@ -26,8 +26,17 @@ COPY assessment-service/src assessment-service/src
 RUN --mount=type=cache,target=/root/.m2 \
     mvn clean package -DskipTests -pl :assessment-service -am
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
 WORKDIR /app
+
+# Install C++ judge dependencies
+RUN apt-get update && apt-get install -y \
+    g++ \
+    gcc \
+    make \
+    bash \
+    coreutils \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy jar from build stage
 COPY --from=build /workspace/app/assessment-service/target/*.jar app.jar
