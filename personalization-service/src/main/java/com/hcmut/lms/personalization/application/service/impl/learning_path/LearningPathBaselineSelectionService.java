@@ -495,9 +495,6 @@ public class LearningPathBaselineSelectionService {
     }
 
     private boolean hasBetterScoreThan(CreditSelectionState other) {
-      if (other == null) {
-        return true;
-      }
       if (Double.compare(score, other.score) != 0) {
         return score > other.score;
       }

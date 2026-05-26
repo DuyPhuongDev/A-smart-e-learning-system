@@ -101,3 +101,5 @@ CLAUDE.md
 .cursor/
 docs/
 .m2/
+
+secret.yaml

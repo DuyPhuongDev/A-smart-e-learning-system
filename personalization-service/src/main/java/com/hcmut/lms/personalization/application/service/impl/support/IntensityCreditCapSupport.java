@@ -22,12 +22,7 @@ public final class IntensityCreditCapSupport {
       throw new IllegalArgumentException(
           "prefMainSemLearnIntensity is required for learning path generation but was null");
     }
-    Integer cap = MAIN_SEMESTER_CAPS.get(intensity);
-    if (cap == null) {
-      throw new IllegalArgumentException(
-          "Unrecognised main-semester learning intensity: " + intensity);
-    }
-    return cap;
+    return MAIN_SEMESTER_CAPS.get(intensity);
   }
 
   public static int summerSemesterCapStrict(SummerLearningIntensity intensity) {
@@ -35,12 +30,7 @@ public final class IntensityCreditCapSupport {
       throw new IllegalArgumentException(
           "learningIntensity is required for preferred summer semester but was null");
     }
-    Integer cap = SUMMER_SEMESTER_CAPS.get(intensity);
-    if (cap == null) {
-      throw new IllegalArgumentException(
-          "Unrecognised summer learning intensity: " + intensity);
-    }
-    return cap;
+    return SUMMER_SEMESTER_CAPS.get(intensity);
   }
 }
 
