@@ -24,7 +24,7 @@ public class CurrentUserHandlerMethodArgumentResolver implements HandlerMethodAr
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) throws Exception {
 
-        System.out.println("Resolving Current User Argument");
+//        System.out.println("Resolving Current User Argument");
         //take the request
         HttpServletRequest httpServletRequest = (HttpServletRequest) webRequest.getNativeRequest();
         //take our Authorization header from request and get access token

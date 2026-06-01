@@ -101,5 +101,12 @@ public class LearningPathController {
       @PathVariable UUID learningPathId) {
     return ResponseEntity.ok(learningPathService.syncLearningPathProgress(currentUser.getId(), learningPathId));
   }
+
+  @GetMapping("/{learningPathId}/curriculum-progress")
+  public ResponseEntity<LearningPathCurriculumProgressResponse> getCurriculumProgress(
+      @CurrentUser CurrentUserInfo currentUser,
+      @PathVariable UUID learningPathId) {
+    return ResponseEntity.ok(learningPathService.getCurriculumProgress(currentUser.getId(), learningPathId));
+  }
 }
 

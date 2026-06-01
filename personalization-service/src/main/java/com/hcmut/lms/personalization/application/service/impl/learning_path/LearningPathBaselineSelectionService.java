@@ -27,12 +27,6 @@ public class LearningPathBaselineSelectionService {
   private static final String MAJOR_SPECIALIZATION_KEY = normalizeSectionName("Chuyên ngành");
   private static final String MAJOR_SPECIALIZATION_GROUP_C_KEY = normalizeSectionName("Chuyên ngành (Nhóm C)");
 
-  private static final Set<String> FREE_ELECTIVE_ALLOWED_SECTION_KEYS = Set.of(
-      FREE_ELECTIVE_SECTION_KEY,
-      MAJOR_SPECIALIZATION_KEY,
-      MAJOR_SPECIALIZATION_GROUP_C_KEY
-  );
-
   private final LearningServiceClient learningServiceClient;
   private final SubjectOccupationValuationRepository subjectOccupationValuationRepository;
 
@@ -174,19 +168,26 @@ public class LearningPathBaselineSelectionService {
           freeSection, countedCompletedCreditsBySection, transferredCreditsBySection);
 
       if (neededCredits > 0) {
+        // Single pool: leftovers from "Chuyên ngành", "Chuyên ngành (Nhóm C)", and
+        // subjects directly from "Tự chọn tự do". All three sources compete equally
+        // on student-goal scores — neutralize section-weight so origin doesn't bias the knapsack.
         List<SubjectCandidate> freePool = new ArrayList<>();
         for (SubjectCandidate candidate : candidates) {
           if (selectedSubjectIds.contains(candidate.getSubjectId())) {
             continue;
           }
           if (SubjectCreditUtil.safeCredits(candidate) > 0
-              && FREE_ELECTIVE_ALLOWED_SECTION_KEYS.contains(normalizeSectionName(candidate.getSectionName()))) {
+              && (MAJOR_SPECIALIZATION_KEY.equals(normalizeSectionName(candidate.getSectionName()))
+                  || MAJOR_SPECIALIZATION_GROUP_C_KEY.equals(normalizeSectionName(candidate.getSectionName()))
+                  || FREE_ELECTIVE_SECTION_KEY.equals(normalizeSectionName(candidate.getSectionName())))) {
+            candidate.setPriority2(0);
             freePool.add(candidate);
           }
         }
 
         List<SubjectCandidate> pickedForFree = selectCandidatesForCredits(freePool, neededCredits, scoreBySubjectId);
         selected.addAll(pickedForFree);
+        pickedForFree.stream().map(SubjectCandidate::getSubjectId).forEach(selectedSubjectIds::add);
       }
     }
 

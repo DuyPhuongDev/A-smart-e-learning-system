@@ -702,6 +702,178 @@ public class LearningPathServiceImpl implements LearningPathService {
     }
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public LearningPathCurriculumProgressResponse getCurriculumProgress(UUID studentId, UUID learningPathId) {
+    LearningPath path = getOwnedPath(studentId, learningPathId);
+    List<LearningPathSubject> lpSubjects = learningPathSubjectRepository.findByLearningPathId(learningPathId);
+
+    // Resolve specialization from the student's active learning goal
+    UUID specializationId;
+    try {
+      LearningGoal goal = learningGoalRepository
+          .findTopByStudentIdAndIsActiveTrueOrderByCreatedAtDesc(studentId)
+          .orElseThrow(() -> new EntityNotFoundException("No active learning goal found"));
+      specializationId = UUID.fromString(goal.getSpecializationId());
+    } catch (Exception e) {
+      log.warn("Failed to resolve specialization for progress: {}", e.getMessage());
+      return emptyProgress(path.getCurriculumCode());
+    }
+
+    // Fetch progress from TDHT — already has correct pass/fail + credit allocation
+    StudentLearningProgressResponse progress;
+    try {
+      progress = courseManagementClient.getStudentProgress(studentId, specializationId);
+    } catch (Exception e) {
+      log.warn("Failed to fetch student progress from TDHT: {}", e.getMessage());
+      return emptyProgress(path.getCurriculumCode());
+    }
+
+    // Build LP lookup: subjectId → LP subject (for metadata attachment)
+    Map<UUID, LearningPathSubject> lpBySubjectId = lpSubjects.stream()
+        .collect(Collectors.toMap(LearningPathSubject::getSubjectId, s -> s, (a, b) -> a));
+
+    List<CurriculumSectionProgressResponse> sectionResponses = new ArrayList<>();
+    Set<UUID> mappedLpSubjectIds = new HashSet<>();
+
+    List<StudentLearningProgressResponse.StudentProgressSectionItem> tdhtSections =
+        progress.getSections() != null ? progress.getSections() : List.of();
+
+    // Sort TDHT sections by display order for consistent rendering
+    List<StudentLearningProgressResponse.StudentProgressSectionItem> sortedTdhtSections = new ArrayList<>(tdhtSections);
+    sortedTdhtSections.sort(Comparator.comparing(
+        StudentLearningProgressResponse.StudentProgressSectionItem::getDisplayOrder,
+        Comparator.nullsLast(Comparator.naturalOrder())));
+
+    for (var tdhtSection : sortedTdhtSections) {
+      UUID sectionId = UUID.fromString(tdhtSection.getSectionId());
+      List<CurriculumSectionSubjectResponse> subjectItems = new ArrayList<>();
+      int lpCreditsInSection = 0;
+
+      if (tdhtSection.getSubjects() != null) {
+        for (var tdhtSubject : tdhtSection.getSubjects()) {
+          // Only show the highest-result attempt per subject
+          if (Boolean.FALSE.equals(tdhtSubject.getIsHighestResult())) {
+            continue;
+          }
+
+          UUID subjectId = UUID.fromString(tdhtSubject.getSubjectId());
+          LearningPathSubject lpSubject = lpBySubjectId.get(subjectId);
+
+          if (lpSubject != null) {
+            mappedLpSubjectIds.add(subjectId);
+            subjectItems.add(toSubjectResponse(lpSubject, tdhtSubject));
+            lpCreditsInSection += lpSubject.getCredits();
+          } else {
+            subjectItems.add(CurriculumSectionSubjectResponse.builder()
+                .subjectId(subjectId)
+                .subjectCode(tdhtSubject.getSubjectCode())
+                .subjectName(tdhtSubject.getSubjectName())
+                .credits(tdhtSubject.getCredits())
+                .inLearningPath(false)
+                .build());
+          }
+        }
+      }
+
+      sectionResponses.add(CurriculumSectionProgressResponse.builder()
+          .sectionId(sectionId)
+          .sectionName(tdhtSection.getSectionName())
+          .displayOrder(tdhtSection.getDisplayOrder())
+          .requiredCredits(tdhtSection.getRequiredCredits())
+          .learningPathCredits(lpCreditsInSection)
+          .completedCredits(tdhtSection.getCompletedCredits() != null ? tdhtSection.getCompletedCredits() : 0)
+          .subjects(subjectItems)
+          .build());
+    }
+
+    // LP subjects not found in any TDHT section → "Unclassified"
+    List<LearningPathSubject> unclassified = lpSubjects.stream()
+        .filter(s -> !mappedLpSubjectIds.contains(s.getSubjectId()))
+        .toList();
+
+    if (!unclassified.isEmpty()) {
+      sectionResponses.add(buildUnclassifiedSection(unclassified));
+    }
+
+    return LearningPathCurriculumProgressResponse.builder()
+        .curriculumCode(path.getCurriculumCode())
+        .sections(sectionResponses)
+        .build();
+  }
+
+  /**
+   * Builds a subject response by combining LP metadata with TDHT progress data.
+   * <p>
+   * Progress status ({@code isCompleted}, {@code completionGrade}) comes from the
+   * TDHT's pass/fail evaluation and 4-scale grade — this is always fresher than the
+   * synced values on the LP entity. LP-only fields ({@code predictedGrade},
+   * {@code learningPathSectionId}) come from the LP subject entity.
+   */
+  private CurriculumSectionSubjectResponse toSubjectResponse(
+      LearningPathSubject lpSubject,
+      StudentLearningProgressResponse.StudentProgressSubjectItem progress) {
+
+    return CurriculumSectionSubjectResponse.builder()
+        .learningPathSubjectId(lpSubject.getLearningPathSubjectId())
+        .subjectId(lpSubject.getSubjectId())
+        .learningPathSectionId(lpSubject.getLearningPathSectionId())
+        .subjectCode(lpSubject.getSubjectCode())
+        .subjectName(lpSubject.getSubjectName())
+        .credits(lpSubject.getCredits())
+        .predictedGrade(lpSubject.getPredictedGrade())
+        .isCompleted(progress.getIsPassed())
+        .completionGrade(progress.getGrade4() != null
+            ? BigDecimal.valueOf(progress.getGrade4()) : null)
+        .semesterLabel(progress.getSemesterCode())
+        .inLearningPath(true)
+        .build();
+  }
+
+  private CurriculumSectionProgressResponse buildUnclassifiedSection(
+      List<LearningPathSubject> subjects) {
+    int totalCredits = 0;
+    int completedCredits = 0;
+    List<CurriculumSectionSubjectResponse> items = new ArrayList<>();
+
+    for (var lpSubject : subjects) {
+      totalCredits += lpSubject.getCredits();
+      boolean isCompleted = Boolean.TRUE.equals(lpSubject.getIsCompleted());
+      if (isCompleted) {
+        completedCredits += lpSubject.getCredits();
+      }
+      items.add(CurriculumSectionSubjectResponse.builder()
+          .learningPathSubjectId(lpSubject.getLearningPathSubjectId())
+          .subjectId(lpSubject.getSubjectId())
+          .learningPathSectionId(lpSubject.getLearningPathSectionId())
+          .subjectCode(lpSubject.getSubjectCode())
+          .subjectName(lpSubject.getSubjectName())
+          .credits(lpSubject.getCredits())
+          .isCompleted(lpSubject.getIsCompleted())
+          .completionGrade(lpSubject.getCompletionGrade())
+          .predictedGrade(lpSubject.getPredictedGrade())
+          .inLearningPath(true)
+          .build());
+    }
+
+    return CurriculumSectionProgressResponse.builder()
+        .sectionId(null)
+        .sectionName("Không phân loại")
+        .displayOrder(Integer.MAX_VALUE)
+        .requiredCredits(null)
+        .learningPathCredits(totalCredits)
+        .completedCredits(completedCredits)
+        .subjects(items)
+        .build();
+  }
+
+  private static LearningPathCurriculumProgressResponse emptyProgress(String curriculumCode) {
+    return LearningPathCurriculumProgressResponse.builder()
+        .curriculumCode(curriculumCode)
+        .sections(List.of())
+        .build();
+  }
+
   private LearningPath getActiveOwnedPath(UUID studentId, UUID learningPathId) {
     return learningPathRepository.findByLearningPathIdAndStudentIdAndIsActiveTrue(learningPathId, studentId)
         .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lộ trình học đang hoạt động với id: " + learningPathId));

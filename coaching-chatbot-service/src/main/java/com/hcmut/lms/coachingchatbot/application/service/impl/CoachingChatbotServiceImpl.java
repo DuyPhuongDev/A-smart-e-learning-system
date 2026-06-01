@@ -140,7 +140,11 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
                     lectureId, refinedQuery, maxKnowledgeChunks);
             log.info("Found {} knowledge chunks from search", searchResults.size());
 
-            // Step 4.1: Filter chunks with relevance score >= threshold
+            // Step 4.1: Deduplicate search results by page/timestamp to avoid redundant sources
+            searchResults = deduplicateSearchResults(searchResults);
+            log.debug("After deduplication: {} unique knowledge chunks", searchResults.size());
+
+            // Step 4.2: Filter chunks with relevance score >= threshold
             List<KnowledgeSearchService.SearchResult> relevantResults = searchResults.stream()
                     .filter(result -> result.score() >= minRelevanceScore)
                     .toList();
@@ -155,12 +159,11 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
                 log.info("Filtered to {} relevant chunks with score >= {}", relevantResults.size(), minRelevanceScore);
             }
 
-            // Step 4.1: Deduplicate search results by page/timestamp to avoid redundant sources
-            searchResults = deduplicateSearchResults(searchResults);
-            log.debug("After deduplication: {} unique knowledge chunks", searchResults.size());
-
             // Step 5: Generate answer using LLM with context
             String answer = generateAnswer(question, contextMessages, relevantResults, isOffTopic);
+
+            // Step 5.1: Filter to only cited sources to avoid displaying unreferenced sources in UI
+            List<KnowledgeSearchService.SearchResult> citedResults = filterCitedResults(answer, relevantResults);
             log.debug("Generated answer length: {} characters", answer.length());
 
             // Step 6: Save user question
@@ -170,8 +173,8 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             // Step 7: Save assistant answer with knowledge sources
             ChatMessage assistantMessage = chatMapper.toAssistantMessage(session, answer, detectLanguage(question), false);
 
-            // Step 7.1: Create knowledge sources for this assistant message (only relevant chunks)
-            List<MessageKnowledgeSource> knowledgeSources = chatMapper.toMessageKnowledgeSources(assistantMessage, relevantResults);
+            // Step 7.1: Create knowledge sources for this assistant message (only cited chunks)
+            List<MessageKnowledgeSource> knowledgeSources = chatMapper.toMessageKnowledgeSources(assistantMessage, citedResults);
 
             // Step 7.2: Set bidirectional relationship
             assistantMessage.getKnowledgeSources().addAll(knowledgeSources);
@@ -190,7 +193,7 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
             return ChatResponse.builder()
                     .sessionId(session.getSessionId())
                     .answer(answer)
-                    .sources(chatMapper.toKnowledgeSources(relevantResults))
+                    .sources(chatMapper.toKnowledgeSources(citedResults))
                     .processingTimeMs(processingTime)
                     .languageDetected(detectLanguage(question))
                     .build();
@@ -444,6 +447,77 @@ public class CoachingChatbotServiceImpl implements CoachingChatbotService {
 
         // Use mm:ss format for shorter videos
         return String.format("%02d:%02d", (seconds / 60), secs);
+    }
+
+    /**
+     * Filter search results to only those actually cited in the LLM answer.
+     * Matches by checking if formatted location strings appear in the answer text.
+     */
+    private List<KnowledgeSearchService.SearchResult> filterCitedResults(
+            String answer, List<KnowledgeSearchService.SearchResult> relevantResults) {
+
+        if (relevantResults.isEmpty() || answer == null || answer.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        List<KnowledgeSearchService.SearchResult> cited = new java.util.ArrayList<>();
+
+        for (KnowledgeSearchService.SearchResult result : relevantResults) {
+            if (isCitedInAnswer(answer, result)) {
+                cited.add(result);
+            } else {
+                log.debug("Chunk {} not cited in answer, excluding from response sources", result.chunkId());
+            }
+        }
+
+        log.info("Cited {}/{} relevant chunks in answer", cited.size(), relevantResults.size());
+        return cited;
+    }
+
+    /**
+     * Check if a search result's location appears as a citation in the answer.
+     * Matches both MM:SS and HH:MM:SS timestamp formats, and page number citations.
+     */
+    private boolean isCitedInAnswer(String answer, KnowledgeSearchService.SearchResult result) {
+        // Check video timestamp citation: [📍 Video: MM:SS-MM:SS] or [📍 Video: HH:MM:SS-HH:MM:SS]
+        if (result.startTimeSeconds() != null && result.endTimeSeconds() != null) {
+            // Try MM:SS format
+            String mmss = formatTimestampRange(result.startTimeSeconds(), result.endTimeSeconds(), false);
+            if (answer.contains(mmss)) return true;
+
+            // Also try HH:MM:SS format (LLM may use either)
+            if (result.endTimeSeconds() >= 3600) {
+                String hhmmss = formatTimestampRange(result.startTimeSeconds(), result.endTimeSeconds(), true);
+                if (answer.contains(hhmmss)) return true;
+            }
+        }
+
+        // Check page number citation: [📄 Trang: X] or [📄 Page: X]
+        if (result.pageNumber() != null) {
+            String trang = "Trang: " + result.pageNumber();
+            String page = "Page: " + result.pageNumber();
+            if (answer.contains(trang) || answer.contains(page)) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Format a timestamp range as a string, matching the citation format used by the LLM.
+     * @param startSeconds start time in seconds
+     * @param endSeconds end time in seconds
+     * @param useHHMMSS true for HH:MM:SS format, false for MM:SS format
+     * @return formatted range like "02:30-03:15" or "01:02:30-01:03:15"
+     */
+    private String formatTimestampRange(int startSeconds, int endSeconds, boolean useHHMMSS) {
+        if (useHHMMSS) {
+            int sH = startSeconds / 3600, sM = (startSeconds % 3600) / 60, sS = startSeconds % 60;
+            int eH = endSeconds / 3600, eM = (endSeconds % 3600) / 60, eS = endSeconds % 60;
+            return String.format("%02d:%02d:%02d-%02d:%02d:%02d", sH, sM, sS, eH, eM, eS);
+        }
+        return String.format("%02d:%02d-%02d:%02d",
+                startSeconds / 60, startSeconds % 60,
+                endSeconds / 60, endSeconds % 60);
     }
 
     /**

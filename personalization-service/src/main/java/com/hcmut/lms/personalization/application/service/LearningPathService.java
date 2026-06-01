@@ -28,4 +28,6 @@ public interface LearningPathService {
   List<LearningPathSubjectResponse> searchSubjects(UUID studentId, UUID learningPathId, String keyword);
 
   LearningPathSyncProgressResponse syncLearningPathProgress(UUID studentId, UUID learningPathId);
+
+  LearningPathCurriculumProgressResponse getCurriculumProgress(UUID studentId, UUID learningPathId);
 }
